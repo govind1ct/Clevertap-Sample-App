@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>google</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.559532622899-6ejjvg1lv1c2h0qogp0kfivtlfufog2s</string>
+			</array>
+		</dict>
+	</array>
+	<key>CleverTapAccountID</key>
+	<string>48K-RZK-Z77Z
+
+</string>
+	<key>CleverTapIdentifiers</key>
+	<array>
+		<string>Email</string>
+		<string>Phone</string>
+		<string>Identity</string>
+	</array>
+	<key>CleverTapToken</key>
+	<string>312-3b4</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>This app uses notifications to send you updates about your orders, special offers, and important information about your crystal purchases.</string>
+	<key>PAYU_ENVIRONMENT</key>
+	<string>live</string>
+	<key>PAYU_MERCHANT_KEY</key>
+	<string>MQAPbp</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+		<string>background-fetch</string>
+	</array>
+</dict>
+</plist>

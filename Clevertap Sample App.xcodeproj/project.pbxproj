@@ -6,11 +6,61 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		2000E5A02F458D2D0074C7C6 /* CleverTapLocation in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E59F2F458D2D0074C7C6 /* CleverTapLocation */; };
+		2000E5A22F458D2D0074C7C6 /* CleverTapSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5A12F458D2D0074C7C6 /* CleverTapSDK */; };
+		2000E5A52F458DA70074C7C6 /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5A42F458DA70074C7C6 /* FirebaseAI */; };
+		2000E5A72F458DA70074C7C6 /* FirebaseAILogic in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5A62F458DA70074C7C6 /* FirebaseAILogic */; };
+		2000E5A92F458DA70074C7C6 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5A82F458DA70074C7C6 /* FirebaseAnalytics */; };
+		2000E5AB2F458DA70074C7C6 /* FirebaseAnalyticsCore in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5AA2F458DA70074C7C6 /* FirebaseAnalyticsCore */; };
+		2000E5AD2F458DA70074C7C6 /* FirebaseAnalyticsIdentitySupport in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5AC2F458DA70074C7C6 /* FirebaseAnalyticsIdentitySupport */; };
+		2000E5AF2F458DA70074C7C6 /* FirebaseAppCheck in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5AE2F458DA70074C7C6 /* FirebaseAppCheck */; };
+		2000E5B12F458DA70074C7C6 /* FirebaseAppDistribution-Beta in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5B02F458DA70074C7C6 /* FirebaseAppDistribution-Beta */; };
+		2000E5B32F458DA70074C7C6 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5B22F458DA70074C7C6 /* FirebaseAuth */; };
+		2000E5B52F458DA70074C7C6 /* FirebaseAuthCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5B42F458DA70074C7C6 /* FirebaseAuthCombine-Community */; };
+		2000E5B72F458DA70074C7C6 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5B62F458DA70074C7C6 /* FirebaseCore */; };
+		2000E5B92F458DA70074C7C6 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5B82F458DA70074C7C6 /* FirebaseCrashlytics */; };
+		2000E5BB2F458DA70074C7C6 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5BA2F458DA70074C7C6 /* FirebaseDatabase */; };
+		2000E5BD2F458DA70074C7C6 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5BC2F458DA70074C7C6 /* FirebaseFirestore */; };
+		2000E5BF2F458DA70074C7C6 /* FirebaseFirestoreCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5BE2F458DA70074C7C6 /* FirebaseFirestoreCombine-Community */; };
+		2000E5C12F458DA70074C7C6 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5C02F458DA70074C7C6 /* FirebaseFunctions */; };
+		2000E5C32F458DA70074C7C6 /* FirebaseFunctionsCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5C22F458DA70074C7C6 /* FirebaseFunctionsCombine-Community */; };
+		2000E5C52F458DA70074C7C6 /* FirebaseInAppMessaging-Beta in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5C42F458DA70074C7C6 /* FirebaseInAppMessaging-Beta */; };
+		2000E5C72F458DA70074C7C6 /* FirebaseInstallations in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5C62F458DA70074C7C6 /* FirebaseInstallations */; };
+		2000E5C92F458DA70074C7C6 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5C82F458DA70074C7C6 /* FirebaseMessaging */; };
+		2000E5CB2F458DA70074C7C6 /* FirebasePerformance in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5CA2F458DA70074C7C6 /* FirebasePerformance */; };
+		2000E5CD2F458DA70074C7C6 /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5CC2F458DA70074C7C6 /* FirebaseRemoteConfig */; };
+		2000E5CF2F458DA70074C7C6 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5CE2F458DA70074C7C6 /* FirebaseStorage */; };
+		2000E5D12F458DA70074C7C6 /* FirebaseStorageCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5D02F458DA70074C7C6 /* FirebaseStorageCombine-Community */; };
+		2000E5D42F458DBC0074C7C6 /* CTNotificationService in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5D32F458DBC0074C7C6 /* CTNotificationService */; };
+		20B076BC2F56C73A009490B3 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 20B076BB2F56C73A009490B3 /* GoogleSignIn */; };
+		20B076BE2F56C73A009490B3 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 20B076BD2F56C73A009490B3 /* GoogleSignInSwift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		2004D0172F0B9DC0009860DB /* Clevertap Sample App NSE.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Clevertap Sample App NSE.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		743077552DCB6C85006E96F0 /* Clevertap Sample App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Clevertap Sample App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		2004D0222F0B9DC0009860DB /* Exceptions for "Clevertap Sample App NSE" folder in "Clevertap Sample App NSE" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 2004D0162F0B9DC0009860DB /* Clevertap Sample App NSE */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		2004D0182F0B9DC0009860DB /* Clevertap Sample App NSE */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				2004D0222F0B9DC0009860DB /* Exceptions for "Clevertap Sample App NSE" folder in "Clevertap Sample App NSE" target */,
+			);
+			path = "Clevertap Sample App NSE";
+			sourceTree = "<group>";
+		};
 		743077572DCB6C85006E96F0 /* Clevertap Sample App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "Clevertap Sample App";
@@ -19,10 +69,45 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		2004D0142F0B9DC0009860DB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2000E5D42F458DBC0074C7C6 /* CTNotificationService in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		743077522DCB6C85006E96F0 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2000E5CB2F458DA70074C7C6 /* FirebasePerformance in Frameworks */,
+				2000E5C12F458DA70074C7C6 /* FirebaseFunctions in Frameworks */,
+				2000E5AF2F458DA70074C7C6 /* FirebaseAppCheck in Frameworks */,
+				20B076BC2F56C73A009490B3 /* GoogleSignIn in Frameworks */,
+				2000E5B32F458DA70074C7C6 /* FirebaseAuth in Frameworks */,
+				2000E5A72F458DA70074C7C6 /* FirebaseAILogic in Frameworks */,
+				2000E5CF2F458DA70074C7C6 /* FirebaseStorage in Frameworks */,
+				2000E5AB2F458DA70074C7C6 /* FirebaseAnalyticsCore in Frameworks */,
+				2000E5A22F458D2D0074C7C6 /* CleverTapSDK in Frameworks */,
+				20B076BE2F56C73A009490B3 /* GoogleSignInSwift in Frameworks */,
+				2000E5AD2F458DA70074C7C6 /* FirebaseAnalyticsIdentitySupport in Frameworks */,
+				2000E5B52F458DA70074C7C6 /* FirebaseAuthCombine-Community in Frameworks */,
+				2000E5A02F458D2D0074C7C6 /* CleverTapLocation in Frameworks */,
+				2000E5C92F458DA70074C7C6 /* FirebaseMessaging in Frameworks */,
+				2000E5BD2F458DA70074C7C6 /* FirebaseFirestore in Frameworks */,
+				2000E5BF2F458DA70074C7C6 /* FirebaseFirestoreCombine-Community in Frameworks */,
+				2000E5C52F458DA70074C7C6 /* FirebaseInAppMessaging-Beta in Frameworks */,
+				2000E5C32F458DA70074C7C6 /* FirebaseFunctionsCombine-Community in Frameworks */,
+				2000E5A92F458DA70074C7C6 /* FirebaseAnalytics in Frameworks */,
+				2000E5B92F458DA70074C7C6 /* FirebaseCrashlytics in Frameworks */,
+				2000E5A52F458DA70074C7C6 /* FirebaseAI in Frameworks */,
+				2000E5CD2F458DA70074C7C6 /* FirebaseRemoteConfig in Frameworks */,
+				2000E5B72F458DA70074C7C6 /* FirebaseCore in Frameworks */,
+				2000E5BB2F458DA70074C7C6 /* FirebaseDatabase in Frameworks */,
+				2000E5D12F458DA70074C7C6 /* FirebaseStorageCombine-Community in Frameworks */,
+				2000E5B12F458DA70074C7C6 /* FirebaseAppDistribution-Beta in Frameworks */,
+				2000E5C72F458DA70074C7C6 /* FirebaseInstallations in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -33,6 +118,8 @@
 			isa = PBXGroup;
 			children = (
 				743077572DCB6C85006E96F0 /* Clevertap Sample App */,
+				2004D0182F0B9DC0009860DB /* Clevertap Sample App NSE */,
+				7430778D2DCB71D6006E96F0 /* Frameworks */,
 				743077562DCB6C85006E96F0 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,13 +128,44 @@
 			isa = PBXGroup;
 			children = (
 				743077552DCB6C85006E96F0 /* Clevertap Sample App.app */,
+				2004D0172F0B9DC0009860DB /* Clevertap Sample App NSE.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		7430778D2DCB71D6006E96F0 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		2004D0162F0B9DC0009860DB /* Clevertap Sample App NSE */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2004D0232F0B9DC0009860DB /* Build configuration list for PBXNativeTarget "Clevertap Sample App NSE" */;
+			buildPhases = (
+				2004D0132F0B9DC0009860DB /* Sources */,
+				2004D0142F0B9DC0009860DB /* Frameworks */,
+				2004D0152F0B9DC0009860DB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				2004D0182F0B9DC0009860DB /* Clevertap Sample App NSE */,
+			);
+			name = "Clevertap Sample App NSE";
+			packageProductDependencies = (
+				2000E5D32F458DBC0074C7C6 /* CTNotificationService */,
+			);
+			productName = "Clevertap Sample App NSE";
+			productReference = 2004D0172F0B9DC0009860DB /* Clevertap Sample App NSE.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		743077542DCB6C85006E96F0 /* Clevertap Sample App */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 743077632DCB6C88006E96F0 /* Build configuration list for PBXNativeTarget "Clevertap Sample App" */;
@@ -65,6 +183,33 @@
 			);
 			name = "Clevertap Sample App";
 			packageProductDependencies = (
+				2000E59F2F458D2D0074C7C6 /* CleverTapLocation */,
+				2000E5A12F458D2D0074C7C6 /* CleverTapSDK */,
+				2000E5A42F458DA70074C7C6 /* FirebaseAI */,
+				2000E5A62F458DA70074C7C6 /* FirebaseAILogic */,
+				2000E5A82F458DA70074C7C6 /* FirebaseAnalytics */,
+				2000E5AA2F458DA70074C7C6 /* FirebaseAnalyticsCore */,
+				2000E5AC2F458DA70074C7C6 /* FirebaseAnalyticsIdentitySupport */,
+				2000E5AE2F458DA70074C7C6 /* FirebaseAppCheck */,
+				2000E5B02F458DA70074C7C6 /* FirebaseAppDistribution-Beta */,
+				2000E5B22F458DA70074C7C6 /* FirebaseAuth */,
+				2000E5B42F458DA70074C7C6 /* FirebaseAuthCombine-Community */,
+				2000E5B62F458DA70074C7C6 /* FirebaseCore */,
+				2000E5B82F458DA70074C7C6 /* FirebaseCrashlytics */,
+				2000E5BA2F458DA70074C7C6 /* FirebaseDatabase */,
+				2000E5BC2F458DA70074C7C6 /* FirebaseFirestore */,
+				2000E5BE2F458DA70074C7C6 /* FirebaseFirestoreCombine-Community */,
+				2000E5C02F458DA70074C7C6 /* FirebaseFunctions */,
+				2000E5C22F458DA70074C7C6 /* FirebaseFunctionsCombine-Community */,
+				2000E5C42F458DA70074C7C6 /* FirebaseInAppMessaging-Beta */,
+				2000E5C62F458DA70074C7C6 /* FirebaseInstallations */,
+				2000E5C82F458DA70074C7C6 /* FirebaseMessaging */,
+				2000E5CA2F458DA70074C7C6 /* FirebasePerformance */,
+				2000E5CC2F458DA70074C7C6 /* FirebaseRemoteConfig */,
+				2000E5CE2F458DA70074C7C6 /* FirebaseStorage */,
+				2000E5D02F458DA70074C7C6 /* FirebaseStorageCombine-Community */,
+				20B076BB2F56C73A009490B3 /* GoogleSignIn */,
+				20B076BD2F56C73A009490B3 /* GoogleSignInSwift */,
 			);
 			productName = "Clevertap Sample App";
 			productReference = 743077552DCB6C85006E96F0 /* Clevertap Sample App.app */;
@@ -77,9 +222,12 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1620;
+				LastSwiftUpdateCheck = 2600;
 				LastUpgradeCheck = 1620;
 				TargetAttributes = {
+					2004D0162F0B9DC0009860DB = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
 					743077542DCB6C85006E96F0 = {
 						CreatedOnToolsVersion = 16.2;
 					};
@@ -94,17 +242,31 @@
 			);
 			mainGroup = 7430774C2DCB6C85006E96F0;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				2000E59E2F458D2D0074C7C6 /* XCRemoteSwiftPackageReference "clevertap-ios-sdk" */,
+				2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				2000E5D22F458DBC0074C7C6 /* XCRemoteSwiftPackageReference "CTNotificationService" */,
+				20B076BA2F56C73A009490B3 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 743077562DCB6C85006E96F0 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				743077542DCB6C85006E96F0 /* Clevertap Sample App */,
+				2004D0162F0B9DC0009860DB /* Clevertap Sample App NSE */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		2004D0152F0B9DC0009860DB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		743077532DCB6C85006E96F0 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -115,6 +277,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		2004D0132F0B9DC0009860DB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		743077512DCB6C85006E96F0 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -125,6 +294,66 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		2004D0202F0B9DC0009860DB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6299Z9R8BM;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Clevertap Sample App NSE/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Clevertap Sample App NSE";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.govind.Clevertap-Sample-App.Clevertap-Sample-App-NSE";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		2004D0212F0B9DC0009860DB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6299Z9R8BM;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Clevertap Sample App NSE/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Clevertap Sample App NSE";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.govind.Clevertap-Sample-App.Clevertap-Sample-App-NSE";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		743077612DCB6C88006E96F0 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -249,12 +478,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Clevertap Sample App/Clevertap Sample App.entitlements";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Clevertap Sample App/Preview Content\"";
-				DEVELOPMENT_TEAM = 73PQ99NCC9;
+				DEVELOPMENT_TEAM = 7XM67G79YA;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Clevertap-Sample-App-Info.plist";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -267,6 +499,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.govind.Clevertap-Sample-App";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -278,12 +511,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Clevertap Sample App/Clevertap Sample App.entitlements";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Clevertap Sample App/Preview Content\"";
-				DEVELOPMENT_TEAM = 73PQ99NCC9;
+				DEVELOPMENT_TEAM = 7XM67G79YA;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Clevertap-Sample-App-Info.plist";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -296,6 +532,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.govind.Clevertap-Sample-App";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -305,6 +542,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		2004D0232F0B9DC0009860DB /* Build configuration list for PBXNativeTarget "Clevertap Sample App NSE" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2004D0202F0B9DC0009860DB /* Debug */,
+				2004D0212F0B9DC0009860DB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		743077502DCB6C85006E96F0 /* Build configuration list for PBXProject "Clevertap Sample App" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -324,6 +570,184 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		2000E59E2F458D2D0074C7C6 /* XCRemoteSwiftPackageReference "clevertap-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/CleverTap/clevertap-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.5.0;
+			};
+		};
+		2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.9.0;
+			};
+		};
+		2000E5D22F458DBC0074C7C6 /* XCRemoteSwiftPackageReference "CTNotificationService" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/CleverTap/CTNotificationService.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.1.7;
+			};
+		};
+		20B076BA2F56C73A009490B3 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.1.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		2000E59F2F458D2D0074C7C6 /* CleverTapLocation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E59E2F458D2D0074C7C6 /* XCRemoteSwiftPackageReference "clevertap-ios-sdk" */;
+			productName = CleverTapLocation;
+		};
+		2000E5A12F458D2D0074C7C6 /* CleverTapSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E59E2F458D2D0074C7C6 /* XCRemoteSwiftPackageReference "clevertap-ios-sdk" */;
+			productName = CleverTapSDK;
+		};
+		2000E5A42F458DA70074C7C6 /* FirebaseAI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAI;
+		};
+		2000E5A62F458DA70074C7C6 /* FirebaseAILogic */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAILogic;
+		};
+		2000E5A82F458DA70074C7C6 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		2000E5AA2F458DA70074C7C6 /* FirebaseAnalyticsCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsCore;
+		};
+		2000E5AC2F458DA70074C7C6 /* FirebaseAnalyticsIdentitySupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsIdentitySupport;
+		};
+		2000E5AE2F458DA70074C7C6 /* FirebaseAppCheck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAppCheck;
+		};
+		2000E5B02F458DA70074C7C6 /* FirebaseAppDistribution-Beta */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseAppDistribution-Beta";
+		};
+		2000E5B22F458DA70074C7C6 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		2000E5B42F458DA70074C7C6 /* FirebaseAuthCombine-Community */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseAuthCombine-Community";
+		};
+		2000E5B62F458DA70074C7C6 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		2000E5B82F458DA70074C7C6 /* FirebaseCrashlytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCrashlytics;
+		};
+		2000E5BA2F458DA70074C7C6 /* FirebaseDatabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseDatabase;
+		};
+		2000E5BC2F458DA70074C7C6 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		2000E5BE2F458DA70074C7C6 /* FirebaseFirestoreCombine-Community */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseFirestoreCombine-Community";
+		};
+		2000E5C02F458DA70074C7C6 /* FirebaseFunctions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFunctions;
+		};
+		2000E5C22F458DA70074C7C6 /* FirebaseFunctionsCombine-Community */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseFunctionsCombine-Community";
+		};
+		2000E5C42F458DA70074C7C6 /* FirebaseInAppMessaging-Beta */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseInAppMessaging-Beta";
+		};
+		2000E5C62F458DA70074C7C6 /* FirebaseInstallations */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseInstallations;
+		};
+		2000E5C82F458DA70074C7C6 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+		2000E5CA2F458DA70074C7C6 /* FirebasePerformance */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebasePerformance;
+		};
+		2000E5CC2F458DA70074C7C6 /* FirebaseRemoteConfig */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseRemoteConfig;
+		};
+		2000E5CE2F458DA70074C7C6 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
+		2000E5D02F458DA70074C7C6 /* FirebaseStorageCombine-Community */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseStorageCombine-Community";
+		};
+		2000E5D32F458DBC0074C7C6 /* CTNotificationService */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5D22F458DBC0074C7C6 /* XCRemoteSwiftPackageReference "CTNotificationService" */;
+			productName = CTNotificationService;
+		};
+		20B076BB2F56C73A009490B3 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 20B076BA2F56C73A009490B3 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		20B076BD2F56C73A009490B3 /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 20B076BA2F56C73A009490B3 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 7430774D2DCB6C85006E96F0 /* Project object */;
 }
