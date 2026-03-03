@@ -1,4 +1,5 @@
 import SwiftUI
+import CleverTapSDK
 
 struct CheckoutView: View {
     @EnvironmentObject var cartManager: CartManager
@@ -11,7 +12,6 @@ struct CheckoutView: View {
     @State private var addressPincode: String = ""
     @State private var paymentMethod: String = "Cash on Delivery"
     @State private var showAddressEdit = false
-    @State private var showPaymentEdit = false
     @State private var isPlacingOrder = false
     @State private var errorMessage: String?
     @State private var showBanner = false
@@ -22,16 +22,8 @@ struct CheckoutView: View {
     @State private var pincodeValidationError: String?
     @State private var pincodeValidationInfo: String?
     @State private var lastValidatedPincode: String = ""
-    @State private var pendingPayUOrderContext: PendingPayUOrderContext?
-
-    private struct PendingPayUOrderContext {
-        let userId: String
-        let userEmail: String?
-        let normalizedPincode: String
-    }
-
     // MARK: - Helpers
-    private let supportedPaymentMethods: [String] = ["Cash on Delivery", "UPI", "Credit/Debit Card", "PayU (Online)"]
+    private let supportedPaymentMethods: [String] = ["Cash on Delivery"]
     private let taxRate: Double = 0.18
 
     private var subtotal: Double { cartManager.total }
@@ -228,12 +220,12 @@ struct CheckoutView: View {
                             HStack {
                                 Text("Payment Method")
                                     .font(.headline)
-                                Spacer()
-                                Button("Edit") { showPaymentEdit = true }
-                                    .font(.subheadline.weight(.semibold))
                             }
                             Text(paymentMethod)
                                 .font(.subheadline)
+                                .foregroundColor(.primary)
+                            Label("Online payments (PayU / UPI / Cards) coming soon", systemImage: "clock.badge.exclamationmark")
+                                .font(.caption)
                                 .foregroundColor(.secondary)
                         }
                         .padding(16)
@@ -243,9 +235,6 @@ struct CheckoutView: View {
                             RoundedRectangle(cornerRadius: 16, style: .continuous)
                                 .stroke(Color.primary.opacity(0.06), lineWidth: 1)
                         )
-                        .sheet(isPresented: $showPaymentEdit) {
-                            PaymentMethodSheet(selected: $paymentMethod)
-                        }
 
                         VStack(spacing: 10) {
                             HStack {
@@ -411,19 +400,11 @@ struct CheckoutView: View {
                     isValidatingPincode = false
                 }
 
-                if paymentMethod == "PayU (Online)" {
-                    await beginPayUCheckout(
-                        userId: user.uid,
-                        userEmail: user.email,
-                        normalizedPincode: normalizedPincode
-                    )
-                } else {
-                    placeOrderAfterValidation(
-                        userId: user.uid,
-                        userEmail: user.email,
-                        normalizedPincode: normalizedPincode
-                    )
-                }
+                placeOrderAfterValidation(
+                    userId: user.uid,
+                    userEmail: user.email,
+                    normalizedPincode: normalizedPincode
+                )
             } catch {
                 await MainActor.run {
                     isPlacingOrder = false
@@ -440,89 +421,14 @@ struct CheckoutView: View {
         }
     }
 
-    @MainActor
-    private func handlePayUCheckoutResult(_ result: PayUCheckoutOutcome) {
-        switch result {
-        case .success:
-            guard let context = pendingPayUOrderContext else {
-                isPlacingOrder = false
-                errorMessage = "Payment succeeded, but order context is missing."
-                bannerType = .error
-                bannerTitle = "Order Failed"
-                bannerMessage = errorMessage ?? ""
-                showBanner = true
-                return
-            }
-
-            isPlacingOrder = true
-            pendingPayUOrderContext = nil
-            placeOrderAfterValidation(
-                userId: context.userId,
-                userEmail: context.userEmail,
-                normalizedPincode: context.normalizedPincode
-            )
-
-        case .failure(let message):
-            isPlacingOrder = false
-            pendingPayUOrderContext = nil
-            errorMessage = message
-            bannerType = .error
-            bannerTitle = "Payment Failed"
-            bannerMessage = message
-            showBanner = true
-
-        case .cancelled:
-            isPlacingOrder = false
-            pendingPayUOrderContext = nil
-            errorMessage = "Payment was cancelled."
-            bannerType = .error
-            bannerTitle = "Payment Cancelled"
-            bannerMessage = errorMessage ?? ""
-            showBanner = true
-        }
-    }
-
-    private func beginPayUCheckout(userId: String, userEmail: String?, normalizedPincode: String) async {
-        let primaryProductName = cartManager.items.first?.product.name ?? "Order Payment"
-        let email = (userEmail?.isEmpty == false) ? (userEmail ?? "") : "customer@example.com"
-        let phone = "9999999999"
-
-        do {
-            pendingPayUOrderContext = PendingPayUOrderContext(
-                userId: userId,
-                userEmail: userEmail,
-                normalizedPincode: normalizedPincode
-            )
-
-            _ = try await PayUService.shared.startCheckout(
-                amount: total,
-                productInfo: primaryProductName,
-                firstName: addressFullName,
-                email: email,
-                phone: phone,
-                userIdentifier: userId
-            ) { result in
-                Task { @MainActor in
-                    self.handlePayUCheckoutResult(result)
-                }
-            }
-            await MainActor.run {
-                isPlacingOrder = false
-            }
-        } catch {
-            await MainActor.run {
-                isPlacingOrder = false
-                pendingPayUOrderContext = nil
-                errorMessage = error.localizedDescription
-                bannerType = .error
-                bannerTitle = "PayU Setup Failed"
-                bannerMessage = error.localizedDescription
-                showBanner = true
-            }
-        }
-    }
-
     private func placeOrderAfterValidation(userId: String, userEmail: String?, normalizedPincode: String) {
+        // Temporary tracking while online payment methods are disabled.
+        CleverTap.sharedInstance()?.recordEvent("COD Selected (PayU Coming Soon)", withProps: [
+            "User ID": userId,
+            "Total Amount": total,
+            "Item Count": cartManager.items.count
+        ])
+
         let order = Order(
             id: nil,
             userId: userId,
@@ -882,11 +788,11 @@ struct EditAddressSheet: View {
 struct PaymentMethodSheet: View {
     @Binding var selected: String
     @Environment(\.presentationMode) var presentationMode
-    let methods = ["Cash on Delivery", "UPI", "Credit/Debit Card", "PayU (Online)"]
+    let methods = ["Cash on Delivery"]
     var body: some View {
         NavigationView {
             List {
-                Section(footer: Text("Supported methods vary by region and availability.")) {
+                Section(footer: Text("Online payments via PayU/UPI/Cards are coming soon.")) {
                     ForEach(methods, id: \.self) { method in
                         HStack {
                             Text(method)
