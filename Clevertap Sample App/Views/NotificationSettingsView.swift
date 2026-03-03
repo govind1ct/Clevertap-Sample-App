@@ -200,6 +200,21 @@ struct NotificationSettingsView: View {
                     CleverTapService.shared.setPushDND(enabled: !pushNotifications)
                     CleverTapService.shared.trackScreenViewed(screenName: "Push Toggle")
                 }
+
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "info.circle.fill")
+                        .foregroundColor(.blue)
+                        .font(.caption)
+                        .padding(.top, 1)
+
+                    Text("This toggle updates your CleverTap push preference (MSG-push). It does not change iOS notification permission. To fully disable notifications, use iPhone Settings.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(12)
+                .background(.blue.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
                 
                 NotificationToggle(
                     title: "In-App Notifications",

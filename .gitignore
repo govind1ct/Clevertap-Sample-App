@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+
+# Xcode user state
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+
+# SwiftPM / build artifacts
+.build/
+DerivedData/
+
+# Logs
+*.log
+
+# Local secrets / temp key files
+*.pem
+*.p12
+*.key
+*.pub
+test

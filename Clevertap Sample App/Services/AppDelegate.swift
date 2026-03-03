@@ -209,8 +209,9 @@ extension AppDelegate {
             print("❌ CleverTap not initialized properly")
         }
         
-        // Log CleverTap version
-        print("🔧 CleverTap SDK Version: 7.1.1")
+        // Log CleverTap version from unified diagnostics helper
+        let sdkVersion = CleverTapService.shared.sdkVersionString()
+        print("🔧 CleverTap SDK Version: \(sdkVersion)")
         
         // Check if in-app delegate is set
         print("🔧 In-App Delegate Status: Configured in init()")

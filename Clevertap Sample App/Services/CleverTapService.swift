@@ -6,6 +6,70 @@ class CleverTapService: ObservableObject {
     
     private init() {}
 
+    // MARK: - SDK Diagnostics
+
+    func sdkVersionString() -> String {
+        // Prefer explicit SDK API if exposed by the binary.
+        let sdkVersionSelector = NSSelectorFromString("sdkVersion")
+        if (CleverTap.self as AnyObject).responds(to: sdkVersionSelector),
+           let unmanaged = (CleverTap.self as AnyObject).perform(sdkVersionSelector),
+           let value = unmanaged.takeUnretainedValue() as? String,
+           !value.isEmpty {
+            return value
+        }
+
+        // Fallback to known framework bundles.
+        let bundleCandidates: [Bundle?] = [
+            Bundle(identifier: "com.clevertap.CleverTapSDK"),
+            Bundle(identifier: "org.cocoapods.CleverTap-iOS-SDK"),
+            Bundle(for: CleverTap.self)
+        ]
+
+        for bundle in bundleCandidates.compactMap({ $0 }) {
+            if let value = bundle.infoDictionary?["CFBundleShortVersionString"] as? String,
+               !value.isEmpty,
+               value != "1.0" {
+                return value
+            }
+        }
+
+        // Final fallback if the package does not expose version metadata in runtime bundle.
+        return "Unknown"
+    }
+
+    func accountIdString() -> String {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let keys = ["CleverTapAccountID", "CLEVERTAP_ACCOUNT_ID", "CT_ACCOUNT_ID"]
+        for key in keys {
+            if let value = info[key] as? String, !value.isEmpty {
+                return value
+            }
+        }
+        return "Not Found"
+    }
+
+    func regionString() -> String {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let keys = ["CleverTapRegion", "CLEVERTAP_REGION", "CT_REGION"]
+        for key in keys {
+            if let value = info[key] as? String, !value.isEmpty {
+                return value
+            }
+        }
+        return "Default"
+    }
+
+    func tokenStatusString() -> String {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let keys = ["CleverTapToken", "CLEVERTAP_TOKEN", "CT_TOKEN"]
+        for key in keys {
+            if let value = info[key] as? String, !value.isEmpty {
+                return "Configured"
+            }
+        }
+        return "Not Found"
+    }
+
     private func refreshProductExperiences() {
         Task { @MainActor in
             CleverTapProductExperiencesService.shared.fetchVariables()

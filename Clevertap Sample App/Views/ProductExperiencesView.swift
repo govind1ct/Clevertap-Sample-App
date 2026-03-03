@@ -9,6 +9,7 @@ struct ProductExperiencesView: View {
         ScrollView {
             VStack(spacing: 20) {
                 headerSection
+                prominentTestLabSection
                 variableStatusSection
                 actionsSection
                 guideSection
@@ -40,6 +41,45 @@ private extension ProductExperiencesView {
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    var prominentTestLabSection: some View {
+        NavigationLink {
+            CleverTapTestView()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "flask.fill")
+                    .font(.title3)
+                    .foregroundColor(.white)
+                    .frame(width: 38, height: 38)
+                    .background(Color.black.opacity(0.20), in: RoundedRectangle(cornerRadius: 10))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("CleverTap Test Lab")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    Text("Run push/in-app/inbox/native display tests")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.92))
+                }
+
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.white.opacity(0.9))
+            }
+            .padding(14)
+            .background(
+                LinearGradient(
+                    colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ),
+                in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+            )
+            .shadow(color: Color("CleverTapPrimary").opacity(0.32), radius: 10, y: 6)
+        }
+        .buttonStyle(.plain)
     }
 
     var variableStatusSection: some View {
@@ -104,7 +144,7 @@ private extension ProductExperiencesView {
         } label: {
             HStack {
                 Image(systemName: "testtube.2")
-                Text("Open Test Lab")
+                Text("More Test Lab Tools")
                     .fontWeight(.medium)
                 Spacer()
                 Image(systemName: "chevron.right")

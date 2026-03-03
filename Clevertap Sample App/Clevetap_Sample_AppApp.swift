@@ -11,6 +11,7 @@ struct Clevertap_Sample_AppApp: App {
     @StateObject private var productExperiencesService = CleverTapProductExperiencesService.shared
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
     @State private var showGuestOnboarding = true
+    @State private var showSplash = true
     
     // Use AppDelegate for push notifications and CleverTap setup
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -18,14 +19,22 @@ struct Clevertap_Sample_AppApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if authViewModel.isAuthenticated {
-                    MainTabView()
-                } else if showGuestOnboarding {
-                    OnboardingView {
-                        showGuestOnboarding = false
+                if showSplash {
+                    SplashView {
+                        withAnimation(.easeOut(duration: 0.25)) {
+                            showSplash = false
+                        }
                     }
                 } else {
-                    AuthLoginView()
+                    if authViewModel.isAuthenticated {
+                        MainTabView()
+                    } else if showGuestOnboarding {
+                        OnboardingView {
+                            showGuestOnboarding = false
+                        }
+                    } else {
+                        AuthLoginView()
+                    }
                 }
             }
             .environmentObject(authViewModel)

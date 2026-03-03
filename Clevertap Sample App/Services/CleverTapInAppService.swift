@@ -17,6 +17,10 @@ class CleverTapInAppService: ObservableObject {
     @Published var lastPayload: [String: Any] = [:]
     @Published var appInboxMessages: [CleverTapInboxMessage] = []
     @Published var pushPermissionStatus: String = "Unknown"
+    @Published var isSDKInitialized: Bool = false
+    @Published var lastDiagnosticsRefresh: Date?
+
+    private var connectionMonitorTimer: Timer?
     
     struct InAppNotificationLog: Identifiable {
         let id = UUID()
@@ -72,21 +76,34 @@ class CleverTapInAppService: ObservableObject {
         checkPushPermissions()
         initializeAppInbox()
     }
+
+    deinit {
+        connectionMonitorTimer?.invalidate()
+    }
     
     private func checkCleverTapConnection() {
         DispatchQueue.main.async {
-            if let cleverTapID = CleverTap.sharedInstance()?.profileGetID() {
-                self.connectionStatus = "Connected (ID: \(String(cleverTapID.prefix(8)))...)"
+            let sdk = CleverTap.sharedInstance()
+            self.isSDKInitialized = sdk != nil
+
+            guard let sdk else {
+                self.connectionStatus = "SDK Not Initialized"
+                return
+            }
+
+            if let cleverTapID = sdk.profileGetID(), !cleverTapID.isEmpty {
+                self.connectionStatus = "SDK Ready • Profile \(String(cleverTapID.prefix(8)))..."
             } else {
-                self.connectionStatus = "Not Connected"
+                self.connectionStatus = "SDK Ready • No Profile Logged In"
             }
         }
     }
     
     private func startConnectionMonitoring() {
-        Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { _ in
+        connectionMonitorTimer?.invalidate()
+        connectionMonitorTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                self.checkCleverTapConnection()
+                self?.checkCleverTapConnection()
             }
         }
     }
@@ -252,13 +269,25 @@ class CleverTapInAppService: ObservableObject {
     // MARK: - Connection Management
     
     func checkConnection() {
-        DispatchQueue.main.async {
-            if let cleverTapID = CleverTap.sharedInstance()?.profileGetID() {
-                self.connectionStatus = "Connected (ID: \(String(cleverTapID.prefix(8)))...)"
-            } else {
-                self.connectionStatus = "Not Connected"
-            }
-        }
+        checkCleverTapConnection()
+    }
+
+    func refreshDiagnostics() {
+        checkCleverTapConnection()
+        checkPushPermissions()
+        refreshAppInbox()
+        lastDiagnosticsRefresh = Date()
+    }
+
+    func statusSummary() -> String {
+        let profileID = CleverTap.sharedInstance()?.profileGetID() ?? ""
+        let profileStatus = profileID.isEmpty ? "No profile/login yet" : "Profile ID: \(String(profileID.prefix(8)))..."
+        return """
+        \(connectionStatus)
+        \(profileStatus)
+        Push: \(pushPermissionStatus)
+        Inbox Count: \(appInboxCount)
+        """
     }
     
     private func checkPushPermissions() {

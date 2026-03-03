@@ -8,6 +8,51 @@ struct CleverTapTestView: View {
     @State private var alertMessage = ""
     @State private var testHistory: [TestEvent] = []
     @Environment(\.colorScheme) var colorScheme
+
+    private var cleverTapSDKVersion: String {
+        CleverTapService.shared.sdkVersionString()
+    }
+
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
+    }
+
+    private var appBuild: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"
+    }
+
+    private var profileStatus: String {
+        let profileID = CleverTap.sharedInstance()?.profileGetID() ?? ""
+        return profileID.isEmpty ? "Anonymous / Not Logged In" : "Identified"
+    }
+
+    private var deviceTokenStatus: String {
+        let token = CleverTap.sharedInstance()?.profileGet("Device Token")
+        if let tokenString = token as? String, !tokenString.isEmpty {
+            return "Present"
+        }
+        return "Not Available"
+    }
+
+    private var cleverTapAccountId: String {
+        CleverTapService.shared.accountIdString()
+    }
+
+    private var cleverTapRegion: String {
+        CleverTapService.shared.regionString()
+    }
+
+    private var cleverTapTokenStatus: String {
+        CleverTapService.shared.tokenStatusString()
+    }
+
+    private var lastDiagnosticsRefreshText: String {
+        guard let date = inAppService.lastDiagnosticsRefresh else { return "Never" }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .none
+        formatter.timeStyle = .medium
+        return formatter.string(from: date)
+    }
     
     private let nativeDisplayLocations = [
         "home_hero",
@@ -133,6 +178,9 @@ struct CleverTapTestView: View {
         .alert(alertMessage, isPresented: $showAlert) {
             Button("OK") { }
         }
+        .onAppear {
+            inAppService.refreshDiagnostics()
+        }
     }
     
     // MARK: - Header Section
@@ -207,9 +255,9 @@ struct CleverTapTestView: View {
             
             StatCard(
                 title: "Status",
-                value: inAppService.connectionStatus.contains("Connected") ? "✓" : "✗",
+                value: inAppService.isSDKInitialized ? "✓" : "✗",
                 icon: "wifi",
-                color: inAppService.connectionStatus.contains("Connected") ? .green : .red
+                color: inAppService.isSDKInitialized ? .green : .red
             )
         }
     }
@@ -560,10 +608,24 @@ struct CleverTapTestView: View {
     // MARK: - Debug Section
     private var debugSection: some View {
         VStack(spacing: 16) {
-            SectionHeader(
-                title: "🔧 Debug Information",
-                subtitle: "System status and configuration"
-            )
+            HStack(alignment: .top) {
+                SectionHeader(
+                    title: "🔧 Debug Information",
+                    subtitle: "System status and configuration"
+                )
+
+                Button {
+                    inAppService.refreshDiagnostics()
+                    addTestEvent(title: "Diagnostics Refreshed", success: true)
+                } label: {
+                    Label("Refresh", systemImage: "arrow.clockwise")
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(.quaternary, in: Capsule())
+                }
+                .buttonStyle(.plain)
+            }
             
             VStack(spacing: 12) {
                 DebugInfoRow(
@@ -586,20 +648,62 @@ struct CleverTapTestView: View {
                 
                 DebugInfoRow(
                     title: "SDK Version",
-                    value: "7.1.1",
+                    value: cleverTapSDKVersion,
                     icon: "gear"
                 )
-                
+
                 DebugInfoRow(
-                    title: "In-App Delegate",
-                    value: "Configured",
-                    icon: "checkmark.circle"
+                    title: "SDK Initialized",
+                    value: inAppService.isSDKInitialized ? "Yes" : "No",
+                    icon: "bolt.horizontal.circle"
                 )
-                
+
+                DebugInfoRow(
+                    title: "Account ID",
+                    value: cleverTapAccountId,
+                    icon: "number"
+                )
+
+                DebugInfoRow(
+                    title: "Region",
+                    value: cleverTapRegion,
+                    icon: "globe.asia.australia"
+                )
+
+                DebugInfoRow(
+                    title: "Token",
+                    value: cleverTapTokenStatus,
+                    icon: "key"
+                )
+
+                DebugInfoRow(
+                    title: "Last Refresh",
+                    value: lastDiagnosticsRefreshText,
+                    icon: "clock"
+                )
+
+                DebugInfoRow(
+                    title: "Profile State",
+                    value: profileStatus,
+                    icon: "person.crop.circle"
+                )
+
+                DebugInfoRow(
+                    title: "Device Token",
+                    value: deviceTokenStatus,
+                    icon: "iphone.gen3.badge.exclamationmark"
+                )
+
                 DebugInfoRow(
                     title: "App Inbox Status",
                     value: inAppService.appInboxCount > 0 ? "Active (\(inAppService.appInboxCount))" : "Empty",
                     icon: "tray"
+                )
+
+                DebugInfoRow(
+                    title: "App Version",
+                    value: "\(appVersion) (\(appBuild))",
+                    icon: "app.badge"
                 )
             }
         }
@@ -668,9 +772,15 @@ struct CleverTapTestView: View {
     }
     
     private func checkCleverTapStatus() {
-        let isConnected = CleverTap.sharedInstance() != nil
-        addTestEvent(title: "Status Check", success: isConnected)
-        showAlert(message: isConnected ? "CleverTap is working properly!" : "CleverTap setup issue detected")
+        inAppService.refreshDiagnostics()
+        let sdkReady = inAppService.isSDKInitialized
+        addTestEvent(title: "Status Check", success: sdkReady)
+
+        if sdkReady {
+            showAlert(message: "SDK: Ready ✅\n\(inAppService.statusSummary())")
+        } else {
+            showAlert(message: "CleverTap SDK is not initialized. Check AppDelegate setup and account credentials.")
+        }
     }
 
     // MARK: - Helper Methods
