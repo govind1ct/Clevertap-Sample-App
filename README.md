@@ -1,90 +1,54 @@
-# Cavacham - Crystal & Spiritual Shop App
+# CleverTap Sample App (iOS)
 
-A beautiful and modern iOS application for exploring and purchasing crystals, spiritual items, and learning about their properties.
+Production-style SwiftUI sample app integrated with CleverTap, Firebase, Product Experiences, App Inbox, Native Display, checkout flow improvements, and modern onboarding/auth UI.
 
-## Features
+## Core Features
 
-### 1. User Authentication
-- Sign up and login functionality
-- User profile management
-- Secure authentication system
+- CleverTap user profile + event tracking
+- CleverTap In-App + Native Display + App Inbox integration
+- Product Experiences / remote variable support
+- Enhanced onboarding experience with branded assets
+- Revamped Login/Signup flow
+- Email auth + Google auth support (Firebase)
+- Cart, checkout, address/pincode validation, profile management
+- Firebase Storage-backed profile image handling
 
-### 2. Home Screen
-- Featured products showcase
-- Category navigation
-- Crystal of the day feature
-- Special offers section
-- Search functionality
+## Recent UX/Auth Updates
 
-### 3. Shop
-- Product browsing with categories
-- Advanced filtering and sorting
-- Product details with images and descriptions
-- Shopping cart functionality
-- Wishlist feature
+- Full redesign of onboarding screens with CleverTap-focused content
+- Logout/guest routing now ensures onboarding is shown before auth
+- Login and Signup screens revamped to match onboarding visual quality
+- Google button styling updated to a Google-like look
+- Added Google auth interaction events:
+  - `Google Auth Clicked` (`Source`: `login`/`signup`)
+  - `Google Auth Failed` (`Source`: `login`/`signup`)
 
-### 4. Crystal Guide
-- Comprehensive crystal information
-- Properties and benefits
-- Associated chakras
-- Search and filter capabilities
-- Detailed crystal profiles
+## Project Structure (main app target)
 
-### 5. Profile
-- User information management
-- Order history
-- Wishlist management
-- Reviews and ratings
-- Settings and preferences
+- `Clevertap Sample App/Services/` – CleverTap, Firebase, checkout, profile, product services
+- `Clevertap Sample App/ViewModels/` – auth state and sign-in flows
+- `Clevertap Sample App/Views/` – all SwiftUI screens
+- `Clevertap Sample App/Assets.xcassets/` – app/theme/brand image assets
 
-## Technical Details
+## Google Sign-In Setup
 
-### Architecture
-- MVVM (Model-View-ViewModel) architecture
-- SwiftUI for modern UI implementation
-- Environment objects for state management
-- Clean and modular code structure
+1. Add package:
+   - `https://github.com/google/GoogleSignIn-iOS`
+2. Link `GoogleSignIn` to app target.
+3. In Firebase Console, enable **Authentication > Sign-in method > Google**.
+4. Add URL type using reversed client ID from `GoogleService-Info.plist`.
+5. Ensure `GoogleService-Info.plist` is included in app target.
 
-### Key Components
-- `CartManager`: Handles shopping cart functionality
-- `AuthManager`: Manages user authentication
-- `Product`: Product data model
-- `Crystal`: Crystal information model
+Note: The code uses `#if canImport(GoogleSignIn)` so build remains safe if the SDK is temporarily missing.
 
-### Views
-- `MainTabView`: Main navigation container
-- `HomeView`: Home screen with featured content
-- `ShopView`: Product browsing and shopping
-- `CrystalGuideView`: Crystal information and guide
-- `ProfileView`: User profile and settings
-- `OnboardingView`: User onboarding experience
+## Build
 
-## Setup and Installation
+- Xcode project: `Clevertap Sample App.xcodeproj`
+- Main target: `Clevertap Sample App`
+- iOS: 15+
 
-1. Clone the repository
-2. Open the project in Xcode
-3. Install dependencies (if any)
-4. Build and run the project
+## Notes
 
-## Requirements
-
-- iOS 15.0+
-- Xcode 13.0+
-- Swift 5.5+
-
-## Dependencies
-
-- SwiftUI
-- Foundation
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a new Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details. 
+- Native display integration details: `Clevertap Sample App/README_NativeDisplay.md`
+- Product experiences setup: `Clevertap Sample App/README_ProductExperiences.md`
+- PayU setup: `Clevertap Sample App/README_PayU.md`
