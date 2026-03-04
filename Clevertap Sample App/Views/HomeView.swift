@@ -70,6 +70,7 @@ struct HomeView: View {
                     headerSection
                     searchSection
                     categorySection
+                    HomeNativeDisplayView()
 
                     if isInitialLoading {
                         loadingSection

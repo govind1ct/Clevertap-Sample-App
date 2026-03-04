@@ -34,6 +34,40 @@ struct NativeDisplayContentView: View {
     let displayUnit: CleverTapDisplayUnit
     let backgroundColor: UIColor?
     @StateObject private var nativeDisplayService = CleverTapNativeDisplayService.shared
+
+    private var resolvedMediaURL: String? {
+        if let mediaUrl = content.mediaUrl, !mediaUrl.isEmpty {
+            return mediaUrl
+        }
+
+        if let reflected = reflectedURLCandidate(from: content) {
+            return reflected
+        }
+
+        guard let extras = displayUnit.customExtras else { return nil }
+        let keys = ["image", "image_url", "img", "media_url", "banner", "hero_image"]
+        for key in keys {
+            if let value = extras[key] as? String, !value.isEmpty {
+                return value
+            }
+        }
+        return nil
+    }
+
+    private func reflectedURLCandidate(from content: CleverTapDisplayUnitContent) -> String? {
+        // Robust fallback for SDK payload variations where image URL may be exposed
+        // through different properties (poster/icon/image/etc.) not covered by mediaUrl.
+        let interesting = ["media", "image", "img", "poster", "icon", "url"]
+        for child in Mirror(reflecting: content).children {
+            guard let label = child.label?.lowercased() else { continue }
+            guard interesting.contains(where: { label.contains($0) }) else { continue }
+
+            if let value = child.value as? String, !value.isEmpty {
+                return value
+            }
+        }
+        return nil
+    }
     
     var body: some View {
         Button(action: {
@@ -104,8 +138,10 @@ struct NativeDisplayContentView: View {
     
     @ViewBuilder
     private var mediaContentView: some View {
-        if let mediaUrl = content.mediaUrl, !mediaUrl.isEmpty {
-            if content.mediaIsImage {
+        if let mediaUrl = resolvedMediaURL, !mediaUrl.isEmpty {
+            // Some campaigns may provide a media URL but not set media-type flags correctly.
+            // Treat unknown media type as image by default for resilient rendering.
+            if content.mediaIsImage || (!content.mediaIsVideo && !content.mediaIsAudio) {
                 // For image content
                 AppAsyncImage(urlString: mediaUrl) { phase in
                     if let image = phase.image {

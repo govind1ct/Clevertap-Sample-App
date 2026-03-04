@@ -156,6 +156,9 @@ struct CleverTapTestView: View {
                         VStack(spacing: 12) {
                             // Display Units Status
                             NativeDisplayStatusCard()
+
+                            // Setup guide
+                            NativeDisplayImplementationCard()
                             
                             // Test Native Display Events
                             VStack(spacing: 8) {
@@ -1283,6 +1286,56 @@ struct NativeDisplayStatusCard: View {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
         return formatter.string(from: date)
+    }
+}
+
+struct NativeDisplayImplementationCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "book.pages.fill")
+                    .foregroundColor(.indigo)
+                Text("How to use from CleverTap Dashboard")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                guideRow("Create a Native Display campaign in CleverTap and publish it.")
+                guideRow("In campaign payload custom extras, pass location key like `home_hero`, `product_list_header`, `cart_recommendations`, `profile_offers`.")
+                guideRow("Send/trigger campaign to test users, then tap `Refresh Units` in Test Lab.")
+                guideRow("Verify status card locations and open `View All Display Units` for full payload preview.")
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Rendered in app at:")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.secondary)
+                Text("Home • Product List • Cart • Profile")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding()
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(.indigo.opacity(0.25), lineWidth: 1)
+        )
+    }
+
+    private func guideRow(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "circle.fill")
+                .font(.system(size: 6))
+                .foregroundColor(.indigo)
+                .padding(.top, 6)
+            Text(text)
+                .font(.caption)
+                .foregroundColor(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
 

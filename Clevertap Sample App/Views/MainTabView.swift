@@ -6,6 +6,7 @@ struct MainTabView: View {
     @EnvironmentObject private var authViewModel: AuthViewModel
     @EnvironmentObject private var cartManager: CartManager
     @StateObject private var inAppService = CleverTapInAppService.shared
+    @StateObject private var nativeDisplayService = CleverTapNativeDisplayService.shared
     
     enum Tab: Int {
         case home, inbox, experiences, cart, profile
@@ -100,6 +101,9 @@ struct MainTabView: View {
         }
         .onChange(of: selectedTab) { _, _ in
             UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+            if selectedTab == .home || selectedTab == .profile {
+                CleverTapNativeDisplayService.shared.refreshDisplayUnits()
+            }
         }
     }
 }

@@ -234,6 +234,10 @@ struct NotificationSettingsView: View {
                     color: .orange
                 ) {
                     CleverTapService.shared.setEmailDND(enabled: !emailNotifications)
+                    // If user opts back in, clear address-level DND as well.
+                    if emailNotifications {
+                        CleverTapService.shared.setEmailAddressDND(enabled: false)
+                    }
                     CleverTapService.shared.trackScreenViewed(screenName: "Email Toggle")
                 }
                 
@@ -245,6 +249,10 @@ struct NotificationSettingsView: View {
                     color: .purple
                 ) {
                     CleverTapService.shared.setSMSDND(enabled: !smsNotifications)
+                    // If user opts back in, clear phone-level DND as well.
+                    if smsNotifications {
+                        CleverTapService.shared.setPhoneDND(enabled: false)
+                    }
                     CleverTapService.shared.trackScreenViewed(screenName: "SMS Toggle")
                 }
             }
@@ -439,16 +447,28 @@ struct NotificationSettingsView: View {
                         }
                         
                         Spacer()
-                        
-                        Button("Enable") {
-                            CleverTapService.shared.setPhoneDND(enabled: true)
-                            CleverTapService.shared.trackScreenViewed(screenName: "Phone DND")
+
+                        HStack(spacing: 8) {
+                            Button("Enable") {
+                                CleverTapService.shared.setPhoneDND(enabled: true)
+                                CleverTapService.shared.trackScreenViewed(screenName: "Phone DND Enabled")
+                            }
+                            .font(.caption)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+                            .foregroundColor(.red)
+
+                            Button("Disable") {
+                                CleverTapService.shared.setPhoneDND(enabled: false)
+                                CleverTapService.shared.trackScreenViewed(screenName: "Phone DND Disabled")
+                            }
+                            .font(.caption)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(.green.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+                            .foregroundColor(.green)
                         }
-                        .font(.caption)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
-                        .foregroundColor(.red)
                     }
                 }
                 .padding(16)
@@ -473,16 +493,28 @@ struct NotificationSettingsView: View {
                         }
                         
                         Spacer()
-                        
-                        Button("Enable") {
-                            CleverTapService.shared.setEmailAddressDND(enabled: true)
-                            CleverTapService.shared.trackScreenViewed(screenName: "Email DND")
+
+                        HStack(spacing: 8) {
+                            Button("Enable") {
+                                CleverTapService.shared.setEmailAddressDND(enabled: true)
+                                CleverTapService.shared.trackScreenViewed(screenName: "Email DND Enabled")
+                            }
+                            .font(.caption)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+                            .foregroundColor(.orange)
+
+                            Button("Disable") {
+                                CleverTapService.shared.setEmailAddressDND(enabled: false)
+                                CleverTapService.shared.trackScreenViewed(screenName: "Email DND Disabled")
+                            }
+                            .font(.caption)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(.green.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+                            .foregroundColor(.green)
                         }
-                        .font(.caption)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
-                        .foregroundColor(.orange)
                     }
                 }
                 .padding(16)
@@ -547,10 +579,14 @@ struct NotificationSettingsView: View {
     // MARK: - Helper Methods
     
     private func loadCurrentSettings() {
-        let profile = profileService.userProfile
-        pushNotifications = profile.pushNotificationsEnabled
-        emailNotifications = profile.emailNotificationsEnabled
-        smsNotifications = profile.smsNotificationsEnabled
+        profileService.fetchUserProfile { _ in
+            DispatchQueue.main.async {
+                let profile = profileService.userProfile
+                pushNotifications = profile.pushNotificationsEnabled
+                emailNotifications = profile.emailNotificationsEnabled
+                smsNotifications = profile.smsNotificationsEnabled
+            }
+        }
         if UserDefaults.standard.object(forKey: "notifications.groupSimilar") != nil {
             groupSimilarNotifications = UserDefaults.standard.bool(forKey: "notifications.groupSimilar")
         } else {
@@ -613,6 +649,15 @@ struct NotificationSettingsView: View {
             pushOptIn: pushNotifications,
             emailOptIn: emailNotifications
         )
+        CleverTapService.shared.setPushDND(enabled: !pushNotifications)
+        CleverTapService.shared.setEmailDND(enabled: !emailNotifications)
+        CleverTapService.shared.setSMSDND(enabled: !smsNotifications)
+        if emailNotifications {
+            CleverTapService.shared.setEmailAddressDND(enabled: false)
+        }
+        if smsNotifications {
+            CleverTapService.shared.setPhoneDND(enabled: false)
+        }
         
         // Track detailed preferences
         CleverTapService.shared.setUserProperty(key: "Order Updates Enabled", value: orderUpdates)
@@ -627,6 +672,7 @@ struct NotificationSettingsView: View {
         // Track settings update event
         CleverTapService.shared.setUserProperty(key: "Notification Settings Updated", value: Date())
         CleverTapService.shared.addToMultiValueProperty(key: "Features Used", value: "Notification Settings")
+        _ = profileService.forceCleverTapSync()
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             isSaving = false

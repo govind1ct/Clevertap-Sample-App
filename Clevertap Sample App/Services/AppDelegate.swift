@@ -283,6 +283,9 @@ class AppDelegate: UIResponder,
         // Push delegate
         CleverTap.sharedInstance()?.setPushNotificationDelegate(self)
 
+        // Native Display delegate / cache setup
+        _ = CleverTapNativeDisplayService.shared
+
         // Route UNUserNotificationCenter callbacks through one path to avoid duplicate tracking.
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
 

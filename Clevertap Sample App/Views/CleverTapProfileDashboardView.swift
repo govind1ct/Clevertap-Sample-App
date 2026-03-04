@@ -6,28 +6,47 @@ struct CleverTapProfileDashboardView: View {
     @State private var profileData: [String: Any] = [:]
     @State private var isLoading = true
     @EnvironmentObject private var authViewModel: AuthViewModel
+    @StateObject private var profileService = ProfileService()
     @State private var showProfile = false
     @State private var showAuth = false
+    @State private var isSyncing = false
     @State private var syncStatusMessage: String?
+
+    private var isCompactScreen: Bool {
+        UIScreen.main.bounds.height <= 750
+    }
+
+    private var horizontalInset: CGFloat {
+        isCompactScreen ? 16 : 20
+    }
+
+    private var sectionPadding: CGFloat {
+        isCompactScreen ? 16 : 20
+    }
     
     var body: some View {
         NavigationView {
             ZStack {
-                // Beautiful gradient background
                 LinearGradient(
                     colors: [
-                        Color("CleverTapPrimary").opacity(0.05),
-                        Color("CleverTapSecondary").opacity(0.03),
-                        Color.clear
+                        Color("CleverTapPrimary").opacity(0.15),
+                        Color("CleverTapSecondary").opacity(0.08),
+                        Color(.systemBackground),
+                        Color(.systemBackground)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
                 .ignoresSafeArea()
+
+                Circle()
+                    .fill(Color("CleverTapPrimary").opacity(0.12))
+                    .frame(width: 260, height: 260)
+                    .blur(radius: 40)
+                    .offset(x: -130, y: -300)
                 
                 ScrollView {
                     VStack(spacing: 24) {
-                        // Header
                         headerSection
                         
                         if isLoading {
@@ -53,7 +72,7 @@ struct CleverTapProfileDashboardView: View {
                             profileActionsSection
                         }
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, horizontalInset)
                     .padding(.bottom, 40)
                 }
             }
@@ -79,6 +98,7 @@ struct CleverTapProfileDashboardView: View {
                         }
                         
                         Button("Refresh") {
+                            CleverTapService.shared.trackEvent("Dashboard Refresh Tapped")
                             loadProfileData()
                         }
                     }
@@ -104,7 +124,6 @@ struct CleverTapProfileDashboardView: View {
     // MARK: - Header Section
     private var headerSection: some View {
         VStack(spacing: 16) {
-            // CleverTap Logo/Icon
             ZStack {
                 Circle()
                     .fill(
@@ -138,13 +157,18 @@ struct CleverTapProfileDashboardView: View {
                     .fontWeight(.bold)
                     .foregroundColor(.primary)
                 
-                Text("Comprehensive user analytics and insights")
+                Text("Analytics, identity and preference health for this profile")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
             }
+
+            HStack(spacing: 10) {
+                DashboardPill(title: "Properties", value: "\(profileData.count)", icon: "slider.horizontal.3")
+                DashboardPill(title: "Permission", value: (profileData["MSG-push"] as? Bool == false) ? "Off" : "On", icon: "bell.fill")
+            }
         }
-        .padding(.top, 20)
+        .padding(.top, 16)
     }
     
     // MARK: - CleverTap ID Section
@@ -189,8 +213,12 @@ struct CleverTapProfileDashboardView: View {
                 }
             }
         }
-        .padding(20)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .padding(sectionPadding)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(.white.opacity(0.22), lineWidth: 1)
+        )
     }
     
     // MARK: - User Properties Section
@@ -211,8 +239,12 @@ struct CleverTapProfileDashboardView: View {
                 }
             }
         }
-        .padding(20)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .padding(sectionPadding)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(.white.opacity(0.22), lineWidth: 1)
+        )
     }
     
     // MARK: - Engagement Metrics Section
@@ -253,8 +285,12 @@ struct CleverTapProfileDashboardView: View {
                 )
             }
         }
-        .padding(20)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .padding(sectionPadding)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(.white.opacity(0.22), lineWidth: 1)
+        )
     }
     
     // MARK: - E-commerce Metrics Section
@@ -302,8 +338,12 @@ struct CleverTapProfileDashboardView: View {
                 )
             }
         }
-        .padding(20)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .padding(sectionPadding)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(.white.opacity(0.22), lineWidth: 1)
+        )
     }
     
     // MARK: - Notification Preferences Section
@@ -350,8 +390,12 @@ struct CleverTapProfileDashboardView: View {
                 }
             }
         }
-        .padding(20)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .padding(sectionPadding)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(.white.opacity(0.22), lineWidth: 1)
+        )
     }
     
     // MARK: - Profile Actions Section
@@ -364,10 +408,11 @@ struct CleverTapProfileDashboardView: View {
             
             VStack(spacing: 12) {
                 ActionButton(
-                    title: "Sync Profile Data",
-                    subtitle: "Update CleverTap with latest data",
+                    title: isSyncing ? "Syncing Profile..." : "Sync Profile Data",
+                    subtitle: "Update CleverTap with latest profile and preferences",
                     icon: "arrow.triangle.2.circlepath",
-                    color: .blue
+                    color: .blue,
+                    isDisabled: isSyncing
                 ) {
                     syncProfileData()
                 }
@@ -398,8 +443,12 @@ struct CleverTapProfileDashboardView: View {
                 }
             }
         }
-        .padding(20)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .padding(sectionPadding)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(.white.opacity(0.22), lineWidth: 1)
+        )
     }
     
     // MARK: - Helper Methods
@@ -468,12 +517,34 @@ struct CleverTapProfileDashboardView: View {
     }
     
     private func syncProfileData() {
-        let didSync = CleverTapService.shared.forceProfileSync()
-        syncStatusMessage = didSync ? "Profile sync triggered." : "Profile sync failed (missing CleverTap identity)."
-        loadProfileData()
+        guard !isSyncing else { return }
+        isSyncing = true
+        syncStatusMessage = "Sync in progress..."
+        CleverTapService.shared.trackEvent("Dashboard Sync Triggered")
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            syncStatusMessage = nil
+        if let user = authViewModel.user {
+            CleverTapService.shared.createUserProfile(
+                email: user.email ?? "",
+                userId: user.uid,
+                name: user.displayName ?? "",
+                isNewUser: false
+            )
+        }
+
+        profileService.fetchUserProfile { _ in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                let didSync = profileService.forceCleverTapSync()
+                syncStatusMessage = didSync ? "Profile sync triggered." : "Profile sync failed. Please login again."
+                CleverTapService.shared.trackEvent("Dashboard Sync Result", withProps: [
+                    "Success": didSync
+                ])
+                loadProfileData()
+                isSyncing = false
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    syncStatusMessage = nil
+                }
+            }
         }
     }
     
@@ -498,10 +569,14 @@ struct ProfileDataRow: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundColor(.blue)
-                .frame(width: 24)
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color("CleverTapPrimary").opacity(0.13))
+                    .frame(width: 28, height: 28)
+                Image(systemName: icon)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(Color("CleverTapPrimary"))
+            }
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -524,13 +599,13 @@ struct ProfileDataRow: View {
                 }) {
                     Image(systemName: "doc.on.doc")
                         .font(.caption)
-                        .foregroundColor(.blue)
+                        .foregroundColor(Color("CleverTapPrimary"))
                 }
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
         .padding(.horizontal, 12)
-        .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 8))
+        .background(Color(.secondarySystemBackground).opacity(0.75), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 }
 
@@ -543,10 +618,10 @@ struct MetricCard: View {
     var body: some View {
         VStack(spacing: 8) {
             Image(systemName: icon)
-                .font(.title2)
+                .font(.title3.weight(.semibold))
                 .foregroundColor(color)
                 .frame(width: 40, height: 40)
-                .background(color.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+                .background(color.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             
             Text(value)
                 .font(.title3)
@@ -560,7 +635,7 @@ struct MetricCard: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
-        .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 12))
+        .background(Color(.secondarySystemBackground).opacity(0.75), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
@@ -572,10 +647,14 @@ struct MetricRow: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundColor(color)
-                .frame(width: 24)
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(color.opacity(0.14))
+                    .frame(width: 28, height: 28)
+                Image(systemName: icon)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(color)
+            }
             
             Text(title)
                 .font(.subheadline)
@@ -588,9 +667,9 @@ struct MetricRow: View {
                 .fontWeight(.semibold)
                 .foregroundColor(.primary)
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
         .padding(.horizontal, 12)
-        .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 8))
+        .background(Color(.secondarySystemBackground).opacity(0.75), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 }
 
@@ -601,10 +680,14 @@ struct NotificationStatusRow: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundColor(isEnabled ? .green : .red)
-                .frame(width: 24)
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill((isEnabled ? Color.green : Color.red).opacity(0.14))
+                    .frame(width: 28, height: 28)
+                Image(systemName: icon)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(isEnabled ? .green : .red)
+            }
             
             Text(title)
                 .font(.subheadline)
@@ -620,9 +703,9 @@ struct NotificationStatusRow: View {
                 .padding(.vertical, 4)
                 .background(isEnabled ? .green : .red, in: RoundedRectangle(cornerRadius: 8))
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
         .padding(.horizontal, 12)
-        .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 8))
+        .background(Color(.secondarySystemBackground).opacity(0.75), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 }
 
@@ -631,16 +714,20 @@ struct ActionButton: View {
     let subtitle: String
     let icon: String
     let color: Color
+    var isDisabled: Bool = false
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.title3)
-                    .foregroundColor(color)
-                    .frame(width: 40, height: 40)
-                    .background(color.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(color.opacity(0.14))
+                        .frame(width: 40, height: 40)
+                    Image(systemName: icon)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(color)
+                }
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
@@ -660,9 +747,30 @@ struct ActionButton: View {
                     .foregroundColor(.secondary)
             }
             .padding(12)
-            .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 12))
+            .background(Color(.secondarySystemBackground).opacity(0.75), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .opacity(isDisabled ? 0.6 : 1.0)
+        .buttonStyle(ScalePressButtonStyle())
+    }
+}
+
+struct DashboardPill: View {
+    let title: String
+    let value: String
+    let icon: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption.weight(.semibold))
+            Text("\(title): \(value)")
+                .font(.caption2.weight(.semibold))
+        }
+        .foregroundColor(Color("CleverTapPrimary"))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color("CleverTapPrimary").opacity(0.12), in: Capsule())
     }
 }
 

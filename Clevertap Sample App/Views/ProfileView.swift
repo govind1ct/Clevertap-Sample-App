@@ -13,6 +13,7 @@ struct ProfileView: View {
     @State private var isLoadingProfile = false
     @State private var isSyncingProfile = false
     @State private var syncStatusMessage: String?
+    @State private var animateContent = false
     
     enum ActiveSheet: Identifiable {
         case editProfile, notificationSettings, cleverTapDashboard
@@ -27,49 +28,110 @@ struct ProfileView: View {
     
     @State private var activeSheet: ActiveSheet?
     @Environment(\.colorScheme) var colorScheme
+
+    private var totalSpentValue: Int {
+        Int(orders.reduce(0) { $0 + $1.total })
+    }
+
+    private var profileCompletionValue: Int {
+        calculateProfileCompletion()
+    }
+
+    private var membershipTierValue: String {
+        determineMembershipTier()
+    }
+
+    private var isCompactScreen: Bool {
+        UIScreen.main.bounds.height <= 750
+    }
+
+    private var horizontalInset: CGFloat {
+        isCompactScreen ? 16 : 20
+    }
+
+    private var contentSectionSpacing: CGFloat {
+        isCompactScreen ? 22 : 28
+    }
+
+    private var contentTopPadding: CGFloat {
+        isCompactScreen ? 14 : 20
+    }
+
+    private var contentBottomPadding: CGFloat {
+        isCompactScreen ? 28 : 40
+    }
+
+    private var heroCardPadding: CGFloat {
+        isCompactScreen ? 22 : 30
+    }
+
+    private var sectionCardPadding: CGFloat {
+        isCompactScreen ? 16 : 20
+    }
+
+    private let membershipTierOptions = ["Bronze", "Silver", "Gold"]
     
     var body: some View {
         ZStack {
-            
+
             LinearGradient(
                 colors: [
-                    Color("CleverTapPrimary").opacity(0.07),
-                    Color("CleverTapSecondary").opacity(0.05),
-                    Color.clear
+                    Color("CleverTapPrimary").opacity(0.16),
+                    Color("CleverTapSecondary").opacity(0.10),
+                    Color(.systemBackground),
+                    Color(.systemBackground)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
-            
+
+            Circle()
+                .fill(Color("CleverTapPrimary").opacity(0.12))
+                .frame(width: 260, height: 260)
+                .blur(radius: 40)
+                .offset(x: -140, y: -320)
+
+            Circle()
+                .fill(Color("CleverTapSecondary").opacity(0.10))
+                .frame(width: 300, height: 300)
+                .blur(radius: 55)
+                .offset(x: 160, y: -260)
+
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 28) {
-                    
+                VStack(spacing: contentSectionSpacing) {
+
                     headerSection
                     userProfileCard
-                   // cleverTapStatsSection
-                    
+
                     ProfileNativeDisplayView()
-                        .padding(.horizontal, 20)
-                    
-                   // quickStatsSection
+                        .padding(.horizontal, horizontalInset)
+
                     profileManagementSection
-                    notificationPreferencesSection
                     cleverTapIntegrationSection
                     orderHistorySection
                     logoutButton
                 }
-                .padding(.top, 20)
-                .padding(.bottom, 40)
+                .padding(.top, contentTopPadding)
+                .padding(.bottom, contentBottomPadding)
+                .opacity(animateContent ? 1 : 0)
+                .offset(y: animateContent ? 0 : 10)
+                .animation(.spring(response: 0.45, dampingFraction: 0.86), value: animateContent)
             }
         }
         .navigationBarHidden(true)
         .onAppear {
+            if !animateContent {
+                animateContent = true
+            }
             fetchUserData()
             CleverTapService.shared.trackScreenViewed(screenName: "Profile")
             CleverTapService.shared.addToMultiValueProperty(key: "Features Used", value: "Profile Management")
         }
         .refreshable {
+            CleverTapService.shared.trackEvent("Profile Refreshed", withProps: [
+                "Source": "pull_to_refresh"
+            ])
             await refreshUserData()
         }
         .sheet(item: $activeSheet) { sheet in
@@ -97,124 +159,218 @@ struct ProfileView: View {
         
         var headerSection: some View {
             HStack {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Profile")
-                        .font(.system(size: 30, weight: .bold))
-                    
-                    Text("Manage your account & preferences")
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Account")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(Color("CleverTapPrimary"))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color("CleverTapPrimary").opacity(0.14), in: Capsule())
+
+                    Text("Profile Hub")
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color.primary, Color.primary.opacity(0.75)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+
+                    Text("Manage identity, preferences, and CleverTap sync in one place.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                
+
                 Spacer()
-                
-                Button {
-                    activeSheet = .cleverTapDashboard
-                } label: {
-                    Image(systemName: "chart.bar.fill")
-                        .font(.title3)
-                        .frame(width: 44, height: 44)
-                        .background(.regularMaterial, in: Circle())
+
+                VStack(spacing: 10) {
+                    Button {
+                        openEditProfile(source: "header_icon")
+                    } label: {
+                        Image(systemName: "square.and.pencil")
+                            .font(.title3)
+                            .frame(width: 46, height: 46)
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                    .buttonStyle(ScalePressButtonStyle())
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, horizontalInset)
         }
 
     // MARK: - User Profile Card
         var userProfileCard: some View {
             VStack(spacing: 20) {
-                
+
                 if isLoadingProfile {
                     ProgressView()
                         .scaleEffect(1.2)
                         .padding(.vertical, 40)
                 } else {
-                    
-                    VStack(spacing: 18) {
-                        
-                        ZStack {
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [
-                                            Color("CleverTapPrimary"),
-                                            Color("CleverTapSecondary")
-                                        ],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
+
+                    VStack(alignment: .leading, spacing: 20) {
+                        HStack(alignment: .top, spacing: 16) {
+                            ZStack {
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [
+                                                Color("CleverTapPrimary"),
+                                                Color("CleverTapSecondary")
+                                            ],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
                                     )
-                                )
-                                .frame(width: 110, height: 110)
-                                .shadow(color: Color("CleverTapPrimary").opacity(0.4),
-                                        radius: 18, y: 10)
-                            
-                            if let resolvedProfilePhotoURL = resolveProfileImageURL(from: profileService.userProfile.photoURL), !profileService.userProfile.photoURL.isEmpty {
-                                AsyncImage(url: resolvedProfilePhotoURL) { image in
-                                    image
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                } placeholder: {
+                                    .frame(width: 92, height: 92)
+                                    .shadow(color: Color("CleverTapPrimary").opacity(0.34),
+                                            radius: 16, y: 8)
+
+                                if let resolvedProfilePhotoURL = resolveProfileImageURL(from: profileService.userProfile.photoURL), !profileService.userProfile.photoURL.isEmpty {
+                                    AsyncImage(url: resolvedProfilePhotoURL) { image in
+                                        image
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                    } placeholder: {
+                                        profileInitials
+                                    }
+                                    .frame(width: 92, height: 92)
+                                    .clipShape(Circle())
+                                } else {
                                     profileInitials
                                 }
-                                .frame(width: 110, height: 110)
-                                .clipShape(Circle())
-                            } else {
-                                profileInitials
                             }
+
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(profileService.userProfile.name.isEmpty ? "User" : profileService.userProfile.name)
+                                    .font(.title3.weight(.semibold))
+
+                                if let user = authViewModel.user {
+                                    Text(user.email ?? "")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+
+                                    Text("Member since \(formatJoinDate(user.metadata.creationDate))")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+
+                                if let cleverTapID = CleverTapService.shared.getUserID() {
+                                    Text("CT ID: \(String(cleverTapID.prefix(8)))...")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 4)
+                                        .background(.ultraThinMaterial, in: Capsule())
+                                }
+                            }
+
+                            Spacer()
                         }
-                        
-                        VStack(spacing: 6) {
-                            Text(profileService.userProfile.name.isEmpty ? "User" : profileService.userProfile.name)
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                            
-                            if let user = authViewModel.user {
-                                Text(user.email ?? "")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                                
-                                Text("Member since \(formatJoinDate(user.metadata.creationDate))")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            if let cleverTapID = CleverTapService.shared.getUserID() {
-                                Text("CT ID: \(String(cleverTapID.prefix(8)))...")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 4)
-                                    .background(.ultraThinMaterial, in: Capsule())
-                            }
+
+                        HStack(spacing: 10) {
+                            ProfileMetricChip(title: "Orders", value: "\(orders.count)", icon: "bag.fill")
+                            ProfileMetricChip(title: "Spent", value: "₹\(totalSpentValue)", icon: "creditcard.fill")
+                            ProfileMetricChip(title: "Tier", value: membershipTierValue, icon: "crown.fill")
                         }
-                        
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("Profile Completion")
+                                    .font(.caption.weight(.medium))
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Text("\(profileCompletionValue)%")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundColor(Color("CleverTapPrimary"))
+                            }
+
+                            ProgressView(value: Double(profileCompletionValue), total: 100)
+                                .tint(Color("CleverTapPrimary"))
+                        }
+
+                        HStack(spacing: 12) {
+                            Button {
+                                openEditProfile(source: "hero_edit_profile")
+                            } label: {
+                                Label("Edit Profile", systemImage: "square.and.pencil")
+                                    .font(.subheadline.weight(.semibold))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [
+                                                Color("CleverTapPrimary"),
+                                                Color("CleverTapSecondary")
+                                            ],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        ),
+                                        in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    )
+                                    .foregroundColor(.white)
+                            }
+                            .buttonStyle(ScalePressButtonStyle())
+
+                            Button {
+                                openNotificationSettings(source: "hero_alerts")
+                            } label: {
+                                Label("Alerts", systemImage: "bell.badge.fill")
+                                    .font(.subheadline.weight(.semibold))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            }
+                            .buttonStyle(ScalePressButtonStyle())
+                        }
+
                         Button {
-                            activeSheet = .editProfile
+                            openCleverTapDashboard(source: "hero_dashboard")
                         } label: {
-                            Text("Edit Profile")
-                                .fontWeight(.medium)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 10)
-                                .background(
-                                    LinearGradient(
-                                        colors: [
-                                            Color("CleverTapPrimary"),
-                                            Color("CleverTapSecondary")
-                                        ],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    ),
-                                    in: Capsule()
-                                )
-                                .foregroundColor(.white)
+                            HStack(spacing: 12) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                        .fill(Color("CleverTapPrimary").opacity(0.16))
+                                        .frame(width: 34, height: 34)
+                                    Image(systemName: "chart.bar.fill")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundColor(Color("CleverTapPrimary"))
+                                }
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("CleverTap Dashboard")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundColor(.primary)
+                                    Text("View live profile analytics")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+
+                                Spacer()
+
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.bold))
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 11)
+                            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                         }
+                        .buttonStyle(ScalePressButtonStyle())
                     }
-                    .padding(30)
+                    .padding(heroCardPadding)
                 }
             }
             .frame(maxWidth: .infinity)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24))
-            .padding(.horizontal, 20)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(Color.white.opacity(0.28), lineWidth: 1)
+            )
+            .padding(.horizontal, horizontalInset)
         }
         
         var profileInitials: some View {
@@ -288,47 +444,108 @@ struct ProfileView: View {
                 title: "Profile Management",
                 subtitle: "Update your personal information"
             )
+
+            HStack(spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .foregroundColor(Color("CleverTapPrimary"))
+                    Text("\(profileCompletionValue)% Complete")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(.primary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color("CleverTapPrimary").opacity(0.14), in: Capsule())
+
+                Spacer()
+
+                Menu {
+                    ForEach(membershipTierOptions, id: \.self) { tier in
+                        Button {
+                            profileService.updateMembershipTier(tier)
+                            CleverTapService.shared.trackEvent("Profile Membership Tier Updated", withProps: [
+                                "Tier": tier,
+                                "Source": "profile_management_menu"
+                            ])
+                            syncStatusMessage = "Membership tier updated to \(tier)."
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                                syncStatusMessage = nil
+                            }
+                        } label: {
+                            if membershipTierValue == tier {
+                                Label(tier, systemImage: "checkmark")
+                            } else {
+                                Text(tier)
+                            }
+                        }
+                    }
+                } label: {
+                    Label(membershipTierValue, systemImage: "crown.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(.yellow)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(.yellow.opacity(0.15), in: Capsule())
+                }
+                .buttonStyle(ScalePressButtonStyle())
+
+                Button {
+                    openEditProfile(source: "profile_management_edit_all")
+                } label: {
+                    Label("Edit All", systemImage: "square.and.pencil")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(Color("CleverTapPrimary"))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color("CleverTapPrimary").opacity(0.10), in: Capsule())
+                }
+                .buttonStyle(ScalePressButtonStyle())
+            }
             
             VStack(spacing: 12) {
                 ProfileInfoRow(
                     title: "Full Name",
                     value: profileService.userProfile.name.isEmpty ? "Not set" : profileService.userProfile.name,
                     icon: "person.fill",
-                    onEdit: { activeSheet = .editProfile }
+                    onEdit: { openEditProfile(source: "profile_info_full_name") }
                 )
                 
                 ProfileInfoRow(
                     title: "Phone",
                     value: profileService.userProfile.phone.isEmpty ? "Not set" : profileService.userProfile.phone,
                     icon: "phone.fill",
-                    onEdit: { activeSheet = .editProfile }
+                    onEdit: { openEditProfile(source: "profile_info_phone") }
                 )
                 
                 ProfileInfoRow(
                     title: "Location",
                     value: profileService.userProfile.location.isEmpty ? "Not set" : profileService.userProfile.location,
                     icon: "location.fill",
-                    onEdit: { activeSheet = .editProfile }
+                    onEdit: { openEditProfile(source: "profile_info_location") }
                 )
                 
                 ProfileInfoRow(
                     title: "Date of Birth",
                     value: profileService.userProfile.dateOfBirth != nil ? formatDate(profileService.userProfile.dateOfBirth!) : "Not set",
                     icon: "calendar",
-                    onEdit: { activeSheet = .editProfile }
+                    onEdit: { openEditProfile(source: "profile_info_dob") }
                 )
                 
                 ProfileInfoRow(
                     title: "Gender",
                     value: profileService.userProfile.gender.isEmpty ? "Not set" : profileService.userProfile.gender,
                     icon: "person.2.fill",
-                    onEdit: { activeSheet = .editProfile }
+                    onEdit: { openEditProfile(source: "profile_info_gender") }
                 )
             }
         }
-        .padding(20)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
-        .padding(.horizontal, 20)
+        .padding(sectionCardPadding)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.white.opacity(0.22), lineWidth: 1)
+        )
+        .padding(.horizontal, horizontalInset)
     }
     
     // MARK: - Notification Preferences Section
@@ -386,9 +603,13 @@ struct ProfileView: View {
                 }
             }
         }
-        .padding(20)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
-        .padding(.horizontal, 20)
+        .padding(sectionCardPadding)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color.white.opacity(0.22), lineWidth: 1)
+        )
+        .padding(.horizontal, horizontalInset)
     }
     
     // MARK: - CleverTap Integration Section
@@ -398,6 +619,52 @@ struct ProfileView: View {
                 title: "CleverTap Integration",
                 subtitle: "Advanced analytics and personalization"
             )
+
+            Button {
+                triggerProfileSync()
+            } label: {
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color.white.opacity(0.16))
+                            .frame(width: 40, height: 40)
+                        if isSyncingProfile {
+                            ProgressView()
+                                .tint(.white)
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.headline.weight(.semibold))
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(isSyncingProfile ? "Syncing Profile..." : "Sync Profile Data")
+                            .font(.subheadline.weight(.semibold))
+                        Text("Push latest profile and preference updates to CleverTap")
+                            .font(.caption)
+                            .opacity(0.9)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .opacity(0.9)
+                }
+                .foregroundColor(.white)
+                .padding(14)
+                .background(
+                    LinearGradient(
+                        colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ),
+                    in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                )
+            }
+            .disabled(isSyncingProfile)
+            .buttonStyle(ScalePressButtonStyle())
             
             VStack(spacing: 12) {
                 CleverTapActionCard(
@@ -406,17 +673,7 @@ struct ProfileView: View {
                     icon: "chart.bar.fill",
                     color: .blue
                 ) {
-                    activeSheet = .cleverTapDashboard
-                }
-                
-                CleverTapActionCard(
-                    title: "Sync Profile Data",
-                    subtitle: isSyncingProfile ? "Sync in progress..." : "Update CleverTap profile",
-                    icon: "arrow.triangle.2.circlepath",
-                    color: .green,
-                    isDisabled: isSyncingProfile
-                ) {
-                    triggerProfileSync()
+                    openCleverTapDashboard(source: "ct_integration_dashboard_card")
                 }
                 
                 CleverTapActionCard(
@@ -425,6 +682,9 @@ struct ProfileView: View {
                     icon: "bell.badge",
                     color: .orange
                 ) {
+                    CleverTapService.shared.trackEvent("Profile Test Notifications Triggered", withProps: [
+                        "Source": "ct_integration_card"
+                    ])
                     CleverTapInAppService.shared.triggerPushNotification()
                 }
                 
@@ -435,10 +695,16 @@ struct ProfileView: View {
                     color: .purple
                 ) {
                     if let dob = profileService.userProfile.dateOfBirth {
+                        CleverTapService.shared.trackEvent("Profile Test DOB Triggered", withProps: [
+                            "Source": "ct_integration_card"
+                        ])
                         CleverTapService.shared.updateDateOfBirth(dob)
                         CleverTapService.shared.debugProfileData()
                     } else {
-                        activeSheet = .editProfile
+                        CleverTapService.shared.trackEvent("Profile Test DOB Missing", withProps: [
+                            "Source": "ct_integration_card"
+                        ])
+                        openEditProfile(source: "ct_integration_missing_dob")
                     }
                 }
             }
@@ -458,11 +724,16 @@ struct ProfileView: View {
                         .foregroundColor(.secondary)
                 }
                 .padding(.top, 4)
+                .transition(.opacity)
             }
         }
-        .padding(20)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
-        .padding(.horizontal, 20)
+        .padding(sectionCardPadding)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.white.opacity(0.22), lineWidth: 1)
+        )
+        .padding(.horizontal, horizontalInset)
     }
     
     // MARK: - Order History
@@ -472,14 +743,40 @@ struct ProfileView: View {
                 SectionHeader(
                     title: "Recent Orders",
                     subtitle: "Your order history"
-                )
+                    )
                 
                 Spacer()
                 
                 if isLoadingOrders {
                     ProgressView()
                         .scaleEffect(0.8)
+                } else if !orders.isEmpty {
+                    NavigationLink {
+                        OrderHistoryView(orders: orders)
+                    } label: {
+                        Text("View All")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(Color("CleverTapPrimary"))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color("CleverTapPrimary").opacity(0.12), in: Capsule())
+                    }
+                    .buttonStyle(ScalePressButtonStyle())
+                    .simultaneousGesture(TapGesture().onEnded {
+                        CleverTapService.shared.trackEvent("Profile View All Orders Opened", withProps: [
+                            "Order Count": orders.count
+                        ])
+                    })
                 }
+            }
+
+            if !isLoadingOrders && !orders.isEmpty {
+                HStack(spacing: 10) {
+                    ProfileMetricChip(title: "Total Orders", value: "\(orders.count)", icon: "cart.fill")
+                    ProfileMetricChip(title: "Total Spend", value: "₹\(Int(orders.reduce(0) { $0 + $1.total }))", icon: "indianrupeesign.circle.fill")
+                    ProfileMetricChip(title: "Latest", value: orders.first?.status.capitalized ?? "-", icon: "clock.arrow.circlepath")
+                }
+                .transition(.opacity)
             }
             
             if isLoadingOrders {
@@ -513,53 +810,103 @@ struct ProfileView: View {
                         } label: {
                             OrderRowView(order: order)
                         }
-                        .buttonStyle(.plain)
-                    }
-                    
-                    if orders.count > 3 {
-                        NavigationLink {
-                            OrderHistoryView(orders: orders)
-                        } label: {
-                            Text("View All Orders")
-                                .font(.subheadline)
-                                .foregroundColor(.blue)
-                                .padding(.top, 8)
-                        }
+                        .buttonStyle(ScalePressButtonStyle())
+                        .simultaneousGesture(TapGesture().onEnded {
+                            CleverTapService.shared.trackEvent("Profile Order Detail Opened", withProps: [
+                                "Order ID": order.id ?? "Unknown",
+                                "Order Status": order.status
+                            ])
+                        })
                     }
                 }
             }
         }
-        .padding(20)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
-        .padding(.horizontal, 20)
+        .padding(sectionCardPadding)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.white.opacity(0.22), lineWidth: 1)
+        )
+        .padding(.horizontal, horizontalInset)
     }
     
     // MARK: - Logout Button
     private var logoutButton: some View {
         Button(action: {
             CleverTapService.shared.trackScreenViewed(screenName: "Logout")
+            CleverTapService.shared.trackEvent("Profile Sign Out Tapped")
             authViewModel.signOut()
         }) {
-            HStack(spacing: 12) {
-                Image(systemName: "rectangle.portrait.and.arrow.right")
-                Text("Sign Out")
-                    .fontWeight(.semibold)
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(.white.opacity(0.18))
+                        .frame(width: 34, height: 34)
+
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundColor(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Sign Out")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.white)
+
+                    Text("Securely end this session")
+                        .font(.caption2)
+                        .foregroundColor(.white.opacity(0.9))
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundColor(.white.opacity(0.9))
             }
-            .font(.subheadline)
-            .foregroundColor(.red)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(.red.opacity(0.3), lineWidth: 1)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(
+                LinearGradient(
+                    colors: [Color.red.opacity(0.95), Color.orange.opacity(0.85)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ),
+                in: RoundedRectangle(cornerRadius: 18, style: .continuous)
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(.white.opacity(0.18), lineWidth: 1)
+            )
+            .shadow(color: .red.opacity(0.22), radius: 12, x: 0, y: 8)
         }
-        .padding(.horizontal, 20)
+        .buttonStyle(ScalePressButtonStyle())
+        .padding(.horizontal, horizontalInset)
         .padding(.bottom, 20)
     }
     
     // MARK: - Helper Methods
+
+    private func openEditProfile(source: String) {
+        CleverTapService.shared.trackEvent("Profile Edit Opened", withProps: [
+            "Source": source
+        ])
+        activeSheet = .editProfile
+    }
+
+    private func openNotificationSettings(source: String) {
+        CleverTapService.shared.trackEvent("Profile Alerts Opened", withProps: [
+            "Source": source
+        ])
+        activeSheet = .notificationSettings
+    }
+
+    private func openCleverTapDashboard(source: String) {
+        CleverTapService.shared.trackEvent("Profile Dashboard Opened", withProps: [
+            "Source": source
+        ])
+        activeSheet = .cleverTapDashboard
+    }
     
     private func fetchUserData(completion: (() -> Void)? = nil) {
         isLoadingProfile = true
@@ -585,6 +932,11 @@ struct ProfileView: View {
         }
         
         group.notify(queue: .main) {
+            CleverTapService.shared.trackEvent("Profile Data Loaded", withProps: [
+                "Orders Count": self.orders.count,
+                "Profile Completion": self.calculateProfileCompletion(),
+                "Membership Tier": self.membershipTierValue
+            ])
             completion?()
         }
     }
@@ -639,7 +991,7 @@ struct ProfileView: View {
                 "Account Created": user.metadata.creationDate ?? Date(),
                 "Last Login": user.metadata.lastSignInDate ?? Date(),
                 "Profile Completion": calculateProfileCompletion(),
-                "Membership Tier": determineMembershipTier()
+                "Membership Tier": membershipTierValue
             ]
         )
         
@@ -656,17 +1008,34 @@ struct ProfileView: View {
     private func triggerProfileSync() {
         guard !isSyncingProfile else { return }
         
+        CleverTapService.shared.trackEvent("Profile Sync Triggered", withProps: [
+            "Source": "profile_sync_cta"
+        ])
         isSyncingProfile = true
         syncStatusMessage = "Syncing profile data..."
         syncCleverTapProfile()
-        let didSync = profileService.forceCleverTapSync()
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            isSyncingProfile = false
-            syncStatusMessage = didSync ? "Profile synced successfully" : "Profile sync failed. Please login again."
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                syncStatusMessage = nil
+
+        if let user = authViewModel.user {
+            CleverTapService.shared.createUserProfile(
+                email: user.email ?? "",
+                userId: user.uid,
+                name: profileService.userProfile.name.isEmpty ? (user.displayName ?? "") : profileService.userProfile.name,
+                isNewUser: false
+            )
+        }
+
+        profileService.fetchUserProfile { _ in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                let didSync = profileService.forceCleverTapSync()
+                isSyncingProfile = false
+                syncStatusMessage = didSync ? "Profile synced successfully" : "Profile sync failed. Please login again."
+                CleverTapService.shared.trackEvent("Profile Sync Result", withProps: [
+                    "Success": didSync
+                ])
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    syncStatusMessage = nil
+                }
             }
         }
     }
@@ -708,9 +1077,14 @@ struct ProfileView: View {
     }
     
     private func determineMembershipTier() -> String {
+        let storedTier = profileService.userProfile.membershipTier
+        if ["Bronze", "Silver", "Gold"].contains(storedTier) {
+            return storedTier
+        }
+
         let totalSpent = orders.reduce(0) { $0 + $1.total }
         let orderCount = orders.count
-        
+
         if totalSpent >= 10000 || orderCount >= 10 {
             return "Gold"
         } else if totalSpent >= 5000 || orderCount >= 5 {
@@ -730,6 +1104,41 @@ struct ProfileView: View {
 }
 
 // MARK: - Supporting Views
+
+struct ScalePressButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .opacity(configuration.isPressed ? 0.92 : 1.0)
+            .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
+    }
+}
+
+struct ProfileMetricChip: View {
+    let title: String
+    let value: String
+    let icon: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.caption.weight(.semibold))
+                Text(title)
+                    .font(.caption2.weight(.medium))
+            }
+            .foregroundColor(.secondary)
+
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.primary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color(.secondarySystemBackground).opacity(0.75), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
 
 struct ModernSettingsRow: View {
     let title: String
@@ -771,7 +1180,7 @@ struct ModernSettingsRow: View {
                     .stroke(.white.opacity(0.2), lineWidth: 1)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(ScalePressButtonStyle())
     }
 }
 
@@ -831,10 +1240,16 @@ struct ModernOrderRow: View {
     var body: some View {
         HStack(spacing: 16) {
             Image(systemName: "shippingbox.fill")
-                .font(.title2)
-                .foregroundColor(.blue)
-                .frame(width: 40, height: 40)
-                .background(.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 42, height: 42)
+                .background(Color("CleverTapPrimary").opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             
             VStack(alignment: .leading, spacing: 4) {
                 Text("Order #\(order.id ?? "Unknown")")
@@ -869,10 +1284,10 @@ struct ModernOrderRow: View {
             }
         }
         .padding(16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(.white.opacity(0.2), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(.white.opacity(0.22), lineWidth: 1)
         )
     }
 }
@@ -1001,10 +1416,10 @@ struct CleverTapActionCard: View {
         Button(action: action) {
             HStack(spacing: 16) {
                 Image(systemName: icon)
-                    .font(.title2)
+                    .font(.title3.weight(.semibold))
                     .foregroundColor(color)
-                    .frame(width: 40, height: 40)
-                    .background(color.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+                    .frame(width: 42, height: 42)
+                    .background(color.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
@@ -1024,15 +1439,15 @@ struct CleverTapActionCard: View {
                     .foregroundColor(.secondary)
             }
             .padding(16)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 16)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .stroke(.white.opacity(0.2), lineWidth: 1)
             )
         }
         .disabled(isDisabled)
         .opacity(isDisabled ? 0.6 : 1.0)
-        .buttonStyle(.plain)
+        .buttonStyle(ScalePressButtonStyle())
     }
 }
 
@@ -1046,10 +1461,16 @@ struct NotificationToggleRow: View {
     var body: some View {
         HStack(spacing: 16) {
             Image(systemName: icon)
-                .font(.title2)
-                .foregroundColor(.blue)
-                .frame(width: 40, height: 40)
-                .background(.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 42, height: 42)
+                .background(Color("CleverTapPrimary").opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
@@ -1070,9 +1491,9 @@ struct NotificationToggleRow: View {
             ))
         }
         .padding(16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(.white.opacity(0.2), lineWidth: 1)
         )
     }
@@ -1087,10 +1508,16 @@ struct ProfileInfoRow: View {
     var body: some View {
         HStack(spacing: 16) {
             Image(systemName: icon)
-                .font(.title2)
-                .foregroundColor(.blue)
-                .frame(width: 40, height: 40)
-                .background(.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 42, height: 42)
+                .background(Color("CleverTapPrimary").opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
@@ -1111,17 +1538,18 @@ struct ProfileInfoRow: View {
                     Text("Edit")
                         .font(.caption)
                         .fontWeight(.medium)
-                        .foregroundColor(.blue)
+                        .foregroundColor(Color("CleverTapPrimary"))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+                        .background(Color("CleverTapPrimary").opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
+                .buttonStyle(ScalePressButtonStyle())
             }
         }
         .padding(16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(.white.opacity(0.2), lineWidth: 1)
         )
     }

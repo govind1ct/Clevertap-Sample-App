@@ -335,6 +335,16 @@ class ProfileService: ObservableObject {
         saveUserProfile()
         syncWithCleverTap()
     }
+
+    // MARK: - Update Membership Tier
+    func updateMembershipTier(_ tier: String) {
+        let allowed = ["Bronze", "Silver", "Gold"]
+        guard allowed.contains(tier) else { return }
+
+        userProfile.membershipTier = tier
+        saveUserProfile()
+        syncWithCleverTap()
+    }
     
     // MARK: - Private Methods
     private func createDefaultProfile() {

@@ -18,6 +18,16 @@ struct NativeDisplayContainerView: View {
         let units = nativeDisplayService.getDisplayUnitsForLocation(location)
         return Array(units.prefix(maxDisplayUnits))
     }
+
+    private var carouselHeight: CGFloat {
+        let hasMedia = filteredDisplayUnits.contains { unit in
+            guard let contents = unit.contents else { return false }
+            return contents.contains { content in
+                content.mediaIsImage || content.mediaIsGif || content.mediaIsVideo || content.mediaIsAudio
+            }
+        }
+        return hasMedia ? 300 : 170
+    }
     
     var body: some View {
         Group {
@@ -59,7 +69,7 @@ struct NativeDisplayContainerView: View {
                         }
                     }
                     .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
-                    .frame(height: 300)
+                    .frame(height: carouselHeight)
                 }
             } else if nativeDisplayService.isLoading {
                 // Loading state
@@ -91,17 +101,51 @@ enum NativeDisplayLayout {
 // MARK: - Specialized Native Display Views for different locations
 
 struct HomeNativeDisplayView: View {
+    @StateObject private var nativeDisplayService = CleverTapNativeDisplayService.shared
+
+    private var heroUnits: [CleverTapDisplayUnit] {
+        Array(nativeDisplayService.getDisplayUnitsForLocation("hero").prefix(1))
+    }
+
+    private var heroIDs: Set<String> {
+        Set(heroUnits.compactMap(\.unitID))
+    }
+
+    private var promotionUnits: [CleverTapDisplayUnit] {
+        nativeDisplayService
+            .getDisplayUnitsForLocation("promotion")
+            .filter { unit in
+                guard let id = unit.unitID else { return true }
+                return !heroIDs.contains(id)
+            }
+    }
+
+    private var promotionIDs: Set<String> {
+        Set(promotionUnits.compactMap(\.unitID))
+    }
+
+    private var genericHomeUnits: [CleverTapDisplayUnit] {
+        nativeDisplayService
+            .getDisplayUnitsForLocation("home")
+            .filter { unit in
+                guard let id = unit.unitID else { return true }
+                return !heroIDs.contains(id) && !promotionIDs.contains(id)
+            }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Hero banner at top
-            NativeDisplayContainerView(
-                location: "hero",
-                maxDisplayUnits: 1,
-                layout: .carousel
-            )
+            if !heroUnits.isEmpty {
+                NativeDisplayContainerView(
+                    location: "hero",
+                    maxDisplayUnits: 1,
+                    layout: .carousel
+                )
+            }
             
             // Promotional content in horizontal scroll
-            if !CleverTapNativeDisplayService.shared.getDisplayUnitsForLocation("promotion").isEmpty {
+            if !promotionUnits.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Special Offers")
                         .font(.headline)
@@ -117,11 +161,13 @@ struct HomeNativeDisplayView: View {
             }
             
             // General home content
-            NativeDisplayContainerView(
-                location: "home",
-                maxDisplayUnits: 3,
-                layout: .vertical
-            )
+            if !genericHomeUnits.isEmpty {
+                NativeDisplayContainerView(
+                    location: "home",
+                    maxDisplayUnits: 3,
+                    layout: .vertical
+                )
+            }
         }
     }
 }
