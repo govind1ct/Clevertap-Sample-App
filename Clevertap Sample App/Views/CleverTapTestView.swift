@@ -174,7 +174,8 @@ struct CleverTapTestView: View {
                 .padding(.bottom, 100)
             }
         }
-        .navigationBarHidden(true)
+        .navigationTitle("CleverTap Test Lab")
+        .navigationBarTitleDisplayMode(.inline)
         .alert(alertMessage, isPresented: $showAlert) {
             Button("OK") { }
         }

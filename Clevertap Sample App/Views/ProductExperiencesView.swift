@@ -1,19 +1,29 @@
 import SwiftUI
 
 struct ProductExperiencesView: View {
+    private enum ExperienceSection {
+        case productExperiences
+        case testLab
+    }
+
     @StateObject private var productExperiencesService = CleverTapProductExperiencesService.shared
     @State private var showAlert = false
     @State private var alertMessage = ""
+    @State private var selectedSection: ExperienceSection = .productExperiences
 
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
                 headerSection
-                prominentTestLabSection
-                variableStatusSection
-                actionsSection
-                guideSection
-                testLabLinkSection
+                sectionSelector
+
+                if selectedSection == .productExperiences {
+                    variableStatusSection
+                    actionsSection
+                    guideSection
+                } else {
+                    testLabSection
+                }
             }
             .padding(20)
             .padding(.bottom, 40)
@@ -43,43 +53,26 @@ private extension ProductExperiencesView {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    var prominentTestLabSection: some View {
-        NavigationLink {
-            CleverTapTestView()
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "flask.fill")
-                    .font(.title3)
-                    .foregroundColor(.white)
-                    .frame(width: 38, height: 38)
-                    .background(Color.black.opacity(0.20), in: RoundedRectangle(cornerRadius: 10))
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("CleverTap Test Lab")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                    Text("Run push/in-app/inbox/native display tests")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.92))
-                }
-
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.white.opacity(0.9))
+    var sectionSelector: some View {
+        HStack(spacing: 12) {
+            selectorCard(
+                title: "Product Experiences",
+                subtitle: "Remote config variables",
+                icon: "shippingbox.fill",
+                isSelected: selectedSection == .productExperiences
+            ) {
+                selectedSection = .productExperiences
             }
-            .padding(14)
-            .background(
-                LinearGradient(
-                    colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                ),
-                in: RoundedRectangle(cornerRadius: 14, style: .continuous)
-            )
-            .shadow(color: Color("CleverTapPrimary").opacity(0.32), radius: 10, y: 6)
+
+            selectorCard(
+                title: "CleverTap Test Lab",
+                subtitle: "Push, in-app, inbox tests",
+                icon: "brain.head.profile",
+                isSelected: selectedSection == .testLab
+            ) {
+                selectedSection = .testLab
+            }
         }
-        .buttonStyle(.plain)
     }
 
     var variableStatusSection: some View {
@@ -138,21 +131,107 @@ private extension ProductExperiencesView {
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
     }
 
-    var testLabLinkSection: some View {
-        NavigationLink {
-            CleverTapTestView()
-        } label: {
-            HStack {
-                Image(systemName: "testtube.2")
-                Text("More Test Lab Tools")
-                    .fontWeight(.medium)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+    var testLabSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("CleverTap Test Lab")
+                .font(.headline)
+
+            Text("Use the Test Lab to validate push, in-app templates, app inbox, and native display behavior.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+            NavigationLink {
+                CleverTapTestView()
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "brain.head.profile")
+                        .font(.title3)
+                        .foregroundColor(.white)
+                        .frame(width: 38, height: 38)
+                        .background(Color.black.opacity(0.20), in: RoundedRectangle(cornerRadius: 10))
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Open CleverTap Test Lab")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        Text("Run full test workflows")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.92))
+                    }
+
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.white.opacity(0.9))
+                }
+                .padding(14)
+                .background(
+                    LinearGradient(
+                        colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ),
+                    in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                )
+                .shadow(color: Color("CleverTapPrimary").opacity(0.32), radius: 10, y: 6)
             }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    func selectorCard(
+        title: String,
+        subtitle: String,
+        icon: String,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: icon)
+                        .font(.title3)
+                    Spacer()
+                    if isSelected {
+                        Label("Selected", systemImage: "checkmark.circle.fill")
+                            .font(.caption2.weight(.semibold))
+                    }
+                }
+
+                Text(title)
+                    .font(.headline)
+                    .lineLimit(2)
+
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(isSelected ? .white.opacity(0.9) : .secondary)
+                    .lineLimit(2)
+            }
+            .foregroundStyle(isSelected ? .white : .primary)
             .padding(14)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(
+                        isSelected
+                            ? AnyShapeStyle(
+                                LinearGradient(
+                                    colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            : AnyShapeStyle(Color(.secondarySystemGroupedBackground))
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(isSelected ? Color.clear : Color.secondary.opacity(0.2), lineWidth: 1)
+            )
+            .opacity(isSelected ? 1.0 : 0.9)
         }
         .buttonStyle(.plain)
     }
