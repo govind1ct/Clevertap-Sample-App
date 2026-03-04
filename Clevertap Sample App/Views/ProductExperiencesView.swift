@@ -4,6 +4,7 @@ struct ProductExperiencesView: View {
     private enum ExperienceSection {
         case productExperiences
         case testLab
+        case nativeDisplay
     }
 
     @StateObject private var productExperiencesService = CleverTapProductExperiencesService.shared
@@ -21,15 +22,17 @@ struct ProductExperiencesView: View {
                     variableStatusSection
                     actionsSection
                     guideSection
-                } else {
+                } else if selectedSection == .testLab {
                     testLabSection
+                } else {
+                    nativeDisplaySection
                 }
             }
             .padding(20)
             .padding(.bottom, 40)
         }
         .background(Color(.systemGroupedBackground))
-        .navigationTitle("Product Experiences")
+        .navigationTitle("Experiences")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             productExperiencesService.fetchVariables()
@@ -54,23 +57,37 @@ private extension ProductExperiencesView {
     }
 
     var sectionSelector: some View {
-        HStack(spacing: 12) {
-            selectorCard(
-                title: "Product Experiences",
-                subtitle: "Remote config variables",
-                icon: "shippingbox.fill",
-                isSelected: selectedSection == .productExperiences
-            ) {
-                selectedSection = .productExperiences
-            }
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                selectorCard(
+                    title: "Product Experiences",
+                    subtitle: "Remote config variables",
+                    icon: "shippingbox.fill",
+                    isSelected: selectedSection == .productExperiences
+                ) {
+                    selectedSection = .productExperiences
+                }
+                .frame(width: 192)
 
-            selectorCard(
-                title: "CleverTap Test Lab",
-                subtitle: "Push, in-app, inbox tests",
-                icon: "brain.head.profile",
-                isSelected: selectedSection == .testLab
-            ) {
-                selectedSection = .testLab
+                selectorCard(
+                    title: "CleverTap Test Lab",
+                    subtitle: "Push, in-app, inbox tests",
+                    icon: "brain.head.profile",
+                    isSelected: selectedSection == .testLab
+                ) {
+                    selectedSection = .testLab
+                }
+                .frame(width: 192)
+
+                selectorCard(
+                    title: "Native Display",
+                    subtitle: "Display units and locations",
+                    icon: "rectangle.3.group.fill",
+                    isSelected: selectedSection == .nativeDisplay
+                ) {
+                    selectedSection = .nativeDisplay
+                }
+                .frame(width: 192)
             }
         }
     }
@@ -180,6 +197,10 @@ private extension ProductExperiencesView {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    var nativeDisplaySection: some View {
+        NativeDisplayLabView()
     }
 
     func selectorCard(

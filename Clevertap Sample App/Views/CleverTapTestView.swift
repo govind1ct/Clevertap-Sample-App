@@ -77,14 +77,6 @@ struct CleverTapTestView: View {
         inAppService.appInboxCount > 0 ? "Active (\(inAppService.appInboxCount))" : "Empty"
     }
     
-    private let nativeDisplayLocations = [
-        "home_hero",
-        "product_list_header", 
-        "cart_recommendations",
-        "profile_offers",
-        "product_detail_related"
-    ]
-    
     struct TestEvent: Identifiable {
         let id = UUID()
         let title: String
@@ -146,68 +138,6 @@ struct CleverTapTestView: View {
                             .frame(maxWidth: .infinity)
                     }
                     
-                    // Native Display Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        SectionHeader(
-                            title: "Native Display",
-                            subtitle: "Test dynamic content display"
-                        )
-                        
-                        VStack(spacing: 12) {
-                            // Display Units Status
-                            NativeDisplayStatusCard()
-
-                            // Setup guide
-                            NativeDisplayImplementationCard()
-                            
-                            // Test Native Display Events
-                            VStack(spacing: 8) {
-                                ForEach(nativeDisplayLocations, id: \.self) { location in
-                                    TestActionCard(
-                                        title: "Test \(location.capitalized)",
-                                        subtitle: "Trigger display test",
-                                        icon: "rectangle.badge.plus",
-                                        gradient: [Color.purple, Color.blue],
-                                        action: { 
-                                            CleverTapNativeDisplayService.shared.triggerTestEvent(for: location)
-                                            addTestEvent(title: "Native Display Test: \(location)", success: true)
-                                        }
-                                    )
-                                }
-                            }
-                            
-                            // Refresh Display Units
-                            TestActionCard(
-                                title: "Refresh Units",
-                                subtitle: "Update display units",
-                                icon: "arrow.clockwise",
-                                gradient: [Color.blue, Color.cyan],
-                                action: { 
-                                    CleverTapNativeDisplayService.shared.refreshDisplayUnits()
-                                    addTestEvent(title: "Display Units Refreshed", success: true)
-                                }
-                            )
-                            
-                            // Show All Display Units
-                            NavigationLink(destination: NativeDisplayDebugView()) {
-                                HStack {
-                                    Image(systemName: "eye.fill")
-                                        .foregroundColor(.green)
-                                    Text("View All Display Units")
-                                        .fontWeight(.medium)
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                                .padding()
-                                .background(.green.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 20)
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 100)

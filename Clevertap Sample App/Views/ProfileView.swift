@@ -1639,6 +1639,18 @@ struct OrderDetailView: View {
         let lower = currentStatus.lowercased()
         return lower != "delivered" && lower != "cancelled"
     }
+
+    private var isCompactScreen: Bool {
+        UIScreen.main.bounds.height <= 750
+    }
+
+    private var horizontalInset: CGFloat {
+        isCompactScreen ? 16 : 20
+    }
+
+    private var sectionSpacing: CGFloat {
+        isCompactScreen ? 16 : 20
+    }
     
     private var shippingAddressLines: [String] {
         var lines: [String] = []
@@ -1658,33 +1670,69 @@ struct OrderDetailView: View {
         ZStack {
             LinearGradient(
                 colors: [
-                    Color("CleverTapPrimary").opacity(0.07),
-                    Color("CleverTapSecondary").opacity(0.05),
-                    Color.clear
+                    Color("CleverTapPrimary").opacity(0.13),
+                    Color("CleverTapSecondary").opacity(0.08),
+                    Color(.systemBackground),
+                    Color(.systemBackground)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
+
+            Circle()
+                .fill(Color("CleverTapPrimary").opacity(0.12))
+                .frame(width: 260, height: 260)
+                .blur(radius: 34)
+                .offset(x: -130, y: -330)
+
+            Circle()
+                .fill(Color("CleverTapSecondary").opacity(0.10))
+                .frame(width: 320, height: 320)
+                .blur(radius: 42)
+                .offset(x: 180, y: -260)
             
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 20) {
+                VStack(spacing: sectionSpacing) {
                     
                     // Header / status card
                     VStack(alignment: .leading, spacing: 12) {
-                        HStack(alignment: .firstTextBaseline) {
-                            Text("Order #\(order.id ?? "Unknown")")
-                                .font(.title3)
-                                .fontWeight(.semibold)
+                        HStack {
+                            Text("Order Snapshot")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(Color("CleverTapPrimary"))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(Color("CleverTapPrimary").opacity(0.14), in: Capsule())
                             
                             Spacer()
                             
                             StatusBadge(status: currentStatus)
                         }
                         
-                        Text(formattedDate)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                        Text("Order #\(order.id ?? "Unknown")")
+                            .font(.title3.weight(.bold))
+                            .foregroundColor(.primary)
+
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text("₹\(Int(order.total))")
+                                .font(.system(size: 30, weight: .heavy, design: .rounded))
+                                .foregroundStyle(amountGradient)
+                            Text("total")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(.secondary)
+                        }
+
+                        HStack(spacing: 10) {
+                            orderMetaChip(
+                                icon: "calendar",
+                                title: formattedDate
+                            )
+                            orderMetaChip(
+                                icon: "shippingbox.fill",
+                                title: "\(itemCount) items"
+                            )
+                        }
                         
                         HStack(spacing: 8) {
                             Circle()
@@ -1695,82 +1743,77 @@ struct OrderDetailView: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
-                        
-                        HStack {
-                            Text("Total")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            
-                            Spacer()
-                            
-                            Text("₹\(Int(order.total))")
-                                .font(.title3.weight(.semibold))
-                                .foregroundStyle(amountGradient)
-                        }
                     }
                     .padding(20)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(.white.opacity(0.2), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .stroke(Color.white.opacity(0.24), lineWidth: 1)
                     )
                     
                     // Shipping address
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
-                            Text("Delivery")
+                            Label("Delivery", systemImage: "location.fill")
                                 .font(.headline)
                             Spacer()
-                            if let method = order.paymentMethod as String? {
-                                Text(method)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 4)
-                                    .background(.ultraThinMaterial, in: Capsule())
-                            }
+                            Text(order.paymentMethod)
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(.ultraThinMaterial, in: Capsule())
                         }
                         
                         VStack(alignment: .leading, spacing: 4) {
                             ForEach(shippingAddressLines, id: \.self) { line in
-                                Text(line)
-                                    .font(.subheadline)
-                                    .foregroundColor(.primary)
+                                HStack(alignment: .top, spacing: 8) {
+                                    Image(systemName: "circle.fill")
+                                        .font(.system(size: 5))
+                                        .foregroundColor(Color("CleverTapPrimary"))
+                                        .padding(.top, 7)
+                                    Text(line)
+                                        .font(.subheadline)
+                                        .foregroundColor(.primary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
                             }
                         }
                     }
                     .padding(20)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(.white.opacity(0.2), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .stroke(Color.white.opacity(0.24), lineWidth: 1)
                     )
                     
                     // Items
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Items")
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                        
-                        Divider().opacity(0.4)
+                        HStack {
+                            Text("Items")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text("\(itemCount) total")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(Color("CleverTapPrimary"))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(Color("CleverTapPrimary").opacity(0.12), in: Capsule())
+                        }
                         
                         ForEach(order.items) { item in
                             OrderItemRow(item: item)
-                                .padding(.vertical, 4)
-                            
-                            if item.id != order.items.last?.id {
-                                Divider().opacity(0.15)
-                            }
                         }
                     }
                     .padding(20)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(.white.opacity(0.2), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .stroke(Color.white.opacity(0.24), lineWidth: 1)
                     )
                     
                     // Summary
@@ -1779,21 +1822,15 @@ struct OrderDetailView: View {
                             .font(.headline)
                             .foregroundColor(.primary)
                         
-                        HStack {
-                            Text("Items")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            
-                            Spacer()
-                            
-                            Text("\(itemCount)")
-                                .font(.subheadline)
-                                .foregroundColor(.primary)
-                        }
+                        summaryRow(title: "Items", value: "\(itemCount)")
+                        summaryRow(title: "Shipping", value: "Free")
+                        summaryRow(title: "Payment", value: order.paymentMethod)
+
+                        Divider().opacity(0.22)
                         
                         HStack {
                             Text("Order Total")
-                                .font(.subheadline)
+                                .font(.subheadline.weight(.semibold))
                                 .foregroundColor(.secondary)
                             
                             Spacer()
@@ -1805,10 +1842,10 @@ struct OrderDetailView: View {
                     }
                     .padding(20)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(.white.opacity(0.2), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .stroke(Color.white.opacity(0.24), lineWidth: 1)
                     )
                     
                     // Actions
@@ -1829,7 +1866,15 @@ struct OrderDetailView: View {
                             .font(.subheadline.weight(.semibold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
-                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                            .foregroundColor(.white)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                ),
+                                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            )
                         }
                         .buttonStyle(.plain)
                         
@@ -1844,7 +1889,11 @@ struct OrderDetailView: View {
                                 .font(.subheadline.weight(.semibold))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
-                                .background(Color.red.opacity(0.12), in: RoundedRectangle(cornerRadius: 16))
+                                .background(Color.red.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .stroke(Color.red.opacity(0.22), lineWidth: 1)
+                                )
                                 .foregroundColor(.red)
                             }
                             .disabled(isCancelling)
@@ -1853,7 +1902,7 @@ struct OrderDetailView: View {
                     }
                     .padding(.top, 8)
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, horizontalInset)
                 .padding(.vertical, 24)
                 .animation(.easeInOut(duration: 0.2), value: currentStatus)
             }
@@ -1923,6 +1972,32 @@ struct OrderDetailView: View {
             "Total Amount": order.total
         ])
     }
+
+    private func orderMetaChip(icon: String, title: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption.weight(.semibold))
+            Text(title)
+                .font(.caption.weight(.medium))
+                .lineLimit(1)
+        }
+        .foregroundColor(.secondary)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(Color(.secondarySystemBackground).opacity(0.85), in: Capsule())
+    }
+
+    private func summaryRow(title: String, value: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            Spacer()
+            Text(value)
+                .font(.subheadline.weight(.medium))
+                .foregroundColor(.primary)
+        }
+    }
 }
 
 struct OrderItemRow: View {
@@ -1940,8 +2015,8 @@ struct OrderItemRow: View {
         HStack(spacing: 16) {
             ZStack {
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(.ultraThinMaterial)
-                    .frame(width: 48, height: 48)
+                    .fill(.regularMaterial)
+                    .frame(width: 54, height: 54)
                 
                 if !item.product.mainImageURL.isEmpty,
                    let url = URL(string: item.product.mainImageURL) {
@@ -1952,7 +2027,7 @@ struct OrderItemRow: View {
                     } placeholder: {
                         Color.clear
                     }
-                    .frame(width: 48, height: 48)
+                    .frame(width: 54, height: 54)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                 } else {
                     Text(String(item.product.name.prefix(1)))
@@ -1988,5 +2063,7 @@ struct OrderItemRow: View {
                     .foregroundStyle(amountGradient)
             }
         }
+        .padding(12)
+        .background(Color(.secondarySystemBackground).opacity(0.72), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
