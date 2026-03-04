@@ -6,6 +6,12 @@ class CleverTapService: ObservableObject {
     
     private init() {}
 
+    private enum SharedPushIdentityConfig {
+        static let appGroupID = "group.com.govind.clevertap-sample-app"
+        static let identityKey = "ct_identity"
+        static let emailKey = "ct_email"
+    }
+
     // MARK: - SDK Diagnostics
 
     func sdkVersionString() -> String {
@@ -92,10 +98,29 @@ class CleverTapService: ObservableObject {
         
         CleverTap.sharedInstance()?.onUserLogin(profile)
         CleverTap.sharedInstance()?.profilePush(profile)
+        syncPushIdentityForExtensions(identity: userId, email: email)
         refreshProductExperiences()
         
         // Check notification permissions after user login
         NotificationDelegate.shared.checkNotificationPermissions()
+    }
+
+    func syncPushIdentityForExtensions(identity: String? = nil, email: String? = nil) {
+        guard let sharedDefaults = UserDefaults(suiteName: SharedPushIdentityConfig.appGroupID) else {
+            return
+        }
+
+        if let providedIdentity = identity, !providedIdentity.isEmpty {
+            sharedDefaults.set(providedIdentity, forKey: SharedPushIdentityConfig.identityKey)
+        } else if let existingIdentity = CleverTap.sharedInstance()?.profileGet("Identity") as? String, !existingIdentity.isEmpty {
+            sharedDefaults.set(existingIdentity, forKey: SharedPushIdentityConfig.identityKey)
+        }
+
+        if let providedEmail = email, !providedEmail.isEmpty {
+            sharedDefaults.set(providedEmail, forKey: SharedPushIdentityConfig.emailKey)
+        } else if let existingEmail = CleverTap.sharedInstance()?.profileGet("Email") as? String, !existingEmail.isEmpty {
+            sharedDefaults.set(existingEmail, forKey: SharedPushIdentityConfig.emailKey)
+        }
     }
     
     func updateUserProfile(with data: [String: Any]) {

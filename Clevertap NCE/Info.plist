@@ -7,14 +7,26 @@
 		<key>NSExtensionAttributes</key>
 		<dict>
 			<key>UNNotificationExtensionCategory</key>
-			<string>myNotificationCategory</string>
+			<string>CTNotification</string>
 			<key>UNNotificationExtensionInitialContentSizeRatio</key>
-			<real>1</real>
+			<real>0.1</real>
+			<key>UNNotificationExtensionDefaultContentHidden</key>
+			<true/>
+			<key>UNNotificationExtensionUserInteractionEnabled</key>
+			<string>1</string>
 		</dict>
 		<key>NSExtensionMainStoryboard</key>
 		<string>MainInterface</string>
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.usernotifications.content-extension</string>
 	</dict>
+	<key>CleverTapAccountID</key>
+	<string>48K-RZK-Z77Z</string>
+	<key>CleverTapToken</key>
+	<string>312-3b4</string>
+	<key>Application Application App Transport Security Settings</key>
+	<dict/>
+	<key>Allow Arbitrary Loads</key>
+	<true/>
 </dict>
 </plist>

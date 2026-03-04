@@ -1,25 +1,11 @@
-//
-//  NotificationViewController.swift
-//  Clevertap NCE
-//
-//  Created by Govind Pathak on 03/03/26.
-//
+import CTNotificationContent
+import CleverTapSDK
 
-import UIKit
-import UserNotifications
-import UserNotificationsUI
-
-class NotificationViewController: UIViewController, UNNotificationContentExtension {
-
-    @IBOutlet var label: UILabel?
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        // Do any required interface initialization here.
+class NotificationViewController: CTNotificationViewController {
+    override func userDidReceive(_ response: UNNotificationResponse?) {
+        let payload = response?.notification.request.content.userInfo
+        if response?.actionIdentifier == "action_2" {
+            CleverTap.sharedInstance()?.recordNotificationClickedEvent(withData: payload ?? [:])
+        }
     }
-    
-    func didReceive(_ notification: UNNotification) {
-        self.label?.text = notification.request.content.body
-    }
-
 }

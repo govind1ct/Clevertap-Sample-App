@@ -32,20 +32,32 @@
 		2000E5CD2F458DA70074C7C6 /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5CC2F458DA70074C7C6 /* FirebaseRemoteConfig */; };
 		2000E5CF2F458DA70074C7C6 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5CE2F458DA70074C7C6 /* FirebaseStorage */; };
 		2000E5D12F458DA70074C7C6 /* FirebaseStorageCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5D02F458DA70074C7C6 /* FirebaseStorageCombine-Community */; };
-		2000E5D42F458DBC0074C7C6 /* CTNotificationService in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5D32F458DBC0074C7C6 /* CTNotificationService */; };
+		2006C49E2F5818B700F0C7E9 /* CleverTapSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 2006C49D2F5818B700F0C7E9 /* CleverTapSDK */; };
+		206B49432F5804D200698C0E /* Clevertap NSE.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 206B493C2F5804D200698C0E /* Clevertap NSE.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		206B494D2F5804FE00698C0E /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 20B0772C2F5709D6009490B3 /* UserNotifications.framework */; };
+		206B494E2F5804FE00698C0E /* UserNotificationsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 20B0772E2F5709D6009490B3 /* UserNotificationsUI.framework */; };
+		206B49582F5804FE00698C0E /* Clevertap NCE.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 206B494C2F5804FE00698C0E /* Clevertap NCE.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		206B495E2F58083300698C0E /* CTNotificationService in Frameworks */ = {isa = PBXBuildFile; productRef = 206B495D2F58083300698C0E /* CTNotificationService */; };
+		206B49602F58083A00698C0E /* CTNotificationContent in Frameworks */ = {isa = PBXBuildFile; productRef = 206B495F2F58083A00698C0E /* CTNotificationContent */; };
+		206B49622F58091100698C0E /* CTNotificationService in Frameworks */ = {isa = PBXBuildFile; productRef = 206B49612F58091100698C0E /* CTNotificationService */; };
+		206B49642F58091D00698C0E /* CTNotificationContent in Frameworks */ = {isa = PBXBuildFile; productRef = 206B49632F58091D00698C0E /* CTNotificationContent */; };
 		20B076BC2F56C73A009490B3 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 20B076BB2F56C73A009490B3 /* GoogleSignIn */; };
 		20B076BE2F56C73A009490B3 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 20B076BD2F56C73A009490B3 /* GoogleSignInSwift */; };
-		20B0772D2F5709D6009490B3 /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 20B0772C2F5709D6009490B3 /* UserNotifications.framework */; };
-		20B0772F2F5709D6009490B3 /* UserNotificationsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 20B0772E2F5709D6009490B3 /* UserNotificationsUI.framework */; };
-		20B077392F5709D6009490B3 /* Clevertap NCE.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 20B0772B2F5709D6009490B3 /* Clevertap NCE.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		20B077372F5709D6009490B3 /* PBXContainerItemProxy */ = {
+		206B49412F5804D200698C0E /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 7430774D2DCB6C85006E96F0 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 20B0772A2F5709D6009490B3;
+			remoteGlobalIDString = 206B493B2F5804D200698C0E;
+			remoteInfo = "Clevertap NSE";
+		};
+		206B49562F5804FE00698C0E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7430774D2DCB6C85006E96F0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 206B494B2F5804FE00698C0E;
 			remoteInfo = "Clevertap NCE";
 		};
 /* End PBXContainerItemProxy section */
@@ -57,7 +69,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				20B077392F5709D6009490B3 /* Clevertap NCE.appex in Embed Foundation Extensions */,
+				206B49582F5804FE00698C0E /* Clevertap NCE.appex in Embed Foundation Extensions */,
+				206B49432F5804D200698C0E /* Clevertap NSE.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -65,43 +78,43 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		2004D0172F0B9DC0009860DB /* Clevertap Sample App NSE.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Clevertap Sample App NSE.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
-		20B0772B2F5709D6009490B3 /* Clevertap NCE.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Clevertap NCE.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		206B493C2F5804D200698C0E /* Clevertap NSE.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Clevertap NSE.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		206B494C2F5804FE00698C0E /* Clevertap NCE.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Clevertap NCE.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		20B0772C2F5709D6009490B3 /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = System/Library/Frameworks/UserNotifications.framework; sourceTree = SDKROOT; };
 		20B0772E2F5709D6009490B3 /* UserNotificationsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotificationsUI.framework; path = System/Library/Frameworks/UserNotificationsUI.framework; sourceTree = SDKROOT; };
 		743077552DCB6C85006E96F0 /* Clevertap Sample App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Clevertap Sample App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		2004D0222F0B9DC0009860DB /* Exceptions for "Clevertap Sample App NSE" folder in "Clevertap Sample App NSE" target */ = {
+		206B49442F5804D200698C0E /* Exceptions for "Clevertap NSE" folder in "Clevertap NSE" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 2004D0162F0B9DC0009860DB /* Clevertap Sample App NSE */;
+			target = 206B493B2F5804D200698C0E /* Clevertap NSE */;
 		};
-		20B0773A2F5709D6009490B3 /* Exceptions for "Clevertap NCE" folder in "Clevertap NCE" target */ = {
+		206B49592F5804FE00698C0E /* Exceptions for "Clevertap NCE" folder in "Clevertap NCE" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 20B0772A2F5709D6009490B3 /* Clevertap NCE */;
+			target = 206B494B2F5804FE00698C0E /* Clevertap NCE */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		2004D0182F0B9DC0009860DB /* Clevertap Sample App NSE */ = {
+		206B493D2F5804D200698C0E /* Clevertap NSE */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				2004D0222F0B9DC0009860DB /* Exceptions for "Clevertap Sample App NSE" folder in "Clevertap Sample App NSE" target */,
+				206B49442F5804D200698C0E /* Exceptions for "Clevertap NSE" folder in "Clevertap NSE" target */,
 			);
-			path = "Clevertap Sample App NSE";
+			path = "Clevertap NSE";
 			sourceTree = "<group>";
 		};
-		20B077302F5709D6009490B3 /* Clevertap NCE */ = {
+		206B494F2F5804FE00698C0E /* Clevertap NCE */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				20B0773A2F5709D6009490B3 /* Exceptions for "Clevertap NCE" folder in "Clevertap NCE" target */,
+				206B49592F5804FE00698C0E /* Exceptions for "Clevertap NCE" folder in "Clevertap NCE" target */,
 			);
 			path = "Clevertap NCE";
 			sourceTree = "<group>";
@@ -114,20 +127,22 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		2004D0142F0B9DC0009860DB /* Frameworks */ = {
+		206B49392F5804D200698C0E /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				2000E5D42F458DBC0074C7C6 /* CTNotificationService in Frameworks */,
+				2006C49E2F5818B700F0C7E9 /* CleverTapSDK in Frameworks */,
+				206B49622F58091100698C0E /* CTNotificationService in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		20B077282F5709D6009490B3 /* Frameworks */ = {
+		206B49492F5804FE00698C0E /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				20B0772F2F5709D6009490B3 /* UserNotificationsUI.framework in Frameworks */,
-				20B0772D2F5709D6009490B3 /* UserNotifications.framework in Frameworks */,
+				206B494E2F5804FE00698C0E /* UserNotificationsUI.framework in Frameworks */,
+				206B49642F58091D00698C0E /* CTNotificationContent in Frameworks */,
+				206B494D2F5804FE00698C0E /* UserNotifications.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -135,6 +150,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				206B495E2F58083300698C0E /* CTNotificationService in Frameworks */,
 				2000E5CB2F458DA70074C7C6 /* FirebasePerformance in Frameworks */,
 				2000E5C12F458DA70074C7C6 /* FirebaseFunctions in Frameworks */,
 				2000E5AF2F458DA70074C7C6 /* FirebaseAppCheck in Frameworks */,
@@ -143,6 +159,7 @@
 				2000E5A72F458DA70074C7C6 /* FirebaseAILogic in Frameworks */,
 				2000E5CF2F458DA70074C7C6 /* FirebaseStorage in Frameworks */,
 				2000E5AB2F458DA70074C7C6 /* FirebaseAnalyticsCore in Frameworks */,
+				206B49602F58083A00698C0E /* CTNotificationContent in Frameworks */,
 				2000E5A22F458D2D0074C7C6 /* CleverTapSDK in Frameworks */,
 				20B076BE2F56C73A009490B3 /* GoogleSignInSwift in Frameworks */,
 				2000E5AD2F458DA70074C7C6 /* FirebaseAnalyticsIdentitySupport in Frameworks */,
@@ -172,8 +189,8 @@
 			isa = PBXGroup;
 			children = (
 				743077572DCB6C85006E96F0 /* Clevertap Sample App */,
-				2004D0182F0B9DC0009860DB /* Clevertap Sample App NSE */,
-				20B077302F5709D6009490B3 /* Clevertap NCE */,
+				206B493D2F5804D200698C0E /* Clevertap NSE */,
+				206B494F2F5804FE00698C0E /* Clevertap NCE */,
 				7430778D2DCB71D6006E96F0 /* Frameworks */,
 				743077562DCB6C85006E96F0 /* Products */,
 			);
@@ -183,8 +200,8 @@
 			isa = PBXGroup;
 			children = (
 				743077552DCB6C85006E96F0 /* Clevertap Sample App.app */,
-				2004D0172F0B9DC0009860DB /* Clevertap Sample App NSE.appex */,
-				20B0772B2F5709D6009490B3 /* Clevertap NCE.appex */,
+				206B493C2F5804D200698C0E /* Clevertap NSE.appex */,
+				206B494C2F5804FE00698C0E /* Clevertap NCE.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -201,49 +218,51 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		2004D0162F0B9DC0009860DB /* Clevertap Sample App NSE */ = {
+		206B493B2F5804D200698C0E /* Clevertap NSE */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 2004D0232F0B9DC0009860DB /* Build configuration list for PBXNativeTarget "Clevertap Sample App NSE" */;
+			buildConfigurationList = 206B49452F5804D200698C0E /* Build configuration list for PBXNativeTarget "Clevertap NSE" */;
 			buildPhases = (
-				2004D0132F0B9DC0009860DB /* Sources */,
-				2004D0142F0B9DC0009860DB /* Frameworks */,
-				2004D0152F0B9DC0009860DB /* Resources */,
+				206B49382F5804D200698C0E /* Sources */,
+				206B49392F5804D200698C0E /* Frameworks */,
+				206B493A2F5804D200698C0E /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				2004D0182F0B9DC0009860DB /* Clevertap Sample App NSE */,
+				206B493D2F5804D200698C0E /* Clevertap NSE */,
 			);
-			name = "Clevertap Sample App NSE";
+			name = "Clevertap NSE";
 			packageProductDependencies = (
-				2000E5D32F458DBC0074C7C6 /* CTNotificationService */,
+				206B49612F58091100698C0E /* CTNotificationService */,
+				2006C49D2F5818B700F0C7E9 /* CleverTapSDK */,
 			);
-			productName = "Clevertap Sample App NSE";
-			productReference = 2004D0172F0B9DC0009860DB /* Clevertap Sample App NSE.appex */;
+			productName = "Clevertap NSE";
+			productReference = 206B493C2F5804D200698C0E /* Clevertap NSE.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-		20B0772A2F5709D6009490B3 /* Clevertap NCE */ = {
+		206B494B2F5804FE00698C0E /* Clevertap NCE */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 20B0773B2F5709D6009490B3 /* Build configuration list for PBXNativeTarget "Clevertap NCE" */;
+			buildConfigurationList = 206B495A2F5804FE00698C0E /* Build configuration list for PBXNativeTarget "Clevertap NCE" */;
 			buildPhases = (
-				20B077272F5709D6009490B3 /* Sources */,
-				20B077282F5709D6009490B3 /* Frameworks */,
-				20B077292F5709D6009490B3 /* Resources */,
+				206B49482F5804FE00698C0E /* Sources */,
+				206B49492F5804FE00698C0E /* Frameworks */,
+				206B494A2F5804FE00698C0E /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				20B077302F5709D6009490B3 /* Clevertap NCE */,
+				206B494F2F5804FE00698C0E /* Clevertap NCE */,
 			);
 			name = "Clevertap NCE";
 			packageProductDependencies = (
+				206B49632F58091D00698C0E /* CTNotificationContent */,
 			);
 			productName = "Clevertap NCE";
-			productReference = 20B0772B2F5709D6009490B3 /* Clevertap NCE.appex */;
+			productReference = 206B494C2F5804FE00698C0E /* Clevertap NCE.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 		743077542DCB6C85006E96F0 /* Clevertap Sample App */ = {
@@ -258,7 +277,8 @@
 			buildRules = (
 			);
 			dependencies = (
-				20B077382F5709D6009490B3 /* PBXTargetDependency */,
+				206B49422F5804D200698C0E /* PBXTargetDependency */,
+				206B49572F5804FE00698C0E /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				743077572DCB6C85006E96F0 /* Clevertap Sample App */,
@@ -292,6 +312,8 @@
 				2000E5D02F458DA70074C7C6 /* FirebaseStorageCombine-Community */,
 				20B076BB2F56C73A009490B3 /* GoogleSignIn */,
 				20B076BD2F56C73A009490B3 /* GoogleSignInSwift */,
+				206B495D2F58083300698C0E /* CTNotificationService */,
+				206B495F2F58083A00698C0E /* CTNotificationContent */,
 			);
 			productName = "Clevertap Sample App";
 			productReference = 743077552DCB6C85006E96F0 /* Clevertap Sample App.app */;
@@ -307,10 +329,10 @@
 				LastSwiftUpdateCheck = 2630;
 				LastUpgradeCheck = 1620;
 				TargetAttributes = {
-					2004D0162F0B9DC0009860DB = {
-						CreatedOnToolsVersion = 26.0.1;
+					206B493B2F5804D200698C0E = {
+						CreatedOnToolsVersion = 26.3;
 					};
-					20B0772A2F5709D6009490B3 = {
+					206B494B2F5804FE00698C0E = {
 						CreatedOnToolsVersion = 26.3;
 					};
 					743077542DCB6C85006E96F0 = {
@@ -331,6 +353,7 @@
 				2000E59E2F458D2D0074C7C6 /* XCRemoteSwiftPackageReference "clevertap-ios-sdk" */,
 				2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				2000E5D22F458DBC0074C7C6 /* XCRemoteSwiftPackageReference "CTNotificationService" */,
+				30D5A1022F600001009490B3 /* XCRemoteSwiftPackageReference "CTNotificationContent" */,
 				20B076BA2F56C73A009490B3 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -339,21 +362,21 @@
 			projectRoot = "";
 			targets = (
 				743077542DCB6C85006E96F0 /* Clevertap Sample App */,
-				2004D0162F0B9DC0009860DB /* Clevertap Sample App NSE */,
-				20B0772A2F5709D6009490B3 /* Clevertap NCE */,
+				206B493B2F5804D200698C0E /* Clevertap NSE */,
+				206B494B2F5804FE00698C0E /* Clevertap NCE */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		2004D0152F0B9DC0009860DB /* Resources */ = {
+		206B493A2F5804D200698C0E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		20B077292F5709D6009490B3 /* Resources */ = {
+		206B494A2F5804FE00698C0E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -370,14 +393,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		2004D0132F0B9DC0009860DB /* Sources */ = {
+		206B49382F5804D200698C0E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		20B077272F5709D6009490B3 /* Sources */ = {
+		206B49482F5804FE00698C0E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -394,33 +417,39 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		20B077382F5709D6009490B3 /* PBXTargetDependency */ = {
+		206B49422F5804D200698C0E /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 20B0772A2F5709D6009490B3 /* Clevertap NCE */;
-			targetProxy = 20B077372F5709D6009490B3 /* PBXContainerItemProxy */;
+			target = 206B493B2F5804D200698C0E /* Clevertap NSE */;
+			targetProxy = 206B49412F5804D200698C0E /* PBXContainerItemProxy */;
+		};
+		206B49572F5804FE00698C0E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 206B494B2F5804FE00698C0E /* Clevertap NCE */;
+			targetProxy = 206B49562F5804FE00698C0E /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		2004D0202F0B9DC0009860DB /* Debug */ = {
+		206B49462F5804D200698C0E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "Clevertap NSE/Clevertap NSE.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = 6299Z9R8BM;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7XM67G79YA;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "Clevertap Sample App NSE/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "Clevertap Sample App NSE";
+				INFOPLIST_FILE = "Clevertap NSE/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Clevertap NSE";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.govind.Clevertap-Sample-App.Clevertap-Sample-App-NSE";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.govind.Clevertap-Sample-App.Clevertap-NSE";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -432,25 +461,26 @@
 			};
 			name = Debug;
 		};
-		2004D0212F0B9DC0009860DB /* Release */ = {
+		206B49472F5804D200698C0E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "Clevertap NSE/Clevertap NSE.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = 6299Z9R8BM;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7XM67G79YA;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "Clevertap Sample App NSE/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "Clevertap Sample App NSE";
+				INFOPLIST_FILE = "Clevertap NSE/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Clevertap NSE";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.govind.Clevertap-Sample-App.Clevertap-Sample-App-NSE";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.govind.Clevertap-Sample-App.Clevertap-NSE";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -462,7 +492,7 @@
 			};
 			name = Release;
 		};
-		20B0773C2F5709D6009490B3 /* Debug */ = {
+		206B495B2F5804FE00698C0E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "Apple Development";
@@ -492,7 +522,7 @@
 			};
 			name = Debug;
 		};
-		20B0773D2F5709D6009490B3 /* Release */ = {
+		206B495C2F5804FE00698C0E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "Apple Development";
@@ -710,20 +740,20 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		2004D0232F0B9DC0009860DB /* Build configuration list for PBXNativeTarget "Clevertap Sample App NSE" */ = {
+		206B49452F5804D200698C0E /* Build configuration list for PBXNativeTarget "Clevertap NSE" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				2004D0202F0B9DC0009860DB /* Debug */,
-				2004D0212F0B9DC0009860DB /* Release */,
+				206B49462F5804D200698C0E /* Debug */,
+				206B49472F5804D200698C0E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		20B0773B2F5709D6009490B3 /* Build configuration list for PBXNativeTarget "Clevertap NCE" */ = {
+		206B495A2F5804FE00698C0E /* Build configuration list for PBXNativeTarget "Clevertap NCE" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				20B0773C2F5709D6009490B3 /* Debug */,
-				20B0773D2F5709D6009490B3 /* Release */,
+				206B495B2F5804FE00698C0E /* Debug */,
+				206B495C2F5804FE00698C0E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -754,7 +784,7 @@
 			repositoryURL = "https://github.com/CleverTap/clevertap-ios-sdk";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 7.5.0;
+				minimumVersion = 7.5.1;
 			};
 		};
 		2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
@@ -779,6 +809,14 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 9.1.0;
+			};
+		};
+		30D5A1022F600001009490B3 /* XCRemoteSwiftPackageReference "CTNotificationContent" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/CleverTap/CTNotificationContent.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.1.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -909,10 +947,30 @@
 			package = 2000E5A32F458DA70074C7C6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = "FirebaseStorageCombine-Community";
 		};
-		2000E5D32F458DBC0074C7C6 /* CTNotificationService */ = {
+		2006C49D2F5818B700F0C7E9 /* CleverTapSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E59E2F458D2D0074C7C6 /* XCRemoteSwiftPackageReference "clevertap-ios-sdk" */;
+			productName = CleverTapSDK;
+		};
+		206B495D2F58083300698C0E /* CTNotificationService */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 2000E5D22F458DBC0074C7C6 /* XCRemoteSwiftPackageReference "CTNotificationService" */;
 			productName = CTNotificationService;
+		};
+		206B495F2F58083A00698C0E /* CTNotificationContent */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 30D5A1022F600001009490B3 /* XCRemoteSwiftPackageReference "CTNotificationContent" */;
+			productName = CTNotificationContent;
+		};
+		206B49612F58091100698C0E /* CTNotificationService */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2000E5D22F458DBC0074C7C6 /* XCRemoteSwiftPackageReference "CTNotificationService" */;
+			productName = CTNotificationService;
+		};
+		206B49632F58091D00698C0E /* CTNotificationContent */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 30D5A1022F600001009490B3 /* XCRemoteSwiftPackageReference "CTNotificationContent" */;
+			productName = CTNotificationContent;
 		};
 		20B076BB2F56C73A009490B3 /* GoogleSignIn */ = {
 			isa = XCSwiftPackageProductDependency;
