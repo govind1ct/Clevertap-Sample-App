@@ -23,6 +23,23 @@ Production-style SwiftUI sample app integrated with CleverTap, Firebase, Product
   - `Google Auth Clicked` (`Source`: `login`/`signup`)
   - `Google Auth Failed` (`Source`: `login`/`signup`)
 
+## Recent Development Updates
+
+- Rich push flow aligned with current CleverTap template payload handling.
+- Carousel-style rich push payload support validated (`pt_img1`, `pt_img2`, `pt_img3` keys).
+- Push viewed/impression tracking flow improved when campaign id is present in payload.
+- Experiences screen updated with two clear entry options:
+  - `Product Experiences`
+  - `CleverTap Test Lab`
+- Added icon-first option cards for better visibility in Experiences.
+- Improved selected-state visibility so active option is clearly identifiable.
+- Fixed navigation/back flow from Test Lab to Experiences.
+
+## Branching For Development
+
+- `development` branch is used for ongoing feature development and fixes.
+- Recommended: create feature branches from `development` and merge back via PR.
+
 ## Project Structure (main app target)
 
 - `Clevertap Sample App/Services/` – CleverTap, Firebase, checkout, profile, product services
@@ -47,8 +64,13 @@ Note: The code uses `#if canImport(GoogleSignIn)` so build remains safe if the S
 - Main target: `Clevertap Sample App`
 - iOS: 15+
 
-## Notes
+## Documentation Index
 
-- Native display integration details: `Clevertap Sample App/README_NativeDisplay.md`
-- Product experiences setup: `Clevertap Sample App/README_ProductExperiences.md`
-- PayU setup: `Clevertap Sample App/README_PayU.md`
+- Native Display integration: `Clevertap Sample App/README_NativeDisplay.md`
+- Product Experiences integration: `Clevertap Sample App/README_ProductExperiences.md`
+- PayU integration: `Clevertap Sample App/README_PayU.md`
+
+Additional root summaries:
+- `CLEVERTAP_PROFILE_FIXES_SUMMARY.md`
+- `DOB_FIXES_COMPLETE_SUMMARY.md`
+- `SAVE_CHANGES_FUNCTIONALITY_SUMMARY.md`
