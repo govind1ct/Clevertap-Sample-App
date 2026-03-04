@@ -376,14 +376,23 @@ class AppDelegate: UIResponder,
         let nextAction = UNNotificationAction(identifier: "action_2", title: "Next", options: [])
         let viewInAppAction = UNNotificationAction(identifier: "action_3", title: "View In App", options: [])
 
-        let category = UNNotificationCategory(
+        // Default rich/category without action buttons.
+        let defaultCategory = UNNotificationCategory(
             identifier: "CTNotification",
+            actions: [],
+            intentIdentifiers: [],
+            options: []
+        )
+
+        // Carousel-specific category with navigation actions.
+        let carouselCategory = UNNotificationCategory(
+            identifier: "CTCarouselNotification",
             actions: [backAction, nextAction, viewInAppAction],
             intentIdentifiers: [],
             options: []
         )
 
-        UNUserNotificationCenter.current().setNotificationCategories([category])
+        UNUserNotificationCenter.current().setNotificationCategories([defaultCategory, carouselCategory])
     }
 
     private func  registerForPush() {

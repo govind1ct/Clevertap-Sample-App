@@ -33,6 +33,8 @@ class NotificationService: CTNotificationServiceExtension {
         }
 
         let userInfo = bestAttemptContent.userInfo
+        let shouldUseRichCategory = isRichTemplatePayload(userInfo)
+        let shouldUseCarouselCategory = isCarouselTemplatePayload(userInfo)
 
         // Track view for CT payloads, but always let CTNotificationService do rich rendering.
         if CleverTap.sharedInstance()?.isCleverTapNotification(userInfo) == true {
@@ -46,10 +48,16 @@ class NotificationService: CTNotificationServiceExtension {
                 return
             }
 
-            // Carousel/content-extension rendering requires category mapping.
-            // Some template payloads may omit aps.category.
-            if mutableContent.categoryIdentifier.isEmpty {
+            // Apply CT content extension category by payload type.
+            // - CTCarouselNotification: carousel only (shows actions)
+            // - CTNotification: rich/template non-carousel (no actions)
+            if shouldUseCarouselCategory {
+                mutableContent.categoryIdentifier = "CTCarouselNotification"
+            } else if shouldUseRichCategory {
                 mutableContent.categoryIdentifier = "CTNotification"
+            } else if mutableContent.categoryIdentifier == "CTNotification" ||
+                        mutableContent.categoryIdentifier == "CTCarouselNotification" {
+                mutableContent.categoryIdentifier = ""
             }
             contentHandler(mutableContent)
         })
@@ -75,5 +83,16 @@ class NotificationService: CTNotificationServiceExtension {
         CleverTap.sharedInstance()?.onUserLogin([
             "Identity": identity
         ])
+    }
+
+    private func isRichTemplatePayload(_ userInfo: [AnyHashable: Any]) -> Bool {
+        // CleverTap template keys that indicate rich/template payload handling.
+        let templateKeys = ["wzrk_pt_id", "pt_id", "pt_img1", "pt_title", "pt_msg"]
+        return templateKeys.contains { userInfo[$0] != nil }
+    }
+
+    private func isCarouselTemplatePayload(_ userInfo: [AnyHashable: Any]) -> Bool {
+        // Carousel templates typically include second/third image keys.
+        return userInfo["pt_img2"] != nil || userInfo["pt_img3"] != nil
     }
 }

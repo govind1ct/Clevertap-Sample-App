@@ -16,18 +16,34 @@ class CleverTapService: ObservableObject {
 
     func sdkVersionString() -> String {
         // Prefer explicit SDK API if exposed by the binary.
-        let sdkVersionSelector = NSSelectorFromString("sdkVersion")
-        if (CleverTap.self as AnyObject).responds(to: sdkVersionSelector),
-           let unmanaged = (CleverTap.self as AnyObject).perform(sdkVersionSelector),
-           let value = unmanaged.takeUnretainedValue() as? String,
-           !value.isEmpty {
-            return value
+        let selectors = ["sdkVersion", "version", "getSdkVersion", "sdkVersionString"]
+
+        for name in selectors {
+            let selector = NSSelectorFromString(name)
+
+            if (CleverTap.self as AnyObject).responds(to: selector),
+               let unmanaged = (CleverTap.self as AnyObject).perform(selector) {
+                let value = String(describing: unmanaged.takeUnretainedValue()).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !value.isEmpty, value.caseInsensitiveCompare("unknown") != .orderedSame {
+                    return value
+                }
+            }
+
+            if let instance = CleverTap.sharedInstance() as AnyObject?,
+               instance.responds(to: selector),
+               let unmanaged = instance.perform(selector) {
+                let value = String(describing: unmanaged.takeUnretainedValue()).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !value.isEmpty, value.caseInsensitiveCompare("unknown") != .orderedSame {
+                    return value
+                }
+            }
         }
 
         // Fallback to known framework bundles.
         let bundleCandidates: [Bundle?] = [
             Bundle(identifier: "com.clevertap.CleverTapSDK"),
             Bundle(identifier: "org.cocoapods.CleverTap-iOS-SDK"),
+            Bundle(identifier: "com.clevertap.sdk"),
             Bundle(for: CleverTap.self)
         ]
 
@@ -37,10 +53,15 @@ class CleverTapService: ObservableObject {
                value != "1.0" {
                 return value
             }
+            if let value = bundle.infoDictionary?["CFBundleVersion"] as? String,
+               !value.isEmpty,
+               value != "1.0" {
+                return value
+            }
         }
 
-        // Final fallback if the package does not expose version metadata in runtime bundle.
-        return "Unknown"
+        // Final fallback if the package does not expose version metadata at runtime.
+        return "Installed (runtime version not exposed)"
     }
 
     func accountIdString() -> String {
@@ -688,11 +709,12 @@ class CleverTapService: ObservableObject {
         CleverTap.sharedInstance()?.recordEvent("Profile Completion Checked", withProps: eventData)
     }
     
-    func forceProfileSync() {
-        // Force sync all profile data to ensure dashboard reflects current state
-        guard let cleverTapID = CleverTap.sharedInstance()?.profileGetID() else { return }
-        
-        // Get current profile data
+    @discardableResult
+    func forceProfileSync() -> Bool {
+        // Force sync all profile data to ensure dashboard reflects current state.
+        guard let sdk = CleverTap.sharedInstance() else { return false }
+        guard let cleverTapID = sdk.profileGetID(), !cleverTapID.isEmpty else { return false }
+
         let currentProfile: [String: Any] = [
             "Force Sync": true,
             "Sync Timestamp": Date(),
@@ -700,16 +722,17 @@ class CleverTapService: ObservableObject {
             "Platform": "iOS",
             "App Version": Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
         ]
-        
-        CleverTap.sharedInstance()?.profilePush(currentProfile)
-        
-        // Track sync event
-        CleverTap.sharedInstance()?.recordEvent("Profile Force Sync", withProps: currentProfile)
-        
-        // Trigger profile completion check
+
+        sdk.profilePush(currentProfile)
+        sdk.recordEvent("Profile Force Sync", withProps: currentProfile)
+        syncPushIdentityForExtensions()
+
+        // Trigger profile completion check after the profile write is queued.
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             self.trackProfileCompletion()
         }
+
+        return true
     }
     
     // MARK: - Specific DOB Update Method
@@ -754,19 +777,22 @@ class CleverTapService: ObservableObject {
     /// - Event Name: "Reminder Test Triggered"
     /// - Properties:
     ///   - reminder_id : String (identifier to filter/group test runs)
-    ///   - due_date_ts : Int (UNIX epoch in milliseconds, set to now + 5 minutes)
+    ///   - due_date    : Date (set to now + 5 minutes)
     ///   - test_mode   : Bool (always true for safety)
     ///   - app_version : String (from app bundle)
     ///
     /// Usage:
     /// Call `CleverTapService.shared.fireReminderTestEvent(reminderId: "test_001")`
-    /// then configure a CleverTap Reminder to trigger based on `due_date_ts` relative time
-    /// (e.g., send reminder when due_date_ts is within the next few minutes).
+    /// then configure a CleverTap Reminder to trigger based on `due_date`
+    /// (e.g., send reminder when due_date is within the next few minutes).
     ///
     /// Notes:
     /// - This is a test-only helper and can be safely removed later.
     /// - Does not modify existing profile or authentication logic.
-    func fireReminderTestEvent(reminderId: String = "test_001") {
+    @discardableResult
+    func fireReminderTestEvent(reminderId: String = "test_001") -> Bool {
+        guard CleverTap.sharedInstance() != nil else { return false }
+
         // Calculate due date: current time + 5 minutes, as a Date object for CleverTap Reminders
         let fiveMinutesAhead = Date().addingTimeInterval(5 * 60)
         let dueDate: Date = fiveMinutesAhead
@@ -782,6 +808,7 @@ class CleverTapService: ObservableObject {
 
         // Fire the event via the service's wrapper for consistency
         trackEvent("Reminder Test Triggered", withProps: props)
+        return true
     }
     
     private func isValidEmail(_ email: String) -> Bool {

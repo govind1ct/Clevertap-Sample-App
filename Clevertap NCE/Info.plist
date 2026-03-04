@@ -4,12 +4,15 @@
 <dict>
 	<key>NSExtension</key>
 	<dict>
-		<key>NSExtensionAttributes</key>
-		<dict>
-			<key>UNNotificationExtensionCategory</key>
-			<string>CTNotification</string>
-			<key>UNNotificationExtensionInitialContentSizeRatio</key>
-			<real>0.1</real>
+			<key>NSExtensionAttributes</key>
+			<dict>
+				<key>UNNotificationExtensionCategory</key>
+				<array>
+					<string>CTNotification</string>
+					<string>CTCarouselNotification</string>
+				</array>
+				<key>UNNotificationExtensionInitialContentSizeRatio</key>
+				<real>0.1</real>
 			<key>UNNotificationExtensionDefaultContentHidden</key>
 			<true/>
 			<key>UNNotificationExtensionUserInteractionEnabled</key>

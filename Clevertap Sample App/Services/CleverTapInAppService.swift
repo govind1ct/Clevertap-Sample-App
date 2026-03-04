@@ -91,10 +91,15 @@ class CleverTapInAppService: ObservableObject {
                 return
             }
 
-            if let cleverTapID = sdk.profileGetID(), !cleverTapID.isEmpty {
-                self.connectionStatus = "SDK Ready • Profile \(String(cleverTapID.prefix(8)))..."
+            let cleverTapID = sdk.profileGetID() ?? ""
+            let identity = sdk.profileGet("Identity") as? String ?? ""
+            let email = sdk.profileGet("Email") as? String ?? ""
+            let isIdentifiedUser = !identity.isEmpty || !email.isEmpty
+
+            if isIdentifiedUser {
+                self.connectionStatus = "SDK Ready • Identified (\(String(cleverTapID.prefix(8)))...)"
             } else {
-                self.connectionStatus = "SDK Ready • No Profile Logged In"
+                self.connectionStatus = "SDK Ready • Anonymous (\(String(cleverTapID.prefix(8)))...)"
             }
         }
     }
@@ -108,22 +113,40 @@ class CleverTapInAppService: ObservableObject {
         }
     }
     
-    func forceSyncInAppNotifications() {
+    @discardableResult
+    func forceSyncInAppNotifications() -> Bool {
         print("🔄 Force syncing in-app notifications...")
-        
-        DispatchQueue.main.async {
-            CleverTap.sharedInstance()?.recordEvent("Force_InApp_Sync", withProps: [
-                "sync_timestamp": Date().timeIntervalSince1970,
-                "user_id": CleverTap.sharedInstance()?.profileGetID() ?? "Unknown"
-            ])
-            
-            print("✅ In-app notification sync triggered")
-            self.addNotificationLog(
-                eventName: "Force Sync",
-                payload: ["sync_result": "triggered"],
-                status: .triggered
+
+        guard let sdk = CleverTap.sharedInstance() else {
+            addNotificationLog(
+                eventName: "Force Sync Failed",
+                payload: ["reason": "sdk_not_initialized"],
+                status: .failed
             )
+            return false
         }
+
+        let profileID = sdk.profileGetID() ?? "Unknown"
+        sdk.recordEvent("Force_InApp_Sync", withProps: [
+            "sync_timestamp": Date().timeIntervalSince1970,
+            "user_id": profileID
+        ])
+
+        // Resume queued in-app notifications as documented by CleverTap.
+        sdk.resumeInAppNotifications()
+
+        addNotificationLog(
+            eventName: "Force Sync",
+            payload: [
+                "sync_result": "triggered",
+                "user_id": profileID
+            ],
+            status: .triggered
+        )
+
+        refreshDiagnostics()
+        print("✅ In-app notification sync triggered")
+        return true
     }
     
     func triggerBasicInApp() {

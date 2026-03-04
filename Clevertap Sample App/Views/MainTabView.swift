@@ -25,8 +25,7 @@ struct MainTabView: View {
                 Label {
                     Text("Home")
                 } icon: {
-                    Image(systemName: "house")
-                        .symbolVariant(selectedTab == .home ? .fill : .none)
+                    Image(systemName: selectedTab == .home ? "house.fill" : "house")
                 }
             }
             .tag(Tab.home)
@@ -40,8 +39,7 @@ struct MainTabView: View {
                 Label {
                     Text("Inbox")
                 } icon: {
-                    Image(systemName: "tray")
-                        .symbolVariant(selectedTab == .inbox ? .fill : .none)
+                    Image(systemName: selectedTab == .inbox ? "tray.fill" : "tray")
                 }
             }
             .tag(Tab.inbox)
@@ -55,8 +53,7 @@ struct MainTabView: View {
                 Label {
                     Text("Experiences")
                 } icon: {
-                    Image(systemName: "sparkles")
-                        .symbolVariant(selectedTab == .experiences ? .fill : .none)
+                    Image(systemName: selectedTab == .experiences ? "wand.and.stars.inverse" : "wand.and.stars")
                 }
             }
             .tag(Tab.experiences)
@@ -70,8 +67,7 @@ struct MainTabView: View {
                 Label {
                     Text("Cart")
                 } icon: {
-                    Image(systemName: "cart")
-                        .symbolVariant(selectedTab == .cart ? .fill : .none)
+                    Image(systemName: selectedTab == .cart ? "cart.fill" : "cart")
                 }
             }
             .badge(cartManager.items.count > 0 ? cartManager.items.count : 0)
@@ -92,8 +88,7 @@ struct MainTabView: View {
                 Label {
                     Text("Profile")
                 } icon: {
-                    Image(systemName: "person.crop.circle")
-                        .symbolVariant(selectedTab == .profile ? .fill : .none)
+                    Image(systemName: selectedTab == .profile ? "person.crop.circle.fill" : "person.crop.circle")
                 }
             }
             .tag(Tab.profile)

@@ -8,6 +8,7 @@ struct CleverTapProfileDashboardView: View {
     @EnvironmentObject private var authViewModel: AuthViewModel
     @State private var showProfile = false
     @State private var showAuth = false
+    @State private var syncStatusMessage: String?
     
     var body: some View {
         NavigationView {
@@ -370,6 +371,13 @@ struct CleverTapProfileDashboardView: View {
                 ) {
                     syncProfileData()
                 }
+
+                if let syncStatusMessage {
+                    Text(syncStatusMessage)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
                 
                 ActionButton(
                     title: "Clear Profile Cache",
@@ -460,8 +468,13 @@ struct CleverTapProfileDashboardView: View {
     }
     
     private func syncProfileData() {
-        CleverTapService.shared.setUserProperty(key: "Manual Sync", value: Date())
+        let didSync = CleverTapService.shared.forceProfileSync()
+        syncStatusMessage = didSync ? "Profile sync triggered." : "Profile sync failed (missing CleverTap identity)."
         loadProfileData()
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            syncStatusMessage = nil
+        }
     }
     
     private func clearProfileCache() {

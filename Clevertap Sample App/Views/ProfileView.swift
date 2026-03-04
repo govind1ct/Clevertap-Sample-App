@@ -659,11 +659,11 @@ struct ProfileView: View {
         isSyncingProfile = true
         syncStatusMessage = "Syncing profile data..."
         syncCleverTapProfile()
-        profileService.forceCleverTapSync()
+        let didSync = profileService.forceCleverTapSync()
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             isSyncingProfile = false
-            syncStatusMessage = "Profile synced successfully"
+            syncStatusMessage = didSync ? "Profile synced successfully" : "Profile sync failed. Please login again."
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                 syncStatusMessage = nil

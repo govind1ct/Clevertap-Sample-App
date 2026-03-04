@@ -194,6 +194,12 @@ private extension ProductExperiencesView {
                 HStack {
                     Image(systemName: icon)
                         .font(.title3)
+                        .foregroundStyle(isSelected ? .white : .secondary)
+                        .frame(width: 28, height: 28)
+                        .background(
+                            (isSelected ? Color.white.opacity(0.18) : Color.secondary.opacity(0.12)),
+                            in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        )
                     Spacer()
                     if isSelected {
                         Label("Selected", systemImage: "checkmark.circle.fill")
