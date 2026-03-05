@@ -41,6 +41,7 @@ class NotificationService: CTNotificationServiceExtension {
             maybeSetCTUserIdentity()
             CleverTap.sharedInstance()?.recordNotificationViewedEvent(withData: userInfo)
         }
+        CleverTap.sharedInstance()?.recordNotificationViewedEvent(withData: request.content.userInfo)
 
         super.didReceive(request, withContentHandler: { content in
             guard let mutableContent = content.mutableCopy() as? UNMutableNotificationContent else {

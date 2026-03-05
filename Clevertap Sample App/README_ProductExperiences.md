@@ -54,6 +54,20 @@ These are consumed by:
 
 ## Recent Changes (Development)
 
+### Latest UI + Demo Updates (March 2026)
+- Experiences UI has been redesigned with a premium visual treatment:
+  - upgraded hero/header, selectors, status cards, and action CTA styling.
+  - improved spacing, hierarchy, and readability for client demos.
+- Native Display Lab UI has been redesigned to match the Experiences visual language:
+  - premium header card, two-column location trigger grid, and upgraded refresh/debug actions.
+- Product Experiences demo controls were added and hardened:
+  - local demo presets (`Luxury`, `Festive`, `Reset`) for quick walkthroughs.
+  - `Demo Mode Lock` to keep local demo values stable and prevent remote overwrite.
+- Product Experiences remote fetch can now be disabled centrally in code:
+  - `CleverTapProductExperiencesService.isFeatureEnabled` controls whether dashboard variables are applied.
+  - when disabled, app defaults are used and remote fetch/sync paths are blocked.
+- App icon asset set has been refreshed with updated icon file names in `AppIcon.appiconset`.
+
 ### Push and Rich Push
 - Restored rich push behavior for current CleverTap templates.
 - Added carousel-compatible handling for template payload keys (`pt_img1`, `pt_img2`, `pt_img3`).
@@ -73,4 +87,3 @@ These are consumed by:
 - Added safeguards to avoid redundant CleverTap syncs during refresh.
 
 For a complete history of changes, see [CHANGELOG.md](CHANGELOG.md).
-
