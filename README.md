@@ -1,4 +1,4 @@
-# CleverTap Sample App (iOS)
+<img width="590" height="1278" alt="Screenshot 2026-03-05 at 11 57 04 AM" src="https://github.com/user-attachments/assets/38e3f76a-d6cf-4dcb-8269-e46d828c0db8" /># CleverTap Sample App (iOS)
 
 Production-style SwiftUI sample app integrated with CleverTap, Firebase, Product Experiences, App Inbox, Native Display, checkout flow improvements, and modern onboarding/auth UI.
 
@@ -74,3 +74,17 @@ Additional root summaries:
 - `CLEVERTAP_PROFILE_FIXES_SUMMARY.md`
 - `DOB_FIXES_COMPLETE_SUMMARY.md`
 - `SAVE_CHANGES_FUNCTIONALITY_SUMMARY.md`
+- <img width="590" height="1278" alt="Screenshot 2026-03-05 at 11 57 04 AM" src="https://github.com/user-attachments/assets/749d677e-eefb-4977-8971-f942f1046351" />
+
+<img width="590" height="1278" alt="Screenshot 2026-03-05 at 11 57 57 AM" src="https://github.com/user-attachm<img ents/assets/6b4e5c72-c14b-4183-b13a-dfab35a396a9"/>
+<img width="590" height="1278" alt="Screenshot 2026-03-05 at 12 00 49 PM" src="https://github.com/user-attachments/assets/e21d5a26-05f5-464b-8c69-de3d11c35563" />
+<img width="590" height="1278" alt="Screenshot 2026-03-05 at 12 00 19 PM" src="https://github.com/user-attachments/assets/65971b14-b8b0-4947-a84b-778032a3d16f" />
+<img width="590" height="1278" alt="Screenshot 2026-03-05 at 11 59 52 AM" src="https://github.com/user-attachments/assets/6c7de7a6-cf7a-4313-add6-a0d38b05967b" />
+<img width="590" height="1278" alt="Screenshot 2026-03-05 at 11 58 35 AM" src="https://github.com/user-attachments/assets/6a4f7b78-2efd-48ef-82fe-c141ad0d36d5" />
+<img width="590" height="1278" alt="Screenshot 2026-03-05 at 11 58 17 AM" src="https://github.com/user-attachments/assets/f3a88085-6ecb-4745-ac05-6e877a36d99e" />
+
+
+
+
+
+
