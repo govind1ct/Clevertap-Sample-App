@@ -17,6 +17,7 @@ The app now uses CleverTap Product Experiences variables to control Home UI in r
 - `home_featured_section_title` (String)
 - `home_show_featured_section` (Boolean)
 - `home_max_featured_products` (Integer)
+- Profile sync improvements and Native Display locations alignment (hero, promotion, home, cart, profile)
 
 These are consumed by:
 - `Views/HomeView.swift`
@@ -27,12 +28,24 @@ These are consumed by:
 2. Tap `Fetch` to download latest variable values.
 3. In debug builds, you can tap `Sync (Debug)` to force sync then fetch.
 4. Open the `Home` tab and verify UI changes.
+5. Open the `Profile` tab and verify profile-driven UI (completion %, membership tier, notification toggles) and Native Display content from the `profile` location.
 
 ## Expected Home Changes
 - Header title/subtitle update from remote values.
 - Featured section title updates.
 - Featured section can be shown/hidden.
 - Featured product count is limited by `home_max_featured_products`.
+- Native Display locations standardized to `hero`, `promotion`, and `home` for the Home screen.
+
+## Profile Updates
+- Profile screen improvements:
+  - Manual CleverTap sync CTA (Sync Profile Data) to push latest profile info.
+  - Membership tier menu with Bronze/Silver/Gold and safe defaulting.
+  - Notification preferences wired to CleverTap DND (push/email/SMS).
+  - CleverTap dashboard entry point from Profile.
+  - Native Display integration for `profile` location via `ProfileNativeDisplayView`.
+- Data sent to CleverTap includes name, email, phone, gender, DOB, location, membership tier, profile completion, and engagement opt-ins.
+- Pull-to-refresh on Profile reloads profile and orders; sync is throttled to avoid redundant calls (ensure service-level checks).
 
 ## Notes
 - Variable names are case-sensitive.
@@ -53,3 +66,11 @@ These are consumed by:
 - Improved option visibility with icon-first cards.
 - Improved selected-state visibility for active option.
 - Fixed navigation so users can return from Test Lab to Experiences.
+### Profile & Native Display
+- Standardized Native Display locations: `hero`, `promotion`, `home`, `cart`, `profile`.
+- Fixed Profile screen to refresh Native Display after manual sync.
+- Improved membership tier handling and profile completion calculation.
+- Added safeguards to avoid redundant CleverTap syncs during refresh.
+
+For a complete history of changes, see [CHANGELOG.md](CHANGELOG.md).
+
