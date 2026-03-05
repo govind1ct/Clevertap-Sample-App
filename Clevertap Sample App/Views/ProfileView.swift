@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import FirebaseAuth
 import FirebaseFirestore
 
@@ -186,6 +187,7 @@ struct ProfileView: View {
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
+
                 }
 
                 Spacer()
@@ -562,7 +564,7 @@ struct ProfileView: View {
         )
         .padding(.horizontal, horizontalInset)
     }
-    
+
     // MARK: - Notification Preferences Section
     private var notificationPreferencesSection: some View {
         VStack(spacing: 16) {
@@ -929,7 +931,7 @@ struct ProfileView: View {
         ])
         activeSheet = .settings
     }
-    
+
     private func fetchUserData(completion: (() -> Void)? = nil) {
         isLoadingProfile = true
         isLoadingOrders = true
@@ -2089,3 +2091,166 @@ struct OrderItemRow: View {
         .background(Color(.secondarySystemBackground).opacity(0.72), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
+struct MeetDeveloperView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var animateIn = false
+
+    private var accentTextColor: Color {
+        colorScheme == .dark ? .white : Color("CleverTapPrimary")
+    }
+
+    private var sectionBorderColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.18) : Color.white.opacity(0.28)
+    }
+
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: colorScheme == .dark
+                    ? [Color(red: 0.08, green: 0.10, blue: 0.14), Color(red: 0.10, green: 0.13, blue: 0.18)]
+                    : [Color(red: 0.94, green: 0.97, blue: 1.0), Color(red: 0.90, green: 0.95, blue: 1.0)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            Circle()
+                .fill(Color("CleverTapPrimary").opacity(colorScheme == .dark ? 0.22 : 0.15))
+                .frame(width: 240, height: 240)
+                .blur(radius: 40)
+                .offset(x: -120, y: -240)
+
+            Circle()
+                .fill(Color("CleverTapSecondary").opacity(colorScheme == .dark ? 0.20 : 0.12))
+                .frame(width: 260, height: 260)
+                .blur(radius: 50)
+                .offset(x: 160, y: 260)
+
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 18) {
+                    heroCard
+
+                    VStack(spacing: 10) {
+                        contactRow(icon: "envelope.fill", title: "Email", value: "govind.pathak@clevertap.com")
+                        contactRow(icon: "phone.fill", title: "Alternate Phone", value: "8527858516")
+                        contactRow(icon: "building.2.fill", title: "Organization", value: "CleverTap")
+                        contactRow(icon: "briefcase.fill", title: "Primary Focus", value: "Technical Accounts & Customer Solutions")
+                    }
+                }
+                .padding(18)
+                .opacity(animateIn ? 1 : 0)
+                .offset(y: animateIn ? 0 : 10)
+                .animation(.spring(response: 0.45, dampingFraction: 0.86), value: animateIn)
+            }
+        }
+        .presentationDragIndicator(.visible)
+        .onAppear {
+            if !animateIn { animateIn = true }
+        }
+    }
+
+    private var heroCard: some View {
+        VStack(alignment: .center, spacing: 14) {
+            avatar
+
+            VStack(spacing: 4) {
+                Text("Govind Pathak")
+                    .font(.system(size: 30, weight: .heavy, design: .rounded))
+                    .multilineTextAlignment(.center)
+
+                Text("Manager - Technical Accounts")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.secondary)
+                Text("Customer Solutions - Customer Success")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            HStack(spacing: 10) {
+                badge(title: "Built with", value: "SwiftUI")
+                badge(title: "Domain", value: "Customer Lifecycle")
+                badge(title: "Org", value: "CleverTap")
+            }
+
+            Text("I built this end-to-end iOS demo application to showcase CleverTap capabilities across identity, engagement, personalization, and conversion tracking in a production-style user journey.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+
+            Text("From onboarding to checkout and profile analytics, the experience is designed to help teams run realistic client walkthroughs with clear business impact.")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(20)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(sectionBorderColor, lineWidth: 1)
+        )
+    }
+
+    @ViewBuilder
+    private var avatar: some View {
+        if let uiImage = UIImage(named: "GovindPathak") {
+            Image(uiImage: uiImage)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 156, height: 156)
+                .clipShape(Circle())
+                .overlay(Circle().stroke(Color.white.opacity(0.75), lineWidth: 2))
+        } else {
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 156, height: 156)
+                .overlay(
+                    Text("GP")
+                        .font(.title3.weight(.bold))
+                        .foregroundColor(.white)
+                )
+        }
+    }
+
+    private func badge(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title.uppercased())
+                .font(.caption2.weight(.semibold))
+                .foregroundColor(.secondary)
+            Text(value)
+                .font(.caption.weight(.semibold))
+                .foregroundColor(accentTextColor)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(Color(.secondarySystemBackground).opacity(0.75), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private func contactRow(icon: String, title: String, value: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .foregroundColor(accentTextColor)
+                .frame(width: 26)
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+            Spacer(minLength: 8)
+            Text(value)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 11)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(sectionBorderColor.opacity(0.8), lineWidth: 1)
+        )
+    }
+}
+

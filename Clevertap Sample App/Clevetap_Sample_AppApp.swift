@@ -25,18 +25,33 @@ struct Clevertap_Sample_AppApp: App {
                             showSplash = false
                         }
                     }
+                    .transition(.opacity)
                 } else {
                     if authViewModel.isAuthenticated {
                         MainTabView()
+                            .transition(.opacity.combined(with: .scale(scale: 0.98)))
                     } else if showGuestOnboarding {
                         OnboardingView {
-                            showGuestOnboarding = false
+                            withAnimation(.spring(response: 0.50, dampingFraction: 0.88)) {
+                                showGuestOnboarding = false
+                            }
                         }
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .trailing).combined(with: .opacity),
+                            removal: .move(edge: .leading).combined(with: .opacity)
+                        ))
                     } else {
                         AuthLoginView()
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .trailing).combined(with: .opacity),
+                                removal: .opacity
+                            ))
                     }
                 }
             }
+            .animation(.easeInOut(duration: 0.40), value: showSplash)
+            .animation(.spring(response: 0.50, dampingFraction: 0.88), value: showGuestOnboarding)
+            .animation(.easeInOut(duration: 0.35), value: authViewModel.isAuthenticated)
             .environmentObject(authViewModel)
             .environmentObject(cartManager)
             .onChange(of: authViewModel.isAuthenticated) { isAuthenticated in

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct OnboardingView: View {
     @State private var currentPage = 0
+    @State private var hasAnimatedIn = false
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
     @Environment(\.colorScheme) private var colorScheme
     var onFinish: (() -> Void)? = nil
@@ -42,22 +43,40 @@ struct OnboardingView: View {
 
                 TabView(selection: $currentPage) {
                     ForEach(Array(pages.enumerated()), id: \.offset) { idx, page in
-                        OnboardingPageCard(page: page, colorScheme: colorScheme)
-                            .tag(idx)
-                            .padding(.horizontal, 4)
+                        OnboardingPageCard(
+                            page: page,
+                            colorScheme: colorScheme,
+                            isActive: idx == currentPage,
+                            hasAnimatedIn: hasAnimatedIn
+                        )
+                        .tag(idx)
+                        .padding(.horizontal, 4)
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.spring(response: 0.42, dampingFraction: 0.86), value: currentPage)
+                .opacity(hasAnimatedIn ? 1 : 0)
+                .offset(y: hasAnimatedIn ? 0 : 16)
 
                 pageIndicator
                     .padding(.top, 2)
+                    .opacity(hasAnimatedIn ? 1 : 0)
+                    .offset(y: hasAnimatedIn ? 0 : 8)
 
                 bottomActions
+                    .opacity(hasAnimatedIn ? 1 : 0)
+                    .offset(y: hasAnimatedIn ? 0 : 14)
             }
             .padding(.horizontal, 18)
             .padding(.top, 10)
             .padding(.bottom, 14)
+            .animation(.spring(response: 0.55, dampingFraction: 0.86), value: hasAnimatedIn)
+        }
+        .onAppear {
+            guard !hasAnimatedIn else { return }
+            withAnimation(.spring(response: 0.58, dampingFraction: 0.84).delay(0.05)) {
+                hasAnimatedIn = true
+            }
         }
     }
 
@@ -75,19 +94,25 @@ struct OnboardingView: View {
                 .fill(Color(red: 0.19, green: 0.56, blue: 0.98).opacity(colorScheme == .dark ? 0.30 : 0.18))
                 .frame(width: 280, height: 280)
                 .blur(radius: 54)
-                .offset(x: -100, y: -120)
+                .offset(x: hasAnimatedIn ? -110 : -70, y: -120 + CGFloat(currentPage * 8))
+                .animation(.easeInOut(duration: 2.4), value: hasAnimatedIn)
+                .animation(.easeInOut(duration: 0.5), value: currentPage)
 
             Circle()
                 .fill(Color(red: 0.11, green: 0.72, blue: 0.58).opacity(colorScheme == .dark ? 0.24 : 0.16))
                 .frame(width: 320, height: 320)
                 .blur(radius: 62)
-                .offset(x: 160, y: 220)
+                .offset(x: 160 - CGFloat(currentPage * 10), y: hasAnimatedIn ? 220 : 250)
+                .animation(.easeInOut(duration: 2.2), value: hasAnimatedIn)
+                .animation(.easeInOut(duration: 0.5), value: currentPage)
 
             Circle()
                 .fill(Color(red: 0.95, green: 0.48, blue: 0.34).opacity(colorScheme == .dark ? 0.20 : 0.12))
                 .frame(width: 220, height: 220)
                 .blur(radius: 48)
-                .offset(x: 140, y: -100)
+                .offset(x: 140 + CGFloat(currentPage * 6), y: hasAnimatedIn ? -100 : -130)
+                .animation(.easeInOut(duration: 2.6), value: hasAnimatedIn)
+                .animation(.easeInOut(duration: 0.5), value: currentPage)
         }
         .ignoresSafeArea()
     }
@@ -183,6 +208,8 @@ struct OnboardingPage {
 private struct OnboardingPageCard: View {
     let page: OnboardingPage
     let colorScheme: ColorScheme
+    let isActive: Bool
+    let hasAnimatedIn: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -261,5 +288,15 @@ private struct OnboardingPageCard: View {
                 .stroke(Color.white.opacity(colorScheme == .dark ? 0.20 : 0.55), lineWidth: 1)
         )
         .shadow(color: .black.opacity(colorScheme == .dark ? 0.32 : 0.12), radius: 22, x: 0, y: 12)
+        .scaleEffect(isActive ? 1.0 : 0.985)
+        .rotation3DEffect(
+            .degrees(isActive ? 0 : 1.6),
+            axis: (x: 0, y: 1, z: 0),
+            perspective: 0.8
+        )
+        .opacity(hasAnimatedIn ? 1 : 0)
+        .offset(y: hasAnimatedIn ? 0 : 20)
+        .animation(.spring(response: 0.52, dampingFraction: 0.86), value: isActive)
+        .animation(.spring(response: 0.60, dampingFraction: 0.84), value: hasAnimatedIn)
     }
 }

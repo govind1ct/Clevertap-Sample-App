@@ -9,10 +9,11 @@ struct MainTabView: View {
     @StateObject private var nativeDisplayService = CleverTapNativeDisplayService.shared
     
     enum Tab: Int {
-        case home, inbox, experiences, cart, profile
+        case home, experiences, cart, profile, developer
     }
     
     @State private var selectedTab: Tab = .home
+    @State private var previousTab: Tab = .home
     @AppStorage("hasSeenMainTabWalkthrough") private var hasSeenMainTabWalkthrough: Bool = false
     @State private var showWalkthroughNudges = false
     @State private var walkthroughStepIndex = 0
@@ -29,26 +30,32 @@ struct MainTabView: View {
             WalkthroughStep(
                 tab: .home,
                 title: "Home",
-                message: "Browse products, search quickly, and discover featured recommendations.",
+                message: "Browse products, discover featured sections, and open product detail in one tap.",
                 icon: "house.fill"
             ),
             WalkthroughStep(
                 tab: .experiences,
                 title: "Experiences",
-                message: "Fetch Product Experiences and preview remote UI updates in real time.",
+                message: "Open CleverTap Test Lab, Product Experiences, App Inbox, and Native Display workflows.",
                 icon: "wand.and.stars"
             ),
             WalkthroughStep(
                 tab: .cart,
                 title: "Cart",
-                message: "Review selected products and continue to checkout when ready.",
+                message: "Review selected items, edit quantities, and continue to checkout.",
                 icon: "cart.fill"
             ),
             WalkthroughStep(
                 tab: .profile,
                 title: "Profile",
-                message: "Manage profile data, sync to CleverTap, and monitor dashboard metrics.",
+                message: "Manage profile data, preferences, and CleverTap-linked account actions.",
                 icon: "person.crop.circle.fill"
+            ),
+            WalkthroughStep(
+                tab: .developer,
+                title: "Developer",
+                message: "See project credits and implementation context in the dedicated developer tab.",
+                icon: "person.crop.circle.badge.checkmark"
             )
         ]
     }
@@ -69,20 +76,6 @@ struct MainTabView: View {
                 }
             }
             .tag(Tab.home)
-            
-            
-            // MARK: - Inbox
-            NavigationStack {
-                AppInboxView()
-            }
-            .tabItem {
-                Label {
-                    Text("Inbox")
-                } icon: {
-                    Image(systemName: selectedTab == .inbox ? "tray.fill" : "tray")
-                }
-            }
-            .tag(Tab.inbox)
             
             
             // MARK: - Product Experiences
@@ -132,6 +125,21 @@ struct MainTabView: View {
                 }
             }
             .tag(Tab.profile)
+
+            // MARK: - Developer
+            NavigationStack {
+                MeetDeveloperView()
+                    .navigationTitle("Developer")
+                    .navigationBarTitleDisplayMode(.inline)
+            }
+            .tabItem {
+                Label {
+                    Text("Developer")
+                } icon: {
+                    Image(systemName: selectedTab == .developer ? "person.crop.circle.badge.checkmark.fill" : "person.crop.circle.badge.checkmark")
+                }
+            }
+            .tag(Tab.developer)
         }
         .animation(.easeInOut(duration: 0.2), value: selectedTab)
         .tint(Color("CleverTapPrimary"))
@@ -150,11 +158,24 @@ struct MainTabView: View {
         .onReceive(NotificationCenter.default.publisher(for: .replayMainTabWalkthrough)) { _ in
             restartWalkthrough()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .openDeveloperTab)) { _ in
+            withAnimation(.spring(response: 0.40, dampingFraction: 0.88)) {
+                selectedTab = .developer
+            }
+        }
         .onChange(of: selectedTab) { _, _ in
             UIImpactFeedbackGenerator(style: .soft).impactOccurred()
             if selectedTab == .home || selectedTab == .profile {
                 CleverTapNativeDisplayService.shared.refreshDisplayUnits()
             }
+            if selectedTab == .experiences {
+                CleverTapService.shared.trackEvent("Experiences Tab Opened", withProps: [
+                    "From Tab": String(describing: previousTab),
+                    "Walkthrough Active": showWalkthroughNudges
+                ])
+                CleverTapService.shared.trackScreenViewed(screenName: "Experiences")
+            }
+            previousTab = selectedTab
         }
     }
 }
@@ -312,6 +333,7 @@ private extension MainTabView {
 
 extension Notification.Name {
     static let replayMainTabWalkthrough = Notification.Name("replayMainTabWalkthrough")
+    static let openDeveloperTab = Notification.Name("openDeveloperTab")
 }
 
 #Preview {

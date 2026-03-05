@@ -16,15 +16,17 @@ struct AuthLoginView: View {
             ZStack {
                 AuthBackgroundView()
 
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 22) {
-                        Spacer(minLength: 22)
-                        AuthBrandHeader(title: "Welcome Back", subtitle: "Sign in to continue with CleverTap demo flows")
-                        formCard
-                        Spacer(minLength: 20)
+                GeometryReader { proxy in
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 22) {
+                            AuthBrandHeader(title: "Welcome Back", subtitle: "Sign in to continue with CleverTap demo flows")
+                            formCard
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 24)
+                        .frame(minHeight: proxy.size.height, alignment: .center)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 16)
                 }
             }
             .navigationBarHidden(true)
@@ -67,23 +69,31 @@ struct AuthLoginView: View {
                 trailingView: AnyView(passwordToggle)
             )
 
-            if let error = viewModel.errorMessage, !error.isEmpty {
-                Text(error)
-                    .font(.caption)
-                    .foregroundColor(.red)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            Group {
+                if let error = viewModel.errorMessage, !error.isEmpty {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    Color.clear
+                        .frame(height: 16)
+                }
             }
 
             Button {
                 signInWithEmail()
             } label: {
-                HStack(spacing: 8) {
-                    if isLoading {
-                        ProgressView().tint(.white)
-                    } else {
+                ZStack {
+                    HStack(spacing: 8) {
                         Text("Sign In")
                         Image(systemName: "arrow.right")
                     }
+                    .opacity(isLoading ? 0 : 1)
+
+                    ProgressView()
+                        .tint(.white)
+                        .opacity(isLoading ? 1 : 0)
                 }
                 .font(.system(.headline, design: .rounded, weight: .bold))
                 .foregroundColor(.white)
@@ -113,15 +123,17 @@ struct AuthLoginView: View {
             Button {
                 signInWithGoogle()
             } label: {
-                HStack(spacing: 10) {
+                HStack(spacing: 12) {
                     if isGoogleLoading {
-                        ProgressView().tint(.primary)
+                        ProgressView()
+                            .tint(.primary)
+                            .frame(width: 30, height: 30)
                     } else {
                         ZStack {
                             Circle()
                                 .fill(Color.white)
-                                .frame(width: 28, height: 28)
-                                .overlay(Circle().stroke(Color.black.opacity(0.08), lineWidth: 1))
+                                .frame(width: 30, height: 30)
+                                .overlay(Circle().stroke(Color.black.opacity(0.10), lineWidth: 1))
                             Text("G")
                                 .font(.caption.weight(.black))
                                 .foregroundStyle(
@@ -138,24 +150,27 @@ struct AuthLoginView: View {
                                 )
                         }
                     }
-                    Text("Continue with Google")
-                        .font(.system(.subheadline, design: .rounded, weight: .semibold))
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Continue with Google")
+                            .font(.system(.subheadline, design: .rounded, weight: .bold))
+                        Text("Fast and secure sign in")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+
                     Spacer(minLength: 0)
+
+                    Image(systemName: "arrow.up.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(.primary)
                 .padding(.horizontal, 14)
                 .frame(maxWidth: .infinity)
-                .frame(height: 52)
-                .background(
-                    (colorScheme == .dark ? Color.white.opacity(0.08) : Color.white),
-                    in: RoundedRectangle(cornerRadius: 14, style: .continuous)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(colorScheme == .dark ? Color.white.opacity(0.16) : Color.black.opacity(0.10), lineWidth: 1)
-                )
-                .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.18 : 0.05), radius: 5, x: 0, y: 2)
+                .frame(height: 58)
             }
+            .buttonStyle(PremiumGoogleButtonStyle(colorScheme: colorScheme))
             .disabled(isLoading || isGoogleLoading)
 
             Button {
@@ -182,6 +197,9 @@ struct AuthLoginView: View {
                 .stroke(colorScheme == .dark ? Color.white.opacity(0.16) : Color.white.opacity(0.40), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.10), radius: 18, x: 0, y: 10)
+        .animation(.none, value: isLoading)
+        .animation(.none, value: isGoogleLoading)
+        .animation(.none, value: viewModel.errorMessage)
     }
 
     private var passwordToggle: some View {
@@ -230,6 +248,31 @@ struct AuthBackgroundView: View {
                 .offset(x: 140, y: 240)
         }
         .ignoresSafeArea()
+    }
+}
+
+private struct PremiumGoogleButtonStyle: ButtonStyle {
+    let colorScheme: ColorScheme
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(
+                LinearGradient(
+                    colors: colorScheme == .dark
+                        ? [Color.white.opacity(0.10), Color.white.opacity(0.05)]
+                        : [Color.white, Color(red: 0.97, green: 0.98, blue: 1.0)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(colorScheme == .dark ? Color.white.opacity(0.18) : Color.black.opacity(0.10), lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.20 : 0.08), radius: 8, x: 0, y: 4)
+            .scaleEffect(configuration.isPressed ? 0.985 : 1)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 

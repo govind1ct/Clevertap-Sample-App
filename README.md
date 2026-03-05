@@ -7,6 +7,8 @@ This repository contains the CleverTap iOS sample app with integrations for:
 - Push and rich push extensions
 - PayU checkout flow
 
+**Current Release:** `v3.0.0` (Major Update)
+
 ## Project At A Glance
 
 This app is a demo storefront built to showcase end-to-end CleverTap usage in a realistic iOS app flow.
@@ -67,6 +69,24 @@ SwiftUI App (Clevetap_Sample_AppApp)
 4. Add products to cart and complete checkout to generate conversion events.
 5. Open Profile dashboard and validate synced properties/engagement metrics.
 
+## Built By
+
+This app was built by **Govind Pathak** (CleverTap).
+
+- Role: Manager - Technical Accounts - Customer Solutions - Customer Success
+- Email: `govind.pathak@clevertap.com`
+- Alternate Phone: `8527858516`
+
+In-app credits are shown in the Profile tab. To show builder photo in the app, add the image asset with name: `GovindPathak`.
+
+## v3.0.0 Major Update (March 2026)
+
+- Complete redesign of the CleverTap Profile Dashboard UI with premium visual styling and improved information hierarchy.
+- Improved dashboard header status indicators for profile properties, push state, sync state, and last refresh.
+- Hardened engagement metric parsing to correctly handle CleverTap values returned as `Int`, `NSNumber`, or `String`.
+- Reinforced app launch engagement tracking by triggering launch tracking during app startup.
+- Preserved all dashboard functionality (refresh, sync, export, clear cache) while upgrading UI quality for demos and client walkthroughs.
+
 ## Latest Enhancements (March 2026)
 
 - Upgraded `Experiences` tab with section-based studio flow: `CleverTap Test Lab` -> `Product Experiences` -> `Native Display`.
@@ -76,14 +96,6 @@ SwiftUI App (Clevetap_Sample_AppApp)
 - Ensured section isolation so each selected Experience surface only shows its own content.
 - Improved Product Experiences guidance with a single highlighted setup step for client demos.
 - Added robust cart persistence so cart items survive app kill/relaunch sessions.
-
-## Major Update (March 2026)
-
-- Complete redesign of the CleverTap Profile Dashboard UI with premium visual styling and improved information hierarchy.
-- Improved dashboard header status indicators for profile properties, push state, sync state, and last refresh.
-- Hardened engagement metric parsing to correctly handle CleverTap values returned as `Int`, `NSNumber`, or `String`.
-- Reinforced app launch engagement tracking by triggering launch tracking during app startup.
-- Preserved all dashboard functionality (refresh, sync, export, clear cache) while upgrading UI quality for demos and client walkthroughs.
 
 ## Documentation
 

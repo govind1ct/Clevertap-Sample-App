@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## v3.0.0 - 2026-03-05 (Major Update)
+- Major redesign of the `Experiences` tab with intro-first flow, premium animations, and smoother section transitions.
+- Refined Product Experiences UX with dedicated in-screen enable/disable toggle, clearer guidance, adaptive controls, and reliable back-to-overview behavior.
+- Reworked Native Display experience for readability and clarity, including dedicated entry flow and improved scrolling/contrast.
+- Upgraded first-time walkthrough coverage and messaging across tabs for clearer onboarding.
+- Added CleverTap event tracking when `Experiences` tab is opened.
+- Removed redundant `Meet the developer` entry from Profile header and kept Developer as a dedicated tab.
+- Improved dark-mode visibility for CleverTap Profile Dashboard by replacing hardcoded light styling with adaptive system-aware colors.
+- Added developer profile asset and integrated latest UI/UX polish across onboarding, auth, profile, and experiences surfaces.
+
 ## 2026-03-05
 - Standardized Native Display locations to `hero`, `promotion`, `home`, `cart`, `profile`.
 - Updated HomeView to consume remote config for header, featured section visibility/title, and max featured products.
@@ -18,4 +28,3 @@ All notable changes to this project will be documented in this file.
 - Set up base Native Display service and container views.
 - Added location-specific views for Home, Cart, Profile.
 - Established README guidance for campaign setup and testing.
-

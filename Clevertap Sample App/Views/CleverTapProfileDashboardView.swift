@@ -3,6 +3,7 @@ import CleverTapSDK
 
 struct CleverTapProfileDashboardView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @State private var profileData: [String: Any] = [:]
     @State private var isLoading = true
     @EnvironmentObject private var authViewModel: AuthViewModel
@@ -29,6 +30,23 @@ struct CleverTapProfileDashboardView: View {
             return formatPropertyValue(updated)
         }
         return "Just now"
+    }
+
+    private var headerCardGradient: [Color] {
+        if colorScheme == .dark {
+            return [
+                Color(.secondarySystemBackground).opacity(0.96),
+                Color("CleverTapPrimary").opacity(0.18)
+            ]
+        }
+        return [
+            Color(.systemBackground).opacity(0.96),
+            Color("CleverTapPrimary").opacity(0.08)
+        ]
+    }
+
+    private var subtleStrokeColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.18) : Color.primary.opacity(0.10)
     }
     
     var body: some View {
@@ -186,16 +204,13 @@ struct CleverTapProfileDashboardView: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
-            .background(.white.opacity(0.6), in: Capsule())
+            .background(Color(.secondarySystemBackground).opacity(0.9), in: Capsule())
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             LinearGradient(
-                colors: [
-                    .white.opacity(0.92),
-                    Color("CleverTapPrimary").opacity(0.08)
-                ],
+                colors: headerCardGradient,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             ),
@@ -203,7 +218,7 @@ struct CleverTapProfileDashboardView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .stroke(.white.opacity(0.65), lineWidth: 1.2)
+                .stroke(subtleStrokeColor, lineWidth: 1.0)
         )
         .shadow(color: Color.black.opacity(0.06), radius: 14, x: 0, y: 10)
         .padding(.top, 8)
@@ -642,7 +657,7 @@ struct ProfileDataRow: View {
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(.white.opacity(0.5), lineWidth: 0.8)
+                .stroke(Color.primary.opacity(0.12), lineWidth: 0.8)
         )
     }
 }
@@ -686,7 +701,7 @@ struct MetricCard: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(.white.opacity(0.45), lineWidth: 0.8)
+                .stroke(Color.primary.opacity(0.12), lineWidth: 0.8)
         )
     }
 }
@@ -724,7 +739,7 @@ struct MetricRow: View {
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(.white.opacity(0.5), lineWidth: 0.8)
+                .stroke(Color.primary.opacity(0.12), lineWidth: 0.8)
         )
     }
 }
@@ -820,7 +835,7 @@ struct ActionButton: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(.white.opacity(0.45), lineWidth: 0.8)
+                    .stroke(Color.primary.opacity(0.12), lineWidth: 0.8)
             )
         }
         .disabled(isDisabled)
@@ -857,7 +872,7 @@ struct DashboardPill: View {
         )
         .overlay(
             Capsule()
-                .stroke(.white.opacity(0.55), lineWidth: 0.8)
+                .stroke(Color.primary.opacity(0.12), lineWidth: 0.8)
         )
     }
 }
@@ -869,8 +884,8 @@ private extension View {
             .background(
                 LinearGradient(
                     colors: [
-                        .white.opacity(0.88),
-                        Color(.secondarySystemBackground).opacity(0.76)
+                        Color(.secondarySystemBackground).opacity(0.94),
+                        Color(.tertiarySystemBackground).opacity(0.84)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -879,7 +894,7 @@ private extension View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(.white.opacity(0.6), lineWidth: 1)
+                    .stroke(Color.primary.opacity(0.10), lineWidth: 1)
             )
             .shadow(color: Color.black.opacity(0.05), radius: 12, x: 0, y: 8)
     }
