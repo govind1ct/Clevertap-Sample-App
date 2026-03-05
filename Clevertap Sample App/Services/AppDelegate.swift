@@ -300,6 +300,7 @@ class AppDelegate: UIResponder,
             print("🔧 CleverTap Profile ID: \(profileId)")
         }
         CleverTapService.shared.syncPushIdentityForExtensions()
+        CleverTapService.shared.trackAppLaunched()
 
         // Handle app launch from push
         if let notificationPayload = launchOptions?[.remoteNotification] as? [String: Any] {

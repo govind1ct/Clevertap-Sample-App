@@ -23,15 +23,22 @@ struct CleverTapProfileDashboardView: View {
     private var sectionPadding: CGFloat {
         isCompactScreen ? 16 : 20
     }
+
+    private var lastRefreshText: String {
+        if let updated = profileData["Last Profile Update"] {
+            return formatPropertyValue(updated)
+        }
+        return "Just now"
+    }
     
     var body: some View {
         NavigationView {
             ZStack {
                 LinearGradient(
                     colors: [
-                        Color("CleverTapPrimary").opacity(0.15),
-                        Color("CleverTapSecondary").opacity(0.08),
-                        Color(.systemBackground),
+                        Color("CleverTapPrimary").opacity(0.22),
+                        Color("CleverTapSecondary").opacity(0.14),
+                        Color(.systemGroupedBackground),
                         Color(.systemBackground)
                     ],
                     startPoint: .topLeading,
@@ -40,18 +47,32 @@ struct CleverTapProfileDashboardView: View {
                 .ignoresSafeArea()
 
                 Circle()
-                    .fill(Color("CleverTapPrimary").opacity(0.12))
-                    .frame(width: 260, height: 260)
-                    .blur(radius: 40)
-                    .offset(x: -130, y: -300)
+                    .fill(Color("CleverTapPrimary").opacity(0.20))
+                    .frame(width: 280, height: 280)
+                    .blur(radius: 52)
+                    .offset(x: -140, y: -340)
+
+                Circle()
+                    .fill(Color("CleverTapSecondary").opacity(0.16))
+                    .frame(width: 220, height: 220)
+                    .blur(radius: 46)
+                    .offset(x: 140, y: -260)
                 
                 ScrollView {
-                    VStack(spacing: 24) {
+                    VStack(spacing: 20) {
                         headerSection
                         
                         if isLoading {
-                            ProgressView("Loading profile data...")
-                                .frame(height: 200)
+                            VStack(spacing: 14) {
+                                ProgressView()
+                                    .controlSize(.large)
+                                Text("Loading profile data...")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 44)
+                            .dashboardSectionCard()
                         } else {
                             // CleverTap ID Section
                             cleverTapIDSection
@@ -74,6 +95,7 @@ struct CleverTapProfileDashboardView: View {
                     }
                     .padding(.horizontal, horizontalInset)
                     .padding(.bottom, 40)
+                    .padding(.top, 8)
                 }
             }
             .navigationTitle("CleverTap Dashboard")
@@ -123,25 +145,22 @@ struct CleverTapProfileDashboardView: View {
     
     // MARK: - Header Section
     private var headerSection: some View {
-        VStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [
-                                Color("CleverTapPrimary").opacity(0.3),
-                                Color("CleverTapSecondary").opacity(0.1)
-                            ],
-                            center: .center,
-                            startRadius: 20,
-                            endRadius: 60
-                        )
-                    )
-                    .frame(width: 80, height: 80)
-                    .blur(radius: 20)
-                
-                Image(systemName: "chart.bar.fill")
-                    .font(.system(size: 40, weight: .medium))
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("CleverTap Profile Dashboard")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text("Analytics, identity health and consent overview")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer()
+
+                Image(systemName: "chart.line.uptrend.xyaxis.circle.fill")
+                    .font(.system(size: 32))
                     .foregroundStyle(
                         LinearGradient(
                             colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
@@ -150,25 +169,44 @@ struct CleverTapProfileDashboardView: View {
                         )
                     )
             }
-            
-            VStack(spacing: 8) {
-                Text("CleverTap Profile Dashboard")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
-                
-                Text("Analytics, identity and preference health for this profile")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-            }
 
             HStack(spacing: 10) {
                 DashboardPill(title: "Properties", value: "\(profileData.count)", icon: "slider.horizontal.3")
-                DashboardPill(title: "Permission", value: (profileData["MSG-push"] as? Bool == false) ? "Off" : "On", icon: "bell.fill")
+                DashboardPill(title: "Push", value: (profileData["MSG-push"] as? Bool == false) ? "Off" : "On", icon: "bell.fill")
+                DashboardPill(title: "Sync", value: isSyncing ? "Running" : "Idle", icon: "arrow.triangle.2.circlepath")
             }
+
+            HStack(spacing: 8) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color("CleverTapPrimary"))
+                Text("Last refresh: \(lastRefreshText)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(.white.opacity(0.6), in: Capsule())
         }
-        .padding(.top, 16)
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            LinearGradient(
+                colors: [
+                    .white.opacity(0.92),
+                    Color("CleverTapPrimary").opacity(0.08)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            in: RoundedRectangle(cornerRadius: 26, style: .continuous)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(.white.opacity(0.65), lineWidth: 1.2)
+        )
+        .shadow(color: Color.black.opacity(0.06), radius: 14, x: 0, y: 10)
+        .padding(.top, 8)
     }
     
     // MARK: - CleverTap ID Section
@@ -213,12 +251,7 @@ struct CleverTapProfileDashboardView: View {
                 }
             }
         }
-        .padding(sectionPadding)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(.white.opacity(0.22), lineWidth: 1)
-        )
+        .dashboardSectionCard(padding: sectionPadding)
     }
     
     // MARK: - User Properties Section
@@ -239,12 +272,7 @@ struct CleverTapProfileDashboardView: View {
                 }
             }
         }
-        .padding(sectionPadding)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(.white.opacity(0.22), lineWidth: 1)
-        )
+        .dashboardSectionCard(padding: sectionPadding)
     }
     
     // MARK: - Engagement Metrics Section
@@ -258,39 +286,34 @@ struct CleverTapProfileDashboardView: View {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
                 MetricCard(
                     title: "App Launches",
-                    value: "\(profileData["App Launches"] as? Int ?? 0)",
+                    value: "\(intValue(for: "App Launches"))",
                     icon: "app.badge",
                     color: .blue
                 )
                 
                 MetricCard(
                     title: "Screen Views",
-                    value: "\(profileData["Total Screen Views"] as? Int ?? 0)",
+                    value: "\(intValue(for: "Total Screen Views"))",
                     icon: "eye.fill",
                     color: .green
                 )
                 
                 MetricCard(
                     title: "Cart Additions",
-                    value: "\(profileData["Cart Additions"] as? Int ?? 0)",
+                    value: "\(intValue(for: "Cart Additions"))",
                     icon: "cart.badge.plus",
                     color: .orange
                 )
                 
                 MetricCard(
                     title: "Searches",
-                    value: "\(profileData["Total Searches"] as? Int ?? 0)",
+                    value: "\(intValue(for: "Total Searches"))",
                     icon: "magnifyingglass",
                     color: .purple
                 )
             }
         }
-        .padding(sectionPadding)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(.white.opacity(0.22), lineWidth: 1)
-        )
+        .dashboardSectionCard(padding: sectionPadding)
     }
     
     // MARK: - E-commerce Metrics Section
@@ -304,28 +327,28 @@ struct CleverTapProfileDashboardView: View {
             VStack(spacing: 12) {
                 MetricRow(
                     title: "Total Orders",
-                    value: "\(profileData["Total Orders"] as? Int ?? 0)",
+                    value: "\(intValue(for: "Total Orders"))",
                     icon: "shippingbox.fill",
                     color: .blue
                 )
                 
                 MetricRow(
                     title: "Total Spent",
-                    value: "₹\(Int(profileData["Total Spent"] as? Double ?? 0))",
+                    value: "₹\(Int(doubleValue(for: "Total Spent")))",
                     icon: "indianrupeesign.circle.fill",
                     color: .green
                 )
                 
                 MetricRow(
                     title: "Average Order Value",
-                    value: "₹\(Int(profileData["Average Order Value"] as? Double ?? 0))",
+                    value: "₹\(Int(doubleValue(for: "Average Order Value")))",
                     icon: "chart.line.uptrend.xyaxis",
                     color: .orange
                 )
                 
                 MetricRow(
                     title: "Loyalty Points",
-                    value: "\(profileData["Loyalty Points"] as? Int ?? 0)",
+                    value: "\(intValue(for: "Loyalty Points"))",
                     icon: "star.fill",
                     color: .yellow
                 )
@@ -338,12 +361,7 @@ struct CleverTapProfileDashboardView: View {
                 )
             }
         }
-        .padding(sectionPadding)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(.white.opacity(0.22), lineWidth: 1)
-        )
+        .dashboardSectionCard(padding: sectionPadding)
     }
     
     // MARK: - Notification Preferences Section
@@ -390,12 +408,7 @@ struct CleverTapProfileDashboardView: View {
                 }
             }
         }
-        .padding(sectionPadding)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(.white.opacity(0.22), lineWidth: 1)
-        )
+        .dashboardSectionCard(padding: sectionPadding)
     }
     
     // MARK: - Profile Actions Section
@@ -443,12 +456,7 @@ struct CleverTapProfileDashboardView: View {
                 }
             }
         }
-        .padding(sectionPadding)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(.white.opacity(0.22), lineWidth: 1)
-        )
+        .dashboardSectionCard(padding: sectionPadding)
     }
     
     // MARK: - Helper Methods
@@ -478,6 +486,32 @@ struct CleverTapProfileDashboardView: View {
             profileData = data
             isLoading = false
         }
+    }
+
+    private func intValue(for key: String) -> Int {
+        if let value = profileData[key] as? Int {
+            return value
+        }
+        if let value = profileData[key] as? NSNumber {
+            return value.intValue
+        }
+        if let value = profileData[key] as? String, let intValue = Int(value) {
+            return intValue
+        }
+        return 0
+    }
+
+    private func doubleValue(for key: String) -> Double {
+        if let value = profileData[key] as? Double {
+            return value
+        }
+        if let value = profileData[key] as? NSNumber {
+            return value.doubleValue
+        }
+        if let value = profileData[key] as? String, let doubleValue = Double(value) {
+            return doubleValue
+        }
+        return 0
     }
     
     private func getUserProperties() -> [(key: String, value: Any)] {
@@ -570,9 +604,9 @@ struct ProfileDataRow: View {
     var body: some View {
         HStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color("CleverTapPrimary").opacity(0.13))
-                    .frame(width: 28, height: 28)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color("CleverTapPrimary").opacity(0.16))
+                    .frame(width: 34, height: 34)
                 Image(systemName: icon)
                     .font(.caption.weight(.semibold))
                     .foregroundColor(Color("CleverTapPrimary"))
@@ -603,9 +637,13 @@ struct ProfileDataRow: View {
                 }
             }
         }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 12)
-        .background(Color(.secondarySystemBackground).opacity(0.75), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .padding(.vertical, 12)
+        .padding(.horizontal, 14)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(.white.opacity(0.5), lineWidth: 0.8)
+        )
     }
 }
 
@@ -620,8 +658,8 @@ struct MetricCard: View {
             Image(systemName: icon)
                 .font(.title3.weight(.semibold))
                 .foregroundColor(color)
-                .frame(width: 40, height: 40)
-                .background(color.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .frame(width: 44, height: 44)
+                .background(color.opacity(0.16), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             
             Text(value)
                 .font(.title3)
@@ -635,7 +673,21 @@ struct MetricCard: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
-        .background(Color(.secondarySystemBackground).opacity(0.75), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(
+            LinearGradient(
+                colors: [
+                    color.opacity(0.12),
+                    Color(.secondarySystemBackground).opacity(0.9)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(.white.opacity(0.45), lineWidth: 0.8)
+        )
     }
 }
 
@@ -648,9 +700,9 @@ struct MetricRow: View {
     var body: some View {
         HStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(color.opacity(0.14))
-                    .frame(width: 28, height: 28)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(color.opacity(0.16))
+                    .frame(width: 34, height: 34)
                 Image(systemName: icon)
                     .font(.caption.weight(.semibold))
                     .foregroundColor(color)
@@ -667,9 +719,13 @@ struct MetricRow: View {
                 .fontWeight(.semibold)
                 .foregroundColor(.primary)
         }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 12)
-        .background(Color(.secondarySystemBackground).opacity(0.75), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .padding(.vertical, 12)
+        .padding(.horizontal, 14)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(.white.opacity(0.5), lineWidth: 0.8)
+        )
     }
 }
 
@@ -681,9 +737,9 @@ struct NotificationStatusRow: View {
     var body: some View {
         HStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill((isEnabled ? Color.green : Color.red).opacity(0.14))
-                    .frame(width: 28, height: 28)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill((isEnabled ? Color.green : Color.red).opacity(0.16))
+                    .frame(width: 34, height: 34)
                 Image(systemName: icon)
                     .font(.caption.weight(.semibold))
                     .foregroundColor(isEnabled ? .green : .red)
@@ -703,9 +759,13 @@ struct NotificationStatusRow: View {
                 .padding(.vertical, 4)
                 .background(isEnabled ? .green : .red, in: RoundedRectangle(cornerRadius: 8))
         }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 12)
-        .background(Color(.secondarySystemBackground).opacity(0.75), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .padding(.vertical, 12)
+        .padding(.horizontal, 14)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(.white.opacity(0.5), lineWidth: 0.8)
+        )
     }
 }
 
@@ -721,9 +781,9 @@ struct ActionButton: View {
         Button(action: action) {
             HStack(spacing: 12) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(color.opacity(0.14))
-                        .frame(width: 40, height: 40)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(color.opacity(0.16))
+                        .frame(width: 42, height: 42)
                     Image(systemName: icon)
                         .font(.subheadline.weight(.semibold))
                         .foregroundColor(color)
@@ -747,7 +807,21 @@ struct ActionButton: View {
                     .foregroundColor(.secondary)
             }
             .padding(12)
-            .background(Color(.secondarySystemBackground).opacity(0.75), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(
+                LinearGradient(
+                    colors: [
+                        color.opacity(0.12),
+                        Color(.secondarySystemBackground).opacity(0.88)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(.white.opacity(0.45), lineWidth: 0.8)
+            )
         }
         .disabled(isDisabled)
         .opacity(isDisabled ? 0.6 : 1.0)
@@ -768,9 +842,46 @@ struct DashboardPill: View {
                 .font(.caption2.weight(.semibold))
         }
         .foregroundColor(Color("CleverTapPrimary"))
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(Color("CleverTapPrimary").opacity(0.12), in: Capsule())
+        .padding(.horizontal, 11)
+        .padding(.vertical, 7)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color("CleverTapPrimary").opacity(0.16),
+                    Color("CleverTapSecondary").opacity(0.10)
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            ),
+            in: Capsule()
+        )
+        .overlay(
+            Capsule()
+                .stroke(.white.opacity(0.55), lineWidth: 0.8)
+        )
+    }
+}
+
+private extension View {
+    func dashboardSectionCard(padding: CGFloat = 20) -> some View {
+        self
+            .padding(padding)
+            .background(
+                LinearGradient(
+                    colors: [
+                        .white.opacity(0.88),
+                        Color(.secondarySystemBackground).opacity(0.76)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                in: RoundedRectangle(cornerRadius: 24, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(.white.opacity(0.6), lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.05), radius: 12, x: 0, y: 8)
     }
 }
 
