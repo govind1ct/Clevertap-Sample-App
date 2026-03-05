@@ -33,6 +33,7 @@
 		2000E5CF2F458DA70074C7C6 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5CE2F458DA70074C7C6 /* FirebaseStorage */; };
 		2000E5D12F458DA70074C7C6 /* FirebaseStorageCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 2000E5D02F458DA70074C7C6 /* FirebaseStorageCombine-Community */; };
 		2006C49E2F5818B700F0C7E9 /* CleverTapSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 2006C49D2F5818B700F0C7E9 /* CleverTapSDK */; };
+		206760412F59E49F00370802 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 206760402F59E49F00370802 /* README.md */; };
 		206B49432F5804D200698C0E /* Clevertap NSE.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 206B493C2F5804D200698C0E /* Clevertap NSE.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		206B494D2F5804FE00698C0E /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 20B0772C2F5709D6009490B3 /* UserNotifications.framework */; };
 		206B494E2F5804FE00698C0E /* UserNotificationsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 20B0772E2F5709D6009490B3 /* UserNotificationsUI.framework */; };
@@ -78,6 +79,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		206760402F59E49F00370802 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		206B493C2F5804D200698C0E /* Clevertap NSE.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Clevertap NSE.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		206B494C2F5804FE00698C0E /* Clevertap NCE.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Clevertap NCE.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		20B0772C2F5709D6009490B3 /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = System/Library/Frameworks/UserNotifications.framework; sourceTree = SDKROOT; };
@@ -193,6 +195,7 @@
 				206B494F2F5804FE00698C0E /* Clevertap NCE */,
 				7430778D2DCB71D6006E96F0 /* Frameworks */,
 				743077562DCB6C85006E96F0 /* Products */,
+				206760402F59E49F00370802 /* README.md */,
 			);
 			sourceTree = "<group>";
 		};
@@ -380,6 +383,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				206760412F59E49F00370802 /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
