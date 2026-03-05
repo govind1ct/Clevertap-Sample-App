@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AuthLoginView: View {
     @EnvironmentObject private var viewModel: AuthViewModel
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var email = ""
     @State private var password = ""
@@ -146,14 +147,14 @@ struct AuthLoginView: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
                 .background(
-                    Color.white,
+                    (colorScheme == .dark ? Color.white.opacity(0.08) : Color.white),
                     in: RoundedRectangle(cornerRadius: 14, style: .continuous)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Color.black.opacity(0.10), lineWidth: 1)
+                        .stroke(colorScheme == .dark ? Color.white.opacity(0.16) : Color.black.opacity(0.10), lineWidth: 1)
                 )
-                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+                .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.18 : 0.05), radius: 5, x: 0, y: 2)
             }
             .disabled(isLoading || isGoogleLoading)
 
@@ -178,7 +179,7 @@ struct AuthLoginView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.white.opacity(0.40), lineWidth: 1)
+                .stroke(colorScheme == .dark ? Color.white.opacity(0.16) : Color.white.opacity(0.40), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.10), radius: 18, x: 0, y: 10)
     }
@@ -235,6 +236,7 @@ struct AuthBackgroundView: View {
 struct AuthBrandHeader: View {
     let title: String
     let subtitle: String
+    var highlights: [String] = ["Realtime Personalization", "Native Display", "Journey Analytics"]
 
     var body: some View {
         VStack(spacing: 12) {
@@ -253,6 +255,20 @@ struct AuthBrandHeader: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 14)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(highlights, id: \.self) { item in
+                        Text(item)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color("CleverTapPrimary"))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color("CleverTapPrimary").opacity(0.12), in: Capsule())
+                    }
+                }
+                .padding(.horizontal, 6)
+            }
         }
     }
 }
@@ -264,6 +280,7 @@ struct AuthTextFieldRow: View {
     let keyboardType: UIKeyboardType
     let isSecure: Bool
     let trailingView: AnyView?
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         HStack(spacing: 12) {
@@ -288,11 +305,11 @@ struct AuthTextFieldRow: View {
         .frame(height: 50)
         .background(
             RoundedRectangle(cornerRadius: 13, style: .continuous)
-                .fill(Color.primary.opacity(0.06))
+                .fill(colorScheme == .dark ? Color.white.opacity(0.08) : Color.primary.opacity(0.06))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 13, style: .continuous)
-                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                .stroke(colorScheme == .dark ? Color.white.opacity(0.14) : Color.white.opacity(0.18), lineWidth: 1)
         )
     }
 }

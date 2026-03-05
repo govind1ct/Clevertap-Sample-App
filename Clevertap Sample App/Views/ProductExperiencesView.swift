@@ -1,64 +1,65 @@
 import SwiftUI
+import UIKit
 
 struct ProductExperiencesView: View {
-    private enum ExperienceSection {
-        case productExperiences
+    private enum ExperienceSection: Hashable {
         case testLab
+        case productExperiences
         case nativeDisplay
+    }
+
+    private enum ActiveSheet: Identifiable {
+        case settings
+
+        var id: String {
+            switch self {
+            case .settings:
+                return "settings"
+            }
+        }
     }
 
     @StateObject private var productExperiencesService = CleverTapProductExperiencesService.shared
     @State private var showAlert = false
     @State private var alertMessage = ""
-    @State private var selectedSection: ExperienceSection = .productExperiences
+    @State private var selectedSection: ExperienceSection = .testLab
+    @State private var activeSheet: ActiveSheet?
     @State private var animateContent = false
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: [
-                    Color("CleverTapPrimary").opacity(0.20),
-                    Color("CleverTapSecondary").opacity(0.10),
-                    Color(.systemBackground),
-                    Color(.systemBackground)
-                ],
+                colors: backgroundGradientColors,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
 
             Circle()
-                .fill(Color("CleverTapPrimary").opacity(0.14))
+                .fill(Color("CleverTapPrimary").opacity(isDarkMode ? 0.20 : 0.14))
                 .frame(width: 280, height: 280)
                 .blur(radius: 36)
                 .offset(x: -150, y: -360)
 
             Circle()
-                .fill(Color("CleverTapSecondary").opacity(0.12))
+                .fill(Color("CleverTapSecondary").opacity(isDarkMode ? 0.18 : 0.12))
                 .frame(width: 320, height: 320)
                 .blur(radius: 44)
                 .offset(x: 170, y: -280)
 
             ScrollView {
                 VStack(spacing: 22) {
-                    headerSection
-
-                    if !CleverTapProductExperiencesService.isFeatureEnabled {
-                        disabledBanner
+                    if selectedSection == .testLab {
+                        headerSection
                     }
 
                     sectionSelector
 
-                    if selectedSection == .productExperiences {
-                        variableStatusSection
-                        actionsSection
-                        demoPresetsSection
-                        guideSection
-                    } else if selectedSection == .testLab {
-                        testLabSection
-                    } else {
-                        nativeDisplaySection
-                    }
+                    sectionContent
+                        .id(selectedSection)
+                        .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.98)), removal: .opacity))
+                        .animation(.spring(response: 0.42, dampingFraction: 0.86), value: selectedSection)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
@@ -81,10 +82,61 @@ struct ProductExperiencesView: View {
         .alert(alertMessage, isPresented: $showAlert) {
             Button("OK") { }
         }
+        .sheet(item: $activeSheet) { item in
+            switch item {
+            case .settings:
+                SettingsView()
+            }
+        }
     }
 }
 
 private extension ProductExperiencesView {
+    var isDarkMode: Bool {
+        colorScheme == .dark
+    }
+
+    var backgroundGradientColors: [Color] {
+        if isDarkMode {
+            return [
+                Color(red: 0.10, green: 0.12, blue: 0.16),
+                Color("CleverTapPrimary").opacity(0.22),
+                Color(.systemBackground),
+                Color(.systemBackground)
+            ]
+        }
+        return [
+            Color("CleverTapPrimary").opacity(0.20),
+            Color("CleverTapSecondary").opacity(0.10),
+            Color(.systemBackground),
+            Color(.systemBackground)
+        ]
+    }
+
+    var sectionBorderColor: Color {
+        isDarkMode ? Color.white.opacity(0.16) : Color.white.opacity(0.24)
+    }
+
+    var rowBackgroundColor: Color {
+        isDarkMode ? Color.white.opacity(0.08) : Color(.secondarySystemBackground).opacity(0.75)
+    }
+
+    var selectorBackgroundColor: Color {
+        isDarkMode ? Color.white.opacity(0.08) : Color(.secondarySystemGroupedBackground)
+    }
+
+    var headerIconBackground: Color {
+        isDarkMode ? Color.white.opacity(0.14) : Color.white.opacity(0.20)
+    }
+
+    var headerPillBackground: Color {
+        isDarkMode ? Color("CleverTapPrimary").opacity(0.20) : Color("CleverTapPrimary").opacity(0.14)
+    }
+
+    var headerBadgeBackground: Color {
+        isDarkMode ? Color.white.opacity(0.10) : rowBackgroundColor
+    }
+
     var headerSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top) {
@@ -94,7 +146,7 @@ private extension ProductExperiencesView {
                         .foregroundColor(Color("CleverTapPrimary"))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
-                        .background(Color("CleverTapPrimary").opacity(0.14), in: Capsule())
+                        .background(headerPillBackground, in: Capsule())
 
                     Text("Experiences")
                         .font(.system(size: 34, weight: .heavy, design: .rounded))
@@ -107,14 +159,19 @@ private extension ProductExperiencesView {
 
                 Spacer(minLength: 16)
 
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.white.opacity(0.20))
-                        .frame(width: 52, height: 52)
-                    Image(systemName: "slider.horizontal.3")
-                        .font(.title3.weight(.semibold))
-                        .foregroundColor(Color("CleverTapPrimary"))
+                Button {
+                    activeSheet = .settings
+                } label: {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(headerIconBackground)
+                            .frame(width: 52, height: 52)
+                        Image(systemName: "slider.horizontal.3")
+                            .font(.title3.weight(.semibold))
+                            .foregroundColor(Color("CleverTapPrimary"))
+                    }
                 }
+                .buttonStyle(.plain)
             }
 
             HStack(spacing: 10) {
@@ -133,43 +190,80 @@ private extension ProductExperiencesView {
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                .stroke(sectionBorderColor, lineWidth: 1)
         )
     }
 
     var sectionSelector: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                selectorCard(
-                    title: "Product Experiences",
-                    subtitle: "Remote config variables",
-                    icon: "shippingbox.fill",
-                    isSelected: selectedSection == .productExperiences
-                ) {
-                    selectedSection = .productExperiences
-                }
-                .frame(width: 210)
+        VStack(alignment: .leading, spacing: 10) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    selectorCard(
+                        title: "CleverTap Test Lab",
+                        subtitle: "Push, in-app, inbox tests",
+                        icon: "brain.head.profile",
+                        isSelected: selectedSection == .testLab
+                    ) {
+                        selectSection(.testLab)
+                    }
+                    .frame(width: 210)
 
-                selectorCard(
-                    title: "CleverTap Test Lab",
-                    subtitle: "Push, in-app, inbox tests",
-                    icon: "brain.head.profile",
-                    isSelected: selectedSection == .testLab
-                ) {
-                    selectedSection = .testLab
-                }
-                .frame(width: 210)
+                    selectorCard(
+                        title: "Product Experiences",
+                        subtitle: "Remote config variables",
+                        icon: "shippingbox.fill",
+                        isSelected: selectedSection == .productExperiences
+                    ) {
+                        selectSection(.productExperiences)
+                    }
+                    .frame(width: 210)
 
-                selectorCard(
-                    title: "Native Display",
-                    subtitle: "Display units and locations",
-                    icon: "rectangle.3.group.fill",
-                    isSelected: selectedSection == .nativeDisplay
-                ) {
-                    selectedSection = .nativeDisplay
+                    selectorCard(
+                        title: "Native Display",
+                        subtitle: "Display units and locations",
+                        icon: "rectangle.3.group.fill",
+                        isSelected: selectedSection == .nativeDisplay
+                    ) {
+                        selectSection(.nativeDisplay)
+                    }
+                    .frame(width: 210)
                 }
-                .frame(width: 210)
             }
+
+            if selectedSection == .productExperiences {
+                Toggle("Enable Product Experiences", isOn: Binding(
+                    get: { productExperiencesService.isFeatureEnabled },
+                    set: { productExperiencesService.setFeatureEnabled($0) }
+                ))
+                .toggleStyle(.switch)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(sectionBorderColor, lineWidth: 1)
+                )
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.88), value: selectedSection)
+    }
+
+    @ViewBuilder
+    var sectionContent: some View {
+        switch selectedSection {
+        case .testLab:
+            testLabSection
+        case .productExperiences:
+            if !productExperiencesService.isFeatureEnabled {
+                disabledBanner
+            }
+            variableStatusSection
+            actionsSection
+            demoPresetsSection
+            guideSection
+        case .nativeDisplay:
+            nativeDisplaySection
         }
     }
 
@@ -199,7 +293,7 @@ private extension ProductExperiencesView {
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.24), lineWidth: 1)
+                .stroke(sectionBorderColor, lineWidth: 1)
         )
     }
 
@@ -218,8 +312,7 @@ private extension ProductExperiencesView {
             } label: {
                 prominentActionLabel(title: "Fetch", icon: "arrow.clockwise", gradient: [Color("CleverTapPrimary"), Color("CleverTapSecondary")])
             }
-            .disabled(!CleverTapProductExperiencesService.isFeatureEnabled)
-
+            .disabled(!productExperiencesService.isFeatureEnabled)
             Button {
                 guard !productExperiencesService.isDemoModeLocked else {
                     alertMessage = "Demo Mode Lock is ON. Disable it to sync/fetch dashboard values."
@@ -236,8 +329,7 @@ private extension ProductExperiencesView {
             } label: {
                 prominentActionLabel(title: "Sync (Debug)", icon: "hammer", gradient: [Color.indigo, Color.blue])
             }
-            .disabled(!CleverTapProductExperiencesService.isFeatureEnabled)
-        }
+            .disabled(!productExperiencesService.isFeatureEnabled)        }
     }
 
     var demoPresetsSection: some View {
@@ -281,8 +373,7 @@ private extension ProductExperiencesView {
                 } label: {
                     actionLabel(title: "Luxury", icon: "sparkles")
                 }
-                .disabled(!CleverTapProductExperiencesService.isFeatureEnabled)
-
+                .disabled(!productExperiencesService.isFeatureEnabled)
                 Button {
                     productExperiencesService.applyDemoPreset(.festiveSale)
                     alertMessage = "Applied preset: Festive Sale."
@@ -290,8 +381,7 @@ private extension ProductExperiencesView {
                 } label: {
                     actionLabel(title: "Festive", icon: "tag.fill")
                 }
-                .disabled(!CleverTapProductExperiencesService.isFeatureEnabled)
-
+                .disabled(!productExperiencesService.isFeatureEnabled)
                 Button {
                     productExperiencesService.applyDemoPreset(.reset)
                     alertMessage = "Reset to app defaults."
@@ -299,15 +389,14 @@ private extension ProductExperiencesView {
                 } label: {
                     actionLabel(title: "Reset", icon: "arrow.uturn.backward")
                 }
-                .disabled(!CleverTapProductExperiencesService.isFeatureEnabled)
-            }
+                .disabled(!productExperiencesService.isFeatureEnabled)            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.24), lineWidth: 1)
+                .stroke(sectionBorderColor, lineWidth: 1)
         )
     }
 
@@ -333,24 +422,35 @@ private extension ProductExperiencesView {
     }
 
     var guideSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("How To Use")
                 .font(.headline)
 
-            Text("1. Update variable values in CleverTap Product Experiences.")
-            Text("2. In app, open this tab and tap `Fetch` (or `Sync (Debug)` in debug builds).")
-            Text("3. Go to Home tab and verify the updated header, featured title, visibility, and item count.")
-            Text("4. If updates depend on user profile/segment, re-login or update profile, then fetch again.")
-            Text("5. Keep variable names exactly as shown in the status list above.")
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "1.circle.fill")
+                    .foregroundStyle(Color("CleverTapPrimary"))
+                    .font(.title3)
+                Text("Go to Profile -> Settings, toggle Enable Product Experiences ON/OFF.")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.primary)
+            }
+            .padding(12)
+            .background(Color("CleverTapPrimary").opacity(0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color("CleverTapPrimary").opacity(0.25), lineWidth: 1)
+            )
+
+            Text("After enabling, use Fetch to pull dashboard values.")
+                .font(.caption)
                 .foregroundColor(.secondary)
         }
-        .font(.subheadline)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.24), lineWidth: 1)
+                .stroke(sectionBorderColor, lineWidth: 1)
         )
     }
 
@@ -405,12 +505,20 @@ private extension ProductExperiencesView {
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.24), lineWidth: 1)
+                .stroke(sectionBorderColor, lineWidth: 1)
         )
     }
 
     var nativeDisplaySection: some View {
         NativeDisplayLabView()
+    }
+
+    private func selectSection(_ section: ExperienceSection) {
+        guard selectedSection != section else { return }
+        withAnimation(.spring(response: 0.38, dampingFraction: 0.84)) {
+            selectedSection = section
+        }
+        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
     }
 
     func selectorCard(
@@ -461,12 +569,12 @@ private extension ProductExperiencesView {
                                     endPoint: .trailing
                                 )
                             )
-                            : AnyShapeStyle(Color(.secondarySystemGroupedBackground))
+                            : AnyShapeStyle(selectorBackgroundColor)
                     )
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(isSelected ? Color.clear : Color.secondary.opacity(0.2), lineWidth: 1)
+                    .stroke(isSelected ? Color.clear : sectionBorderColor, lineWidth: 1)
             )
             .shadow(color: isSelected ? Color("CleverTapPrimary").opacity(0.22) : .clear, radius: 8, y: 5)
             .opacity(isSelected ? 1.0 : 0.92)
@@ -488,7 +596,7 @@ private extension ProductExperiencesView {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Color(.secondarySystemBackground).opacity(0.75), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(rowBackgroundColor, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     func actionLabel(title: String, icon: String) -> some View {
@@ -534,7 +642,7 @@ private extension ProductExperiencesView {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(Color(.secondarySystemBackground).opacity(0.75), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(headerBadgeBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 }
 

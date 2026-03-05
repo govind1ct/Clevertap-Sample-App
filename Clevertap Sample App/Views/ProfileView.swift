@@ -16,12 +16,13 @@ struct ProfileView: View {
     @State private var animateContent = false
     
     enum ActiveSheet: Identifiable {
-        case editProfile, notificationSettings, cleverTapDashboard
+        case editProfile, notificationSettings, cleverTapDashboard, settings
         var id: Int {
             switch self {
             case .editProfile: return 0
             case .notificationSettings: return 1
             case .cleverTapDashboard: return 2
+            case .settings: return 3
             }
         }
     }
@@ -148,6 +149,10 @@ struct ProfileView: View {
                 CleverTapProfileDashboardView()
                     .ignoresSafeArea(.keyboard)
                     .presentationDetents([.medium, .large])
+            case .settings:
+                SettingsView()
+                    .ignoresSafeArea(.keyboard)
+                    .presentationDetents([.medium, .large])
             }
         }
     }
@@ -190,6 +195,16 @@ struct ProfileView: View {
                         openEditProfile(source: "header_icon")
                     } label: {
                         Image(systemName: "square.and.pencil")
+                            .font(.title3)
+                            .frame(width: 46, height: 46)
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                    .buttonStyle(ScalePressButtonStyle())
+
+                    Button {
+                        openSettings(source: "header_settings")
+                    } label: {
+                        Image(systemName: "gearshape.fill")
                             .font(.title3)
                             .frame(width: 46, height: 46)
                             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -906,6 +921,13 @@ struct ProfileView: View {
             "Source": source
         ])
         activeSheet = .cleverTapDashboard
+    }
+
+    private func openSettings(source: String) {
+        CleverTapService.shared.trackEvent("Profile Settings Opened", withProps: [
+            "Source": source
+        ])
+        activeSheet = .settings
     }
     
     private func fetchUserData(completion: (() -> Void)? = nil) {

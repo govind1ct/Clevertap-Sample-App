@@ -3,6 +3,7 @@ import SwiftUI
 struct SignUpView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var viewModel: AuthViewModel
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var name = ""
     @State private var email = ""
@@ -20,7 +21,11 @@ struct SignUpView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 22) {
                         Spacer(minLength: 22)
-                        AuthBrandHeader(title: "Create Account", subtitle: "Set up your profile to test CleverTap user journeys")
+                        AuthBrandHeader(
+                            title: "Create Account",
+                            subtitle: "Set up your profile to test CleverTap user journeys",
+                            highlights: ["Profile Sync", "Event Tracking", "Smart Campaigns"]
+                        )
                         signUpCard
                         Spacer(minLength: 20)
                     }
@@ -163,14 +168,14 @@ struct SignUpView: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
                 .background(
-                    Color.white,
+                    (colorScheme == .dark ? Color.white.opacity(0.08) : Color.white),
                     in: RoundedRectangle(cornerRadius: 14, style: .continuous)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Color.black.opacity(0.10), lineWidth: 1)
+                        .stroke(colorScheme == .dark ? Color.white.opacity(0.16) : Color.black.opacity(0.10), lineWidth: 1)
                 )
-                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+                .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.18 : 0.05), radius: 5, x: 0, y: 2)
             }
             .disabled(isLoading || isGoogleLoading)
 
@@ -195,7 +200,7 @@ struct SignUpView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.white.opacity(0.40), lineWidth: 1)
+                .stroke(colorScheme == .dark ? Color.white.opacity(0.16) : Color.white.opacity(0.40), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.10), radius: 18, x: 0, y: 10)
     }

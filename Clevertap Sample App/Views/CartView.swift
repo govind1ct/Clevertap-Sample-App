@@ -5,6 +5,7 @@ struct CartView: View {
     @State private var showCheckout = false
     @State private var showingDeleteAlert = false
     @State private var productToDelete: Product?
+    @State private var animateContent = false
     @Environment(\.colorScheme) var colorScheme
 
     private let taxRate: Double = 0.18
@@ -15,20 +16,30 @@ struct CartView: View {
 
     var body: some View {
         ZStack {
-            // Beautiful gradient background
             LinearGradient(
                 colors: [
-                    Color("CleverTapPrimary").opacity(0.05),
-                    Color("CleverTapSecondary").opacity(0.03),
-                    Color.clear
+                    Color("CleverTapPrimary").opacity(colorScheme == .dark ? 0.16 : 0.08),
+                    Color("CleverTapSecondary").opacity(colorScheme == .dark ? 0.10 : 0.05),
+                    Color(.systemBackground)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
+
+            Circle()
+                .fill(Color("CleverTapPrimary").opacity(colorScheme == .dark ? 0.22 : 0.14))
+                .frame(width: 260, height: 260)
+                .blur(radius: 42)
+                .offset(x: -140, y: -320)
+
+            Circle()
+                .fill(Color("CleverTapSecondary").opacity(colorScheme == .dark ? 0.18 : 0.12))
+                .frame(width: 300, height: 300)
+                .blur(radius: 50)
+                .offset(x: 170, y: -260)
             
             VStack(spacing: 0) {
-                // Header Section
                 headerSection
                 
                 if cartManager.items.isEmpty {
@@ -37,9 +48,15 @@ struct CartView: View {
                     cartContentView
                 }
             }
+            .opacity(animateContent ? 1 : 0)
+            .offset(y: animateContent ? 0 : 10)
+            .animation(.spring(response: 0.42, dampingFraction: 0.86), value: animateContent)
         }
         .navigationBarHidden(true)
         .onAppear {
+            if !animateContent {
+                animateContent = true
+            }
             CleverTapService.shared.trackScreenViewed(screenName: "Cart")
         }
         .alert("Remove Item", isPresented: $showingDeleteAlert) {
@@ -61,7 +78,7 @@ struct CartView: View {
     
     // MARK: - Header Section
     private var headerSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Shopping Cart")
@@ -82,12 +99,11 @@ struct CartView: View {
                 
                 Spacer()
                 
-                // Cart Icon with Badge
                 ZStack(alignment: .topTrailing) {
                     Image(systemName: "cart.fill")
                         .font(.title2)
                         .foregroundColor(.primary)
-                        .frame(width: 44, height: 44)
+                        .frame(width: 46, height: 46)
                         .background(.ultraThinMaterial, in: Circle())
                     
                     if cartManager.itemCount > 0 {
@@ -101,11 +117,36 @@ struct CartView: View {
                     }
                 }
             }
+
+            HStack(spacing: 10) {
+                cartStatPill(icon: "shippingbox.fill", text: "\(cartManager.items.count) products")
+                cartStatPill(icon: "indianrupeesign.circle.fill", text: "₹\(Int(total)) total")
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .padding(16)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.white.opacity(0.22), lineWidth: 1)
+        )
         .padding(.horizontal, 20)
         .padding(.top, 10)
     }
     
+    private func cartStatPill(icon: String, text: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption.weight(.semibold))
+            Text(text)
+                .font(.caption.weight(.semibold))
+        }
+        .foregroundStyle(Color("CleverTapPrimary"))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color("CleverTapPrimary").opacity(0.12), in: Capsule())
+    }
+
     // MARK: - Empty Cart View
     private var emptyCartView: some View {
         VStack(spacing: 32) {
@@ -180,7 +221,6 @@ struct CartView: View {
     // MARK: - Cart Content View
     private var cartContentView: some View {
         VStack(spacing: 0) {
-            // Cart Items
             ScrollView {
                 LazyVStack(spacing: 16) {
                     ForEach(cartManager.items) { item in
@@ -196,8 +236,7 @@ struct CartView: View {
                             }
                         )
                     }
-                    
-                    // Native Display for cart recommendations
+
                     NativeDisplayContainerView(
                         location: "cart_recommendations",
                         maxDisplayUnits: 1,
@@ -208,9 +247,9 @@ struct CartView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
+                .padding(.bottom, 8)
             }
-            
-            // Cart Summary and Checkout
+
             cartSummarySection
         }
     }
@@ -287,8 +326,18 @@ struct CartView: View {
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 20)
-        .background(.ultraThinMaterial)
+        .padding(.top, 16)
+        .padding(.bottom, 22)
+        .background(
+            .ultraThinMaterial,
+            in: RoundedRectangle(cornerRadius: 26, style: .continuous)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+        )
+        .padding(.horizontal, 12)
+        .padding(.bottom, 8)
     }
 }
 
@@ -408,12 +457,12 @@ struct ModernCartItemRow: View {
             }
         }
         .padding(16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(.white.opacity(0.2), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(.white.opacity(0.24), lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 6)
     }
 }
 

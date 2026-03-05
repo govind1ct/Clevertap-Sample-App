@@ -4,7 +4,14 @@ import CleverTapSDK
 @MainActor
 final class CleverTapProductExperiencesService: ObservableObject {
     static let shared = CleverTapProductExperiencesService()
-    static let isFeatureEnabled = false
+    private static let featureEnabledUserDefaultsKey = "product_experiences_feature_enabled"
+
+    static var isFeatureEnabled: Bool {
+        if UserDefaults.standard.object(forKey: featureEnabledUserDefaultsKey) == nil {
+            return true
+        }
+        return UserDefaults.standard.bool(forKey: featureEnabledUserDefaultsKey)
+    }
 
     enum DemoPreset {
         case luxuryLaunch
@@ -19,6 +26,7 @@ final class CleverTapProductExperiencesService: ObservableObject {
     @Published private(set) var maxFeaturedProducts: Int = 8
     @Published private(set) var hasFetchedVariables: Bool = false
     @Published private(set) var isDemoModeLocked: Bool = false
+    @Published private(set) var isFeatureEnabled: Bool = true
 
     private var homeHeaderTitleVar: CleverTapSDK.Var?
     private var homeHeaderSubtitleVar: CleverTapSDK.Var?
@@ -32,15 +40,17 @@ final class CleverTapProductExperiencesService: ObservableObject {
     private let defaultShowFeaturedSection = true
     private let defaultMaxFeaturedProducts: Int32 = 8
     private let demoModeLockUserDefaultsKey = "product_experiences_demo_mode_locked"
+    private var hasRegisteredCallbacks = false
 
     private init() {
+        isFeatureEnabled = Self.isFeatureEnabled
         isDemoModeLocked = UserDefaults.standard.bool(forKey: demoModeLockUserDefaultsKey)
         setupVariables()
         registerCallbacks()
     }
 
     private func setupVariables() {
-        guard Self.isFeatureEnabled else {
+        guard isFeatureEnabled else {
             applyDefaultValues()
             return
         }
@@ -70,7 +80,8 @@ final class CleverTapProductExperiencesService: ObservableObject {
     }
 
     private func registerCallbacks() {
-        guard Self.isFeatureEnabled else { return }
+        guard isFeatureEnabled, !hasRegisteredCallbacks else { return }
+        hasRegisteredCallbacks = true
 
         CleverTap.sharedInstance()?.onVariablesChanged { [weak self] in
             Task { @MainActor in
@@ -130,7 +141,7 @@ final class CleverTapProductExperiencesService: ObservableObject {
     }
 
     func fetchVariables(completion: ((Bool) -> Void)? = nil) {
-        guard Self.isFeatureEnabled else {
+        guard isFeatureEnabled else {
             hasFetchedVariables = false
             applyDefaultValues()
             completion?(false)
@@ -172,7 +183,7 @@ final class CleverTapProductExperiencesService: ObservableObject {
     }
 
     func syncVariablesInDebugBuild() {
-        guard Self.isFeatureEnabled else { return }
+        guard isFeatureEnabled else { return }
         guard !isDemoModeLocked else { return }
         #if DEBUG
         CleverTap.sharedInstance()?.syncVariables()
@@ -180,7 +191,7 @@ final class CleverTapProductExperiencesService: ObservableObject {
     }
 
     func applyDemoPreset(_ preset: DemoPreset) {
-        guard Self.isFeatureEnabled else { return }
+        guard isFeatureEnabled else { return }
         switch preset {
         case .luxuryLaunch:
             homeHeaderTitle = "Luxury Launch"
@@ -205,8 +216,27 @@ final class CleverTapProductExperiencesService: ObservableObject {
         hasFetchedVariables = true
     }
 
+    func setFeatureEnabled(_ enabled: Bool) {
+        isFeatureEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: Self.featureEnabledUserDefaultsKey)
+
+        if enabled {
+            setupVariables()
+            registerCallbacks()
+            hasFetchedVariables = false
+            if !isDemoModeLocked {
+                fetchVariables()
+            }
+        } else {
+            hasFetchedVariables = false
+            isDemoModeLocked = false
+            UserDefaults.standard.set(false, forKey: demoModeLockUserDefaultsKey)
+            applyDefaultValues()
+        }
+    }
+
     func setDemoModeLocked(_ isLocked: Bool) {
-        guard Self.isFeatureEnabled else {
+        guard isFeatureEnabled else {
             isDemoModeLocked = false
             UserDefaults.standard.set(false, forKey: demoModeLockUserDefaultsKey)
             return

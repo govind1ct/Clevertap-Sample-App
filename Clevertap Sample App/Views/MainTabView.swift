@@ -13,6 +13,45 @@ struct MainTabView: View {
     }
     
     @State private var selectedTab: Tab = .home
+    @AppStorage("hasSeenMainTabWalkthrough") private var hasSeenMainTabWalkthrough: Bool = false
+    @State private var showWalkthroughNudges = false
+    @State private var walkthroughStepIndex = 0
+
+    private struct WalkthroughStep {
+        let tab: Tab
+        let title: String
+        let message: String
+        let icon: String
+    }
+
+    private var walkthroughSteps: [WalkthroughStep] {
+        [
+            WalkthroughStep(
+                tab: .home,
+                title: "Home",
+                message: "Browse products, search quickly, and discover featured recommendations.",
+                icon: "house.fill"
+            ),
+            WalkthroughStep(
+                tab: .experiences,
+                title: "Experiences",
+                message: "Fetch Product Experiences and preview remote UI updates in real time.",
+                icon: "wand.and.stars"
+            ),
+            WalkthroughStep(
+                tab: .cart,
+                title: "Cart",
+                message: "Review selected products and continue to checkout when ready.",
+                icon: "cart.fill"
+            ),
+            WalkthroughStep(
+                tab: .profile,
+                title: "Profile",
+                message: "Manage profile data, sync to CleverTap, and monitor dashboard metrics.",
+                icon: "person.crop.circle.fill"
+            )
+        ]
+    }
     
     var body: some View {
         
@@ -96,8 +135,20 @@ struct MainTabView: View {
         }
         .animation(.easeInOut(duration: 0.2), value: selectedTab)
         .tint(Color("CleverTapPrimary"))
+        .overlay(alignment: .bottom) {
+            if showWalkthroughNudges {
+                walkthroughNudgeCard
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 88)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
         .onAppear {
             configureTabBarAppearance()
+            startWalkthroughIfNeeded()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .replayMainTabWalkthrough)) { _ in
+            restartWalkthrough()
         }
         .onChange(of: selectedTab) { _, _ in
             UIImpactFeedbackGenerator(style: .soft).impactOccurred()
@@ -112,6 +163,95 @@ struct MainTabView: View {
 // MARK: - Apple Minimalist Tab Bar Styling
 
 private extension MainTabView {
+    var walkthroughNudgeCard: some View {
+        let step = walkthroughSteps[walkthroughStepIndex]
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: step.icon)
+                    .font(.headline)
+                    .foregroundStyle(Color("CleverTapPrimary"))
+                    .frame(width: 34, height: 34)
+                    .background(Color("CleverTapPrimary").opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("First-time walkthrough")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(step.title)
+                        .font(.headline)
+                    Text(step.message)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 8)
+
+                Text("\(walkthroughStepIndex + 1)/\(walkthroughSteps.count)")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 10) {
+                Button("Skip") {
+                    finishWalkthrough()
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+                Spacer()
+
+                Button(walkthroughStepIndex == walkthroughSteps.count - 1 ? "Got it" : "Next") {
+                    advanceWalkthrough()
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(Color("CleverTapPrimary"), in: Capsule())
+            }
+        }
+        .padding(14)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.white.opacity(0.24), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.12), radius: 8, y: 4)
+    }
+
+    func startWalkthroughIfNeeded() {
+        guard !hasSeenMainTabWalkthrough, !showWalkthroughNudges else { return }
+        walkthroughStepIndex = 0
+        selectedTab = walkthroughSteps[0].tab
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+            showWalkthroughNudges = true
+        }
+    }
+
+    func advanceWalkthrough() {
+        if walkthroughStepIndex < walkthroughSteps.count - 1 {
+            walkthroughStepIndex += 1
+            selectedTab = walkthroughSteps[walkthroughStepIndex].tab
+        } else {
+            finishWalkthrough()
+        }
+    }
+
+    func finishWalkthrough() {
+        withAnimation(.easeOut(duration: 0.2)) {
+            showWalkthroughNudges = false
+        }
+        hasSeenMainTabWalkthrough = true
+    }
+
+    func restartWalkthrough() {
+        hasSeenMainTabWalkthrough = false
+        walkthroughStepIndex = 0
+        selectedTab = walkthroughSteps[0].tab
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+            showWalkthroughNudges = true
+        }
+    }
     
     func configureTabBarAppearance() {
         
@@ -169,6 +309,10 @@ private extension MainTabView {
     }
 }
 
+
+extension Notification.Name {
+    static let replayMainTabWalkthrough = Notification.Name("replayMainTabWalkthrough")
+}
 
 #Preview {
     MainTabView()
