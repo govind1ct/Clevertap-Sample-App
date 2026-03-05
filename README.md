@@ -75,6 +75,16 @@ SwiftUI App (Clevetap_Sample_AppApp)
 - Reinforced app launch engagement tracking by triggering launch tracking during app startup.
 - Preserved all dashboard functionality (refresh, sync, export, clear cache) while upgrading UI quality for demos and client walkthroughs.
 
+## Latest Enhancements (March 2026)
+
+- Upgraded `Experiences` tab with section-based studio flow: `CleverTap Test Lab` -> `Product Experiences` -> `Native Display`.
+- Added smooth animated section transitions with haptic feedback to improve demo polish.
+- Added in-screen Product Experiences enable/disable toggle under selector cards and connected it to persisted app state.
+- Added Settings access directly from Experiences via the slider icon and expanded global Settings controls for Product Experiences + walkthrough replay.
+- Ensured section isolation so each selected Experience surface only shows its own content.
+- Improved Product Experiences guidance with a single highlighted setup step for client demos.
+- Added robust cart persistence so cart items survive app kill/relaunch sessions.
+
 ## Documentation
 
 - Product Experiences: `Clevertap Sample App/README_ProductExperiences.md`
