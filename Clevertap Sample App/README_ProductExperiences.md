@@ -54,6 +54,13 @@ These are consumed by:
 
 ## Recent Changes (Development)
 
+### Major Update: CleverTap Dashboard (March 2026)
+- Complete visual redesign of `CleverTapProfileDashboardView` with premium card surfaces, richer gradients, and improved metric hierarchy.
+- Added stronger profile health visibility in dashboard header (properties count, push state, sync status, and last refresh display).
+- Engagement metric rendering hardened to handle values coming from CleverTap as `Int`, `NSNumber`, or `String`.
+- App launch tracking reinforced by triggering `trackAppLaunched()` during app startup for better engagement metric consistency in CleverTap.
+- All dashboard actions remain functionally unchanged (refresh, sync, export, cache clear), with UI-only enhancements for better demo quality.
+
 ### Latest UI + Demo Updates (March 2026)
 - Experiences UI has been redesigned with a premium visual treatment:
   - upgraded hero/header, selectors, status cards, and action CTA styling.
