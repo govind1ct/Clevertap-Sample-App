@@ -8,7 +8,7 @@ final class CleverTapProductExperiencesService: ObservableObject {
 
     static var isFeatureEnabled: Bool {
         if UserDefaults.standard.object(forKey: featureEnabledUserDefaultsKey) == nil {
-            return true
+            return false
         }
         return UserDefaults.standard.bool(forKey: featureEnabledUserDefaultsKey)
     }
