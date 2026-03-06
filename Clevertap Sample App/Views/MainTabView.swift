@@ -17,6 +17,7 @@ struct MainTabView: View {
     @AppStorage("hasSeenMainTabWalkthrough") private var hasSeenMainTabWalkthrough: Bool = false
     @State private var showWalkthroughNudges = false
     @State private var walkthroughStepIndex = 0
+    @State private var showAuthLoginSheet = false
 
     private struct WalkthroughStep {
         let tab: Tab
@@ -113,7 +114,9 @@ struct MainTabView: View {
                     if authViewModel.isAuthenticated {
                         ProfileView()
                     } else {
-                        AuthLoginView()
+                        GuestProfilePromptView {
+                            showAuthLoginSheet = true
+                        }
                     }
                 }
             }
@@ -177,9 +180,87 @@ struct MainTabView: View {
             }
             previousTab = selectedTab
         }
+        .sheet(isPresented: $showAuthLoginSheet) {
+            AuthLoginView()
+                .environmentObject(authViewModel)
+        }
     }
 }
 
+private struct GuestProfilePromptView: View {
+    let onSignInTap: () -> Void
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 18) {
+                Image(systemName: "person.crop.circle.badge.exclamationmark")
+                    .font(.system(size: 54))
+                    .foregroundStyle(Color("CleverTapPrimary"))
+                    .padding(.top, 28)
+
+                VStack(spacing: 8) {
+                    Text("Profile Access Requires Sign In")
+                        .font(.title3.weight(.bold))
+                        .multilineTextAlignment(.center)
+
+                    Text("You can explore Home, Experiences, Cart, and Developer without login. To use Profile features, sign in first.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Label("Tap \"Sign In to Continue\" below.", systemImage: "1.circle.fill")
+                    Label("Use email/password or Continue with Google.", systemImage: "2.circle.fill")
+                    Label("Return to Profile tab after login.", systemImage: "3.circle.fill")
+                }
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(14)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                Button(action: onSignInTap) {
+                    HStack(spacing: 8) {
+                        Text("Sign In to Continue")
+                        Image(systemName: "arrow.right")
+                    }
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        LinearGradient(
+                            colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ),
+                        in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    )
+                }
+                .buttonStyle(.plain)
+
+                Spacer(minLength: 20)
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 24)
+        }
+        .background(
+            LinearGradient(
+                colors: [
+                    Color("CleverTapPrimary").opacity(0.14),
+                    Color(.systemBackground),
+                    Color(.systemBackground)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        )
+        .navigationTitle("Profile")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
 
 // MARK: - Apple Minimalist Tab Bar Styling
 

@@ -10,7 +10,6 @@ struct Clevertap_Sample_AppApp: App {
     @StateObject private var nativeDisplayService = CleverTapNativeDisplayService.shared
     @StateObject private var productExperiencesService = CleverTapProductExperiencesService.shared
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
-    @State private var showGuestOnboarding = true
     @State private var showSplash = true
     
     // Use AppDelegate for push notifications and CleverTap setup
@@ -27,13 +26,10 @@ struct Clevertap_Sample_AppApp: App {
                     }
                     .transition(.opacity)
                 } else {
-                    if authViewModel.isAuthenticated {
-                        MainTabView()
-                            .transition(.opacity.combined(with: .scale(scale: 0.98)))
-                    } else if showGuestOnboarding {
+                    if !hasSeenOnboarding {
                         OnboardingView {
                             withAnimation(.spring(response: 0.50, dampingFraction: 0.88)) {
-                                showGuestOnboarding = false
+                                hasSeenOnboarding = true
                             }
                         }
                         .transition(.asymmetric(
@@ -41,24 +37,15 @@ struct Clevertap_Sample_AppApp: App {
                             removal: .move(edge: .leading).combined(with: .opacity)
                         ))
                     } else {
-                        AuthLoginView()
-                            .transition(.asymmetric(
-                                insertion: .move(edge: .trailing).combined(with: .opacity),
-                                removal: .opacity
-                            ))
+                        MainTabView()
+                            .transition(.opacity.combined(with: .scale(scale: 0.98)))
                     }
                 }
             }
             .animation(.easeInOut(duration: 0.40), value: showSplash)
-            .animation(.spring(response: 0.50, dampingFraction: 0.88), value: showGuestOnboarding)
-            .animation(.easeInOut(duration: 0.35), value: authViewModel.isAuthenticated)
+            .animation(.spring(response: 0.50, dampingFraction: 0.88), value: hasSeenOnboarding)
             .environmentObject(authViewModel)
             .environmentObject(cartManager)
-            .onChange(of: authViewModel.isAuthenticated) { isAuthenticated in
-                if !isAuthenticated {
-                    showGuestOnboarding = true
-                }
-            }
             .onAppear {
                 // Verify CleverTap delegate setup
                 print("✅ App Started - CleverTap delegate should be set in AppDelegate")
