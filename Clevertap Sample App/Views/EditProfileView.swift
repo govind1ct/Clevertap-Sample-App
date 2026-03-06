@@ -20,6 +20,10 @@ struct EditProfileView: View {
     @State private var alertMessage = ""
     
     private let genders = ["Male", "Female", "Other", "Prefer not to say"]
+
+    private var canEditPhone: Bool {
+        profileService.userProfile.phone.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
     
     var body: some View {
         NavigationView {
@@ -57,11 +61,20 @@ struct EditProfileView: View {
                                 icon: "envelope.fill"
                             )
 
-                            ReadOnlyInfoField(
-                                title: "Phone Number",
-                                value: phone,
-                                icon: "phone.fill"
-                            )
+                            if canEditPhone {
+                                CustomTextField(
+                                    title: "Phone Number",
+                                    text: $phone,
+                                    icon: "phone.fill",
+                                    keyboardType: .phonePad
+                                )
+                            } else {
+                                ReadOnlyInfoField(
+                                    title: "Phone Number",
+                                    value: phone,
+                                    icon: "phone.fill"
+                                )
+                            }
 
                             // Location Field
                             CustomTextField(
@@ -341,7 +354,7 @@ struct EditProfileView: View {
         let profile = profileService.userProfile
         name = profile.name
         email = Auth.auth().currentUser?.email ?? "Not available"
-        phone = profile.phone.isEmpty ? "Not set" : profile.phone
+        phone = profile.phone
         location = profile.location
         dateOfBirth = profile.dateOfBirth ?? Date()
         gender = profile.gender
@@ -350,8 +363,10 @@ struct EditProfileView: View {
     
     private func saveProfile() {
         let finishProfileUpdate: (String?) -> Void = { updatedPhotoURL in
+            let normalizedPhone = phone.trimmingCharacters(in: .whitespacesAndNewlines)
             profileService.updateUserProfile(
                 name: name.isEmpty ? nil : name,
+                phone: canEditPhone ? (normalizedPhone.isEmpty ? nil : normalizedPhone) : nil,
                 location: location.isEmpty ? nil : location,
                 dateOfBirth: dateOfBirth,
                 gender: gender.isEmpty ? nil : gender,

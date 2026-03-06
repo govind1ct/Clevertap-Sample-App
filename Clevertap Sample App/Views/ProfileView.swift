@@ -245,7 +245,9 @@ struct ProfileView: View {
                                     .shadow(color: Color("CleverTapPrimary").opacity(0.34),
                                             radius: 16, y: 8)
 
-                                if let resolvedProfilePhotoURL = resolveProfileImageURL(from: profileService.userProfile.photoURL), !profileService.userProfile.photoURL.isEmpty {
+                                if shouldRenderCustomAvatar(profileService.userProfile.photoURL),
+                                   let resolvedProfilePhotoURL = resolveProfileImageURL(from: profileService.userProfile.photoURL),
+                                   !profileService.userProfile.photoURL.isEmpty {
                                     AsyncImage(url: resolvedProfilePhotoURL) { image in
                                         image
                                             .resizable()
@@ -1114,6 +1116,14 @@ struct ProfileView: View {
             return url
         }
         return URL(fileURLWithPath: value)
+    }
+
+    private func shouldRenderCustomAvatar(_ value: String) -> Bool {
+        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalized.isEmpty else { return false }
+
+        // Use uploaded custom photos only; ignore provider-generated letter avatars.
+        return normalized.contains("profile_images/") || normalized.contains("firebasestorage.googleapis.com")
     }
 }
 

@@ -289,7 +289,14 @@ class ProfileService: ObservableObject {
         
         // Update local profile
         if let name = name { userProfile.name = name }
-        if let phone = phone { userProfile.phone = phone }
+        if let phone = phone {
+            let newPhone = phone.trimmingCharacters(in: .whitespacesAndNewlines)
+            let existingPhone = userProfile.phone.trimmingCharacters(in: .whitespacesAndNewlines)
+            // Phone is write-once: allow first set only.
+            if existingPhone.isEmpty && !newPhone.isEmpty {
+                userProfile.phone = newPhone
+            }
+        }
         if let location = location { userProfile.location = location }
         if let dateOfBirth = dateOfBirth { userProfile.dateOfBirth = dateOfBirth }
         if let gender = gender { userProfile.gender = gender }
