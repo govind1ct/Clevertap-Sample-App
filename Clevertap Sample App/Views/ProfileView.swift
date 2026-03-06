@@ -530,8 +530,7 @@ struct ProfileView: View {
                 ProfileInfoRow(
                     title: "Phone",
                     value: profileService.userProfile.phone.isEmpty ? "Not set" : profileService.userProfile.phone,
-                    icon: "phone.fill",
-                    onEdit: { openEditProfile(source: "profile_info_phone") }
+                    icon: "phone.fill"
                 )
                 
                 ProfileInfoRow(
@@ -1038,15 +1037,6 @@ struct ProfileView: View {
         isSyncingProfile = true
         syncStatusMessage = "Syncing profile data..."
         syncCleverTapProfile()
-
-        if let user = authViewModel.user {
-            CleverTapService.shared.createUserProfile(
-                email: user.email ?? "",
-                userId: user.uid,
-                name: profileService.userProfile.name.isEmpty ? (user.displayName ?? "") : profileService.userProfile.name,
-                isNewUser: false
-            )
-        }
 
         profileService.fetchUserProfile { _ in
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {

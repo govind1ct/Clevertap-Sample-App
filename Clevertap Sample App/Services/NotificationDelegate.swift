@@ -67,8 +67,6 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, UIApplic
     ) {
         recordPushImpressionIfPossible(userInfo: notification.request.content.userInfo)
 
-        trackNotificationEvent(notification: notification, action: "Received")
-
         // Foreground push should still be visible.
         if #available(iOS 14.0, *) {
             completionHandler([.banner, .list, .badge, .sound])
@@ -84,6 +82,8 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, UIApplic
     ) {
         let notification = response.notification
 
+        // Fallback: if NSE did not execute for this payload, ensure viewed is still captured on tap.
+        recordPushImpressionIfPossible(userInfo: notification.request.content.userInfo)
         trackNotificationEvent(notification: notification, action: "Clicked")
 
         CleverTap.sharedInstance()?.handleNotification(withData: notification.request.content.userInfo)
@@ -128,8 +128,12 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, UIApplic
     }
 
     private func recordPushImpressionIfPossible(userInfo: [AnyHashable: Any]) {
+        guard let sdk = CleverTap.sharedInstance(), sdk.isCleverTapNotification(userInfo) else {
+            return
+        }
+
         let normalizedPayload = normalizedPayloadForImpression(from: userInfo)
-        CleverTap.sharedInstance()?.recordNotificationViewedEvent(withData: normalizedPayload)
+        sdk.recordNotificationViewedEvent(withData: normalizedPayload)
     }
 
     private func normalizedPayloadForImpression(from userInfo: [AnyHashable: Any]) -> [AnyHashable: Any] {

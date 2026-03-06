@@ -24,7 +24,8 @@ struct SignUpView: View {
                         AuthBrandHeader(
                             title: "Create Account",
                             subtitle: "Set up your profile to test CleverTap user journeys",
-                            highlights: ["Profile Sync", "Event Tracking", "Smart Campaigns"]
+                            highlights: ["Profile Sync", "Event Tracking", "Smart Campaigns"],
+                            logoStyle: .circular
                         )
                         signUpCard
                         Spacer(minLength: 20)

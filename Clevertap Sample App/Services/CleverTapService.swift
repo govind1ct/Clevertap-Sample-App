@@ -1,5 +1,6 @@
 import Foundation
 import CleverTapSDK
+import FirebaseAuth
 
 class CleverTapService: ObservableObject {
     static let shared = CleverTapService()
@@ -153,9 +154,8 @@ class CleverTapService: ObservableObject {
             profile["Registration Date"] = Date()
         }
 
-        // Always switch explicitly using Identity-first payload to avoid profile merge issues.
+        // Identity switch should happen only at auth boundaries (login/signup).
         CleverTap.sharedInstance()?.onUserLogin(profile)
-        CleverTap.sharedInstance()?.profilePush(profile)
         rebindCachedPushTokenIfAvailable(userId: trimmedUserID)
         syncPushIdentityForExtensions(identity: trimmedUserID, email: trimmedEmail)
         refreshProductExperiences()
@@ -169,15 +169,23 @@ class CleverTapService: ObservableObject {
             return
         }
 
+        // Never infer identity/email from SDK cache when app user is logged out.
+        // Explicit params are still allowed (used on successful login flows).
+        let isAuthenticated = Auth.auth().currentUser != nil
+
         if let providedIdentity = identity, !providedIdentity.isEmpty {
             sharedDefaults.set(providedIdentity, forKey: SharedPushIdentityConfig.identityKey)
-        } else if let existingIdentity = CleverTap.sharedInstance()?.profileGet("Identity") as? String, !existingIdentity.isEmpty {
+        } else if isAuthenticated,
+                  let existingIdentity = CleverTap.sharedInstance()?.profileGet("Identity") as? String,
+                  !existingIdentity.isEmpty {
             sharedDefaults.set(existingIdentity, forKey: SharedPushIdentityConfig.identityKey)
         }
 
         if let providedEmail = email, !providedEmail.isEmpty {
             sharedDefaults.set(providedEmail, forKey: SharedPushIdentityConfig.emailKey)
-        } else if let existingEmail = CleverTap.sharedInstance()?.profileGet("Email") as? String, !existingEmail.isEmpty {
+        } else if isAuthenticated,
+                  let existingEmail = CleverTap.sharedInstance()?.profileGet("Email") as? String,
+                  !existingEmail.isEmpty {
             sharedDefaults.set(existingEmail, forKey: SharedPushIdentityConfig.emailKey)
         }
     }
@@ -217,18 +225,11 @@ class CleverTapService: ObservableObject {
 
         sdk.recordEvent("User Logged Out", withProps: logoutEventProps)
 
-        // Important: switch to a fresh guest identity so identified profile remains isolated
-        // and future login does not merge into an in-between anonymous state.
-        let guestIdentity = "guest_\(UUID().uuidString)"
-        sdk.onUserLogin([
-            "Identity": guestIdentity,
-            "Customer Type": "Guest",
-            "Session State": "Logged Out"
-        ])
-        sdk.profilePush([
-            "Session State": "Logged Out",
-            "Last Logout": Date()
-        ])
+        // Keep logged-out state anonymous: remove identifying profile keys.
+        let identityKeys = ["Identity", "Email", "Name", "Phone", "Gender", "DOB", "Age"]
+        for key in identityKeys {
+            sdk.profileRemoveValue(forKey: key)
+        }
 
         clearPushIdentityForExtensions()
         refreshProductExperiences()

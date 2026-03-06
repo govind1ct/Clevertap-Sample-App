@@ -17,6 +17,8 @@ class NotificationService: CTNotificationServiceExtension {
     private enum SharedPushIdentityConfig {
         static let appGroupID = "group.com.govind.clevertap-sample-app"
         static let identityKey = "ct_identity"
+        static let emailKey = "ct_email"
+        static let lastImpressionDebugKey = "ct_last_impression_debug"
     }
 
     // MARK: - Main Entry - this is where we have to define the Rich Media Support
@@ -36,11 +38,20 @@ class NotificationService: CTNotificationServiceExtension {
         let shouldUseRichCategory = isRichTemplatePayload(userInfo)
         let shouldUseCarouselCategory = isCarouselTemplatePayload(userInfo)
 
-        // Track view once for CT payloads, then let CTNotificationService handle rendering.
-        if CleverTap.sharedInstance()?.isCleverTapNotification(userInfo) == true {
-            maybeSetCTUserIdentity()
-            CleverTap.sharedInstance()?.recordNotificationViewedEvent(withData: userInfo)
+        // Record impression with normalized payload.
+        // Keep identity sync guarded for actual CleverTap payloads only.
+        guard let sdk = CleverTap.sharedInstance() else {
+            persistImpressionDebugFlag(reason: "sdk_nil")
+            super.didReceive(request, withContentHandler: contentHandler)
+            return
         }
+
+        if sdk.isCleverTapNotification(userInfo) {
+            maybeSetCTUserIdentity()
+        }
+
+        let normalizedPayload = normalizedPayloadForImpression(from: userInfo)
+        sdk.recordNotificationViewedEvent(withData: normalizedPayload)
 
         super.didReceive(request, withContentHandler: { content in
             guard let mutableContent = content.mutableCopy() as? UNMutableNotificationContent else {
@@ -73,16 +84,26 @@ class NotificationService: CTNotificationServiceExtension {
 
     // MARK: - User Identity Sync (App ↔ NSE)
     private func maybeSetCTUserIdentity() {
-        guard
-            let sharedDefaults = UserDefaults(suiteName: SharedPushIdentityConfig.appGroupID),
-            let identity = sharedDefaults.string(forKey: SharedPushIdentityConfig.identityKey)
-        else {
+        guard let sharedDefaults = UserDefaults(suiteName: SharedPushIdentityConfig.appGroupID) else {
             return
         }
 
-        CleverTap.sharedInstance()?.onUserLogin([
-            "Identity": identity
-        ])
+        let identity = sharedDefaults.string(forKey: SharedPushIdentityConfig.identityKey)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let email = sharedDefaults.string(forKey: SharedPushIdentityConfig.emailKey)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        var profile: [String: Any] = [:]
+        if !identity.isEmpty {
+            profile["Identity"] = identity
+        }
+        if !email.isEmpty {
+            profile["Email"] = email
+        }
+
+        guard !profile.isEmpty else {
+            return
+        }
+
+        CleverTap.sharedInstance()?.onUserLogin(profile)
     }
 
     private func isRichTemplatePayload(_ userInfo: [AnyHashable: Any]) -> Bool {
@@ -137,5 +158,29 @@ class NotificationService: CTNotificationServiceExtension {
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
             .replacingOccurrences(of: "_", with: "")
+    }
+
+    private func persistImpressionDebugFlag(reason: String) {
+        guard let sharedDefaults = UserDefaults(suiteName: SharedPushIdentityConfig.appGroupID) else {
+            return
+        }
+
+        sharedDefaults.set(["reason": reason, "timestamp": Date().timeIntervalSince1970], forKey: SharedPushIdentityConfig.lastImpressionDebugKey)
+    }
+
+    private func normalizedPayloadForImpression(from userInfo: [AnyHashable: Any]) -> [AnyHashable: Any] {
+        var payload = userInfo
+
+        if payload["wzrk_id"] == nil {
+            if let fallbackID = payload["W$id"] ?? payload["wzrk_pt_id"] ?? payload["pt_id"] {
+                payload["wzrk_id"] = fallbackID
+            }
+        }
+
+        if payload["wzrk_nm"] == nil, let title = payload["pt_title"] {
+            payload["wzrk_nm"] = title
+        }
+
+        return payload
     }
 }

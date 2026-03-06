@@ -571,15 +571,6 @@ struct CleverTapProfileDashboardView: View {
         syncStatusMessage = "Sync in progress..."
         CleverTapService.shared.trackEvent("Dashboard Sync Triggered")
 
-        if let user = authViewModel.user {
-            CleverTapService.shared.createUserProfile(
-                email: user.email ?? "",
-                userId: user.uid,
-                name: user.displayName ?? "",
-                isNewUser: false
-            )
-        }
-
         profileService.fetchUserProfile { _ in
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                 let didSync = profileService.forceCleverTapSync()

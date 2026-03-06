@@ -456,15 +456,7 @@ class ProfileService: ObservableObject {
     // MARK: - Force Sync with CleverTap
     @discardableResult
     func forceCleverTapSync() -> Bool {
-        guard let user = Auth.auth().currentUser else { return false }
-
-        // Re-assert identity before force sync so dashboard always maps updates to this user.
-        CleverTapService.shared.createUserProfile(
-            email: user.email ?? "",
-            userId: user.uid,
-            name: userProfile.name.isEmpty ? (user.displayName ?? "") : userProfile.name,
-            isNewUser: false
-        )
+        guard Auth.auth().currentUser != nil else { return false }
 
         syncWithCleverTap()
         return CleverTapService.shared.forceProfileSync()

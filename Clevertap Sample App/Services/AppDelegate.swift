@@ -251,6 +251,7 @@ import UIKit
 import CleverTapSDK
 import UserNotifications
 import FirebaseCore
+import FirebaseAuth
 #if canImport(PayUCheckoutProKit)
 import PayUCheckoutProKit
 #endif
@@ -299,7 +300,11 @@ class AppDelegate: UIResponder,
         if let profileId = CleverTap.sharedInstance()?.profileGetID() {
             print("🔧 CleverTap Profile ID: \(profileId)")
         }
-        CleverTapService.shared.syncPushIdentityForExtensions()
+        if Auth.auth().currentUser != nil {
+            CleverTapService.shared.syncPushIdentityForExtensions()
+        } else {
+            CleverTapService.shared.clearPushIdentityForExtensions()
+        }
         CleverTapService.shared.trackAppLaunched()
 
         // Handle app launch from push

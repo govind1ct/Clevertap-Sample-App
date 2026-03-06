@@ -108,6 +108,14 @@ class CartManager: ObservableObject {
         } else {
             items.append(CartItem(id: product.id ?? UUID().uuidString, product: product, quantity: quantityToAdd))
         }
+
+        CleverTapService.shared.trackProductAddedToCart(
+            productId: product.id ?? product.name,
+            productName: product.name,
+            category: product.category,
+            price: product.price,
+            quantity: quantityToAdd
+        )
     }
 
     func removeFromCart(_ product: Product) {

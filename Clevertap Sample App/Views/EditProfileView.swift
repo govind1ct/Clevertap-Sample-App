@@ -1,11 +1,13 @@
 import SwiftUI
 import PhotosUI
+import FirebaseAuth
 
 struct EditProfileView: View {
     @ObservedObject var profileService: ProfileService
     @Environment(\.dismiss) private var dismiss
     
     @State private var name: String = ""
+    @State private var email: String = ""
     @State private var phone: String = ""
     @State private var location: String = ""
     @State private var dateOfBirth: Date = Date()
@@ -48,14 +50,19 @@ struct EditProfileView: View {
                                 icon: "person.fill"
                             )
                             
-                            // Phone Field
-                            CustomTextField(
-                                title: "Phone Number",
-                                text: $phone,
-                                icon: "phone.fill",
-                                keyboardType: .phonePad
+                            // Email and Phone are read-only by requirement
+                            ReadOnlyInfoField(
+                                title: "Email",
+                                value: email,
+                                icon: "envelope.fill"
                             )
-                            
+
+                            ReadOnlyInfoField(
+                                title: "Phone Number",
+                                value: phone,
+                                icon: "phone.fill"
+                            )
+
                             // Location Field
                             CustomTextField(
                                 title: "Location",
@@ -333,7 +340,8 @@ struct EditProfileView: View {
     private func loadCurrentProfile() {
         let profile = profileService.userProfile
         name = profile.name
-        phone = profile.phone
+        email = Auth.auth().currentUser?.email ?? "Not available"
+        phone = profile.phone.isEmpty ? "Not set" : profile.phone
         location = profile.location
         dateOfBirth = profile.dateOfBirth ?? Date()
         gender = profile.gender
@@ -344,7 +352,6 @@ struct EditProfileView: View {
         let finishProfileUpdate: (String?) -> Void = { updatedPhotoURL in
             profileService.updateUserProfile(
                 name: name.isEmpty ? nil : name,
-                phone: phone.isEmpty ? nil : phone,
                 location: location.isEmpty ? nil : location,
                 dateOfBirth: dateOfBirth,
                 gender: gender.isEmpty ? nil : gender,
@@ -458,6 +465,42 @@ struct CustomTextField: View {
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(.white.opacity(0.2), lineWidth: 1)
                 )
+        }
+    }
+}
+
+struct ReadOnlyInfoField: View {
+    let title: String
+    let value: String
+    let icon: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: icon)
+                    .foregroundColor(Color("CleverTapPrimary"))
+                    .frame(width: 20)
+
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+            }
+
+            HStack {
+                Text(value.isEmpty ? "Not set" : value)
+                    .foregroundColor(.primary)
+                Spacer()
+                Image(systemName: "lock.fill")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(16)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(.white.opacity(0.2), lineWidth: 1)
+            )
         }
     }
 }

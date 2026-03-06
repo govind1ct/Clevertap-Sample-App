@@ -19,7 +19,11 @@ struct AuthLoginView: View {
                 GeometryReader { proxy in
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 22) {
-                            AuthBrandHeader(title: "Welcome Back", subtitle: "Sign in to continue with CleverTap demo flows")
+                            AuthBrandHeader(
+                                title: "Welcome Back",
+                                subtitle: "Sign in to continue with CleverTap demo flows",
+                                logoStyle: .circular
+                            )
                             formCard
                         }
                         .frame(maxWidth: .infinity)
@@ -277,17 +281,47 @@ private struct PremiumGoogleButtonStyle: ButtonStyle {
 }
 
 struct AuthBrandHeader: View {
+    enum LogoStyle {
+        case standard
+        case circular
+    }
+
     let title: String
     let subtitle: String
     var highlights: [String] = ["Realtime Personalization", "Native Display", "Journey Analytics"]
+    var logoStyle: LogoStyle = .standard
 
     var body: some View {
         VStack(spacing: 12) {
-            Image("CleverTap logo")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 180)
-                .padding(.vertical, 10)
+            Group {
+                switch logoStyle {
+                case .standard:
+                    Image("CleverTap logo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 180)
+                        .padding(.vertical, 10)
+
+                case .circular:
+                    ZStack {
+                        Circle()
+                            .fill(Color.white.opacity(0.92))
+
+                        Image("CleverTap logo")
+                            .resizable()
+                            .scaledToFit()
+                            .padding(18)
+                    }
+                    .frame(width: 112, height: 112)
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(Color.white.opacity(0.35), lineWidth: 2)
+                    )
+                    .shadow(color: Color.black.opacity(0.18), radius: 10, x: 0, y: 6)
+                    .padding(.vertical, 6)
+                }
+            }
 
             Text(title)
                 .font(.system(size: 33, weight: .bold, design: .rounded))
