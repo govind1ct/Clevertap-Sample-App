@@ -165,13 +165,12 @@ class AuthViewModel: ObservableObject {
     
     func signOut() {
         do {
+            let previousUserID = user?.uid
             try Auth.auth().signOut()
             isAuthenticated = false
             user = nil
             UserDefaults.standard.set(false, forKey: "hasSeenOnboarding")
-            
-            // Track logout event
-            //CleverTap.sharedInstance()?.recordEvent("User Logged Out", withProps: nil)
+            CleverTapService.shared.logoutCurrentUser(firebaseUserID: previousUserID)
         } catch {
             errorMessage = error.localizedDescription
         }

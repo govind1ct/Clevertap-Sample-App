@@ -180,6 +180,11 @@ struct MainTabView: View {
             }
             previousTab = selectedTab
         }
+        .onChange(of: authViewModel.isAuthenticated) { _, isAuthenticated in
+            if isAuthenticated {
+                showAuthLoginSheet = false
+            }
+        }
         .sheet(isPresented: $showAuthLoginSheet) {
             AuthLoginView()
                 .environmentObject(authViewModel)

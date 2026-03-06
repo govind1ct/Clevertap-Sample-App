@@ -1,6 +1,7 @@
 import SwiftUI
 import CleverTapSDK
 import UserNotifications
+import FirebaseAuth
 
 struct CleverTapTestView: View {
     @StateObject private var inAppService = CleverTapInAppService.shared
@@ -26,17 +27,24 @@ struct CleverTapTestView: View {
         CleverTap.sharedInstance()?.profileGetID() ?? "Not Available"
     }
 
+    private var isUserAuthenticated: Bool {
+        Auth.auth().currentUser != nil
+    }
+
     private var cleverTapIdentity: String {
+        guard isUserAuthenticated else { return "Not Set" }
         let identity = CleverTap.sharedInstance()?.profileGet("Identity") as? String ?? ""
         return identity.isEmpty ? "Not Set" : identity
     }
 
     private var cleverTapEmail: String {
+        guard isUserAuthenticated else { return "Not Set" }
         let email = CleverTap.sharedInstance()?.profileGet("Email") as? String ?? ""
         return email.isEmpty ? "Not Set" : email
     }
 
     private var profileStatus: String {
+        guard isUserAuthenticated else { return "Signed Out" }
         let isIdentified = cleverTapIdentity != "Not Set" || cleverTapEmail != "Not Set"
         return isIdentified ? "Identified" : "Anonymous"
     }
@@ -519,7 +527,7 @@ struct CleverTapTestView: View {
                         gradient: [Color.orange, Color.red],
                         action: { inAppService.triggerAppInboxMessage() }
                     )
-                    
+
                     TestActionCard(
                         title: "Refresh Inbox",
                         subtitle: "Update message list",
@@ -528,6 +536,16 @@ struct CleverTapTestView: View {
                         action: { inAppService.refreshAppInbox() }
                     )
                 }
+
+                // Row 2: Carousel Inbox Trigger
+                TestActionCard(
+                    title: "Carousel Inbox",
+                    subtitle: "Trigger carousel inbox campaign",
+                    icon: "square.stack.3d.forward.dottedline",
+                    gradient: [Color.orange, Color.pink],
+                    action: { inAppService.triggerCarouselAppInboxMessage() },
+                    isWide: true
+                )
             }
         }
         .padding(.vertical, 20)

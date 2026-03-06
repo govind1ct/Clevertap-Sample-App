@@ -19,6 +19,7 @@ class CleverTapInAppService: ObservableObject {
     @Published var pushPermissionStatus: String = "Unknown"
     @Published var isSDKInitialized: Bool = false
     @Published var lastDiagnosticsRefresh: Date?
+    @Published var isRefreshingInbox: Bool = false
 
     private var connectionMonitorTimer: Timer?
     
@@ -555,15 +556,47 @@ class CleverTapInAppService: ObservableObject {
     // MARK: - App Inbox
     
     func refreshAppInbox() {
+        isRefreshingInbox = true
+
         if let inbox = CleverTap.sharedInstance()?.getAllInboxMessages() {
             appInboxMessages = inbox
             appInboxCount = inbox.count
-            
+            isRefreshingInbox = false
+
             addNotificationLog(
                 eventName: "Inbox Refreshed",
                 payload: ["message_count": inbox.count],
                 status: .inboxUpdated
             )
+            return
+        }
+
+        // Inbox can become unavailable after profile/session transitions.
+        // Re-initialize once and retry fetch before failing.
+        CleverTap.sharedInstance()?.initializeInbox { success in
+            DispatchQueue.main.async {
+                if success, let inbox = CleverTap.sharedInstance()?.getAllInboxMessages() {
+                    self.appInboxMessages = inbox
+                    self.appInboxCount = inbox.count
+
+                    self.addNotificationLog(
+                        eventName: "Inbox Reinitialized",
+                        payload: ["message_count": inbox.count],
+                        status: .inboxUpdated
+                    )
+                } else {
+                    self.appInboxMessages = []
+                    self.appInboxCount = 0
+
+                    self.addNotificationLog(
+                        eventName: "Inbox Refresh Failed",
+                        payload: ["reason": "inbox_unavailable_or_nil", "reinitialize_success": success],
+                        status: .failed
+                    )
+                }
+
+                self.isRefreshingInbox = false
+            }
         }
     }
     
@@ -574,28 +607,92 @@ class CleverTapInAppService: ObservableObject {
             "User ID": CleverTap.sharedInstance()?.profileGetID() ?? "Unknown",
             "Message": "Test App Inbox message"
         ] as [String : Any]
-        
+
         CleverTap.sharedInstance()?.recordEvent("Trigger_App_Inbox_Message", withProps: eventData)
-        
+
         // Refresh inbox after triggering
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             self.refreshAppInbox()
         }
-        
+
         addNotificationLog(
             eventName: "App Inbox Message Triggered",
             payload: eventData,
             status: .triggered
         )
     }
-    
-    func markInboxMessageAsRead(messageId: String) {
-        CleverTap.sharedInstance()?.markReadInboxMessage(forID: messageId)
-        print("📬 CleverTap: Marked inbox message as read - \(messageId)")
+
+    func triggerCarouselAppInboxMessage() {
+        let eventData = [
+            "Inbox Type": "Carousel App Inbox Message",
+            "Template": "Carousel",
+            "Carousel Items": 3,
+            "Timestamp": Date().timeIntervalSince1970,
+            "User ID": CleverTap.sharedInstance()?.profileGetID() ?? "Unknown",
+            "Message": "Test Carousel App Inbox message"
+        ] as [String : Any]
+
+        CleverTap.sharedInstance()?.recordEvent("Trigger_Carousel_App_Inbox_Message", withProps: eventData)
+
+        // Allow campaign delivery time before inbox pull (carousel can take slightly longer).
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            self.refreshAppInbox()
+        }
+
+        addNotificationLog(
+            eventName: "Carousel App Inbox Message Triggered",
+            payload: eventData,
+            status: .triggered
+        )
     }
     
-    func deleteInboxMessage(messageId: String) {
+    func markInboxMessageAsRead(messageId: String, shouldRefresh: Bool = true) {
+        CleverTap.sharedInstance()?.markReadInboxMessage(forID: messageId)
+        print("📬 CleverTap: Marked inbox message as read - \(messageId)")
+
+        if shouldRefresh {
+            // Keep UI in sync immediately after single-item action.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                self.refreshAppInbox()
+            }
+        }
+    }
+
+    func markAllInboxMessagesAsRead() {
+        let messageIDs = appInboxMessages.compactMap { $0.messageId }
+        guard !messageIDs.isEmpty else { return }
+
+        for messageId in messageIDs {
+            markInboxMessageAsRead(messageId: messageId, shouldRefresh: false)
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            self.refreshAppInbox()
+        }
+    }
+    
+    func deleteInboxMessage(messageId: String, shouldRefresh: Bool = true) {
         CleverTap.sharedInstance()?.deleteInboxMessage(forID: messageId)
         print("🗑️ CleverTap: Deleted inbox message - \(messageId)")
+
+        if shouldRefresh {
+            // Keep UI in sync immediately after single-item action.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                self.refreshAppInbox()
+            }
+        }
+    }
+
+    func deleteAllInboxMessages() {
+        let messageIDs = appInboxMessages.compactMap { $0.messageId }
+        guard !messageIDs.isEmpty else { return }
+
+        for messageId in messageIDs {
+            deleteInboxMessage(messageId: messageId, shouldRefresh: false)
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            self.refreshAppInbox()
+        }
     }
 } 

@@ -102,26 +102,64 @@ class CleverTapService: ObservableObject {
             CleverTapProductExperiencesService.shared.fetchVariables()
         }
     }
+
+    private func cachedPushTokenData() -> Data? {
+        UserDefaults.standard.data(forKey: "deviceToken")
+    }
+
+    private func rebindCachedPushTokenIfAvailable(userId: String) {
+        guard let deviceToken = cachedPushTokenData() else {
+            return
+        }
+
+        CleverTap.sharedInstance()?.setPushToken(deviceToken)
+
+        let tokenString = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
+        CleverTap.sharedInstance()?.profilePush([
+            "Device Token": tokenString,
+            "Push Enabled": true,
+            "Last Token Update": Date()
+        ])
+
+        CleverTap.sharedInstance()?.recordEvent("Device Token Rebound", withProps: [
+            "User ID": userId,
+            "Platform": "iOS"
+        ])
+    }
     
     // MARK: - User Profile Management
     
     func createUserProfile(email: String, userId: String, name: String, isNewUser: Bool = false) {
+        let trimmedUserID = userId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedUserID.isEmpty else { return }
+
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+
         var profile: [String: Any] = [
-            "Email": email,
-            "Identity": userId,
-            "Name": name
+            "Identity": trimmedUserID
         ]
-        
+
+        if !trimmedEmail.isEmpty {
+            profile["Email"] = trimmedEmail
+        }
+
+        if !trimmedName.isEmpty {
+            profile["Name"] = trimmedName
+        }
+
         if isNewUser {
             profile["Customer Type"] = "New User"
             profile["Registration Date"] = Date()
         }
-        
+
+        // Always switch explicitly using Identity-first payload to avoid profile merge issues.
         CleverTap.sharedInstance()?.onUserLogin(profile)
         CleverTap.sharedInstance()?.profilePush(profile)
-        syncPushIdentityForExtensions(identity: userId, email: email)
+        rebindCachedPushTokenIfAvailable(userId: trimmedUserID)
+        syncPushIdentityForExtensions(identity: trimmedUserID, email: trimmedEmail)
         refreshProductExperiences()
-        
+
         // Check notification permissions after user login
         NotificationDelegate.shared.checkNotificationPermissions()
     }
@@ -142,6 +180,58 @@ class CleverTapService: ObservableObject {
         } else if let existingEmail = CleverTap.sharedInstance()?.profileGet("Email") as? String, !existingEmail.isEmpty {
             sharedDefaults.set(existingEmail, forKey: SharedPushIdentityConfig.emailKey)
         }
+    }
+
+    func clearPushIdentityForExtensions() {
+        guard let sharedDefaults = UserDefaults(suiteName: SharedPushIdentityConfig.appGroupID) else {
+            return
+        }
+
+        sharedDefaults.removeObject(forKey: SharedPushIdentityConfig.identityKey)
+        sharedDefaults.removeObject(forKey: SharedPushIdentityConfig.emailKey)
+    }
+
+    func logoutCurrentUser(firebaseUserID: String? = nil) {
+        guard let sdk = CleverTap.sharedInstance() else {
+            clearPushIdentityForExtensions()
+            return
+        }
+
+        let previousIdentity = sdk.profileGet("Identity") as? String ?? ""
+        let previousEmail = sdk.profileGet("Email") as? String ?? ""
+
+        var logoutEventProps: [String: Any] = [
+            "Platform": "iOS",
+            "Timestamp": Date()
+        ]
+
+        if !previousIdentity.isEmpty {
+            logoutEventProps["Previous Identity"] = previousIdentity
+        }
+        if !previousEmail.isEmpty {
+            logoutEventProps["Previous Email"] = previousEmail
+        }
+        if let firebaseUserID, !firebaseUserID.isEmpty {
+            logoutEventProps["Firebase User ID"] = firebaseUserID
+        }
+
+        sdk.recordEvent("User Logged Out", withProps: logoutEventProps)
+
+        // Important: switch to a fresh guest identity so identified profile remains isolated
+        // and future login does not merge into an in-between anonymous state.
+        let guestIdentity = "guest_\(UUID().uuidString)"
+        sdk.onUserLogin([
+            "Identity": guestIdentity,
+            "Customer Type": "Guest",
+            "Session State": "Logged Out"
+        ])
+        sdk.profilePush([
+            "Session State": "Logged Out",
+            "Last Logout": Date()
+        ])
+
+        clearPushIdentityForExtensions()
+        refreshProductExperiences()
     }
     
     func updateUserProfile(with data: [String: Any]) {

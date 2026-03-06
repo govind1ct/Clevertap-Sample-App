@@ -36,12 +36,11 @@ class NotificationService: CTNotificationServiceExtension {
         let shouldUseRichCategory = isRichTemplatePayload(userInfo)
         let shouldUseCarouselCategory = isCarouselTemplatePayload(userInfo)
 
-        // Track view for CT payloads, but always let CTNotificationService do rich rendering.
+        // Track view once for CT payloads, then let CTNotificationService handle rendering.
         if CleverTap.sharedInstance()?.isCleverTapNotification(userInfo) == true {
             maybeSetCTUserIdentity()
             CleverTap.sharedInstance()?.recordNotificationViewedEvent(withData: userInfo)
         }
-        CleverTap.sharedInstance()?.recordNotificationViewedEvent(withData: request.content.userInfo)
 
         super.didReceive(request, withContentHandler: { content in
             guard let mutableContent = content.mutableCopy() as? UNMutableNotificationContent else {
@@ -93,7 +92,50 @@ class NotificationService: CTNotificationServiceExtension {
     }
 
     private func isCarouselTemplatePayload(_ userInfo: [AnyHashable: Any]) -> Bool {
-        // Carousel templates typically include second/third image keys.
-        return userInfo["pt_img2"] != nil || userInfo["pt_img3"] != nil
+        // 1) Explicit category/template hints in payload.
+        let explicitCarouselHints = [
+            userInfo["category"],
+            userInfo["ct_category"],
+            userInfo["wzrk_category"],
+            userInfo["template_type"],
+            userInfo["pt_type"],
+            userInfo["wzrk_pt_type"]
+        ]
+
+        for hint in explicitCarouselHints {
+            if let text = normalizedString(hint), text.contains("carousel") {
+                return true
+            }
+            if let text = normalizedString(hint), text == "ctcarouselnotification" {
+                return true
+            }
+        }
+
+        // 2) APNS category fallback.
+        if let aps = userInfo["aps"] as? [AnyHashable: Any],
+           let category = normalizedString(aps["category"]),
+           category == "ctcarouselnotification" || category.contains("carousel") {
+            return true
+        }
+
+        // 3) Legacy/known CleverTap carousel key patterns.
+        if userInfo["pt_img2"] != nil || userInfo["pt_img3"] != nil {
+            return true
+        }
+
+        // 4) Generic image key scan (pt_img1, pt_img2, ...). Carousel requires >= 2 images.
+        let imageKeys = userInfo.keys
+            .compactMap { $0 as? String }
+            .filter { $0.lowercased().hasPrefix("pt_img") }
+
+        return imageKeys.count >= 2
+    }
+
+    private func normalizedString(_ value: Any?) -> String? {
+        guard let raw = value as? String else { return nil }
+        return raw
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: "_", with: "")
     }
 }
