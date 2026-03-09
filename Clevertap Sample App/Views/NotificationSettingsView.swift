@@ -17,21 +17,50 @@ struct NotificationSettingsView: View {
     @State private var showSuccessAlert = false
     @State private var notificationStatus = "Checking..."
     @State private var deviceToken = "Not available"
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var isDarkMode: Bool {
+        colorScheme == .dark
+    }
+
+    private var backgroundGradientColors: [Color] {
+        if isDarkMode {
+            return [
+                Color(red: 0.10, green: 0.12, blue: 0.16),
+                Color("CleverTapPrimary").opacity(0.22),
+                Color(.systemBackground),
+                Color(.systemBackground)
+            ]
+        }
+        return [
+            Color("CleverTapPrimary").opacity(0.18),
+            Color("CleverTapSecondary").opacity(0.10),
+            Color(.systemBackground),
+            Color(.systemBackground)
+        ]
+    }
     
     var body: some View {
         NavigationView {
             ZStack {
-                // Beautiful gradient background
                 LinearGradient(
-                    colors: [
-                        Color("CleverTapPrimary").opacity(0.05),
-                        Color("CleverTapSecondary").opacity(0.03),
-                        Color.clear
-                    ],
+                    colors: backgroundGradientColors,
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
                 .ignoresSafeArea()
+
+                Circle()
+                    .fill(Color("CleverTapPrimary").opacity(isDarkMode ? 0.20 : 0.12))
+                    .frame(width: 260, height: 260)
+                    .blur(radius: 36)
+                    .offset(x: -140, y: -320)
+
+                Circle()
+                    .fill(Color("CleverTapSecondary").opacity(isDarkMode ? 0.18 : 0.10))
+                    .frame(width: 300, height: 300)
+                    .blur(radius: 48)
+                    .offset(x: 160, y: -260)
                 
                 ScrollView {
                     VStack(spacing: 24) {
@@ -90,48 +119,46 @@ struct NotificationSettingsView: View {
     
     // MARK: - Header Section
     private var headerSection: some View {
-        VStack(spacing: 16) {
-            // Notification Icon
-            ZStack {
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [
-                                Color("CleverTapPrimary").opacity(0.3),
-                                Color("CleverTapSecondary").opacity(0.1)
-                            ],
-                            center: .center,
-                            startRadius: 20,
-                            endRadius: 60
+        VStack(alignment: .leading, spacing: 10) {
+            Text("NOTIFICATION CONTROL")
+                .font(.caption.weight(.semibold))
+                .foregroundColor(Color("CleverTapPrimary"))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color("CleverTapPrimary").opacity(isDarkMode ? 0.20 : 0.14), in: Capsule())
+
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Notification Settings")
+                        .font(.system(size: 32, weight: .heavy, design: .rounded))
+                        .foregroundColor(.primary)
+
+                    Text("Customize how you receive updates and communications.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 10)
+
+                ZStack {
+                    Circle()
+                        .fill(Color("CleverTapPrimary").opacity(isDarkMode ? 0.26 : 0.18))
+                        .frame(width: 58, height: 58)
+                    Image(systemName: "bell.fill")
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
-                    )
-                    .frame(width: 80, height: 80)
-                    .blur(radius: 20)
-                
-                Image(systemName: "bell.fill")
-                    .font(.system(size: 40, weight: .medium))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-            }
-            
-            VStack(spacing: 8) {
-                Text("Notification Preferences")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
-                
-                Text("Customize how you receive updates and communications")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
+                }
             }
         }
-        .padding(.top, 20)
+        .settingsSurfaceCard(isDarkMode: isDarkMode)
+        .padding(.top, 8)
     }
     
     // MARK: - System Status Section
@@ -177,8 +204,7 @@ struct NotificationSettingsView: View {
                 }
             }
         }
-        .padding(20)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .settingsSurfaceCard(isDarkMode: isDarkMode)
     }
     
     // MARK: - Primary Notification Section
@@ -257,8 +283,7 @@ struct NotificationSettingsView: View {
                 }
             }
         }
-        .padding(20)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .settingsSurfaceCard(isDarkMode: isDarkMode)
     }
     
     // MARK: - Email Preferences Section
@@ -295,8 +320,7 @@ struct NotificationSettingsView: View {
                 )
             }
         }
-        .padding(20)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .settingsSurfaceCard(isDarkMode: isDarkMode)
     }
     
     // MARK: - SMS Preferences Section
@@ -348,8 +372,7 @@ struct NotificationSettingsView: View {
                 .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 12))
             }
         }
-        .padding(20)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .settingsSurfaceCard(isDarkMode: isDarkMode)
     }
     
     // MARK: - Advanced Settings Section
@@ -415,8 +438,7 @@ struct NotificationSettingsView: View {
                 .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 12))
             }
         }
-        .padding(20)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .settingsSurfaceCard(isDarkMode: isDarkMode)
     }
     
     // MARK: - CleverTap DND Section
@@ -539,8 +561,7 @@ struct NotificationSettingsView: View {
                 .background(.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
             }
         }
-        .padding(20)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .settingsSurfaceCard(isDarkMode: isDarkMode)
     }
     
     // MARK: - Save Button
@@ -719,7 +740,11 @@ struct NotificationToggle: View {
                 }
         }
         .padding(16)
-        .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 12))
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.white.opacity(0.16), lineWidth: 1)
+        )
     }
 }
 
@@ -749,7 +774,23 @@ struct StatusRow: View {
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
-        .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 8))
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.white.opacity(0.16), lineWidth: 1)
+        )
+    }
+}
+
+private extension View {
+    func settingsSurfaceCard(isDarkMode: Bool) -> some View {
+        self
+            .padding(20)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(isDarkMode ? Color.white.opacity(0.16) : Color.white.opacity(0.24), lineWidth: 1)
+            )
     }
 }
 

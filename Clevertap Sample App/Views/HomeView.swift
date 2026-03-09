@@ -11,6 +11,7 @@ struct HomeView: View {
     @State private var selectedCategory = "All"
     @State private var searchText = ""
     @State private var showingCart = false
+    @State private var spotlightClock = Date()
 
     private var categories: [String] {
         ["All"] + ProductCategory.allCases.map { $0.rawValue.capitalized }
@@ -35,6 +36,18 @@ struct HomeView: View {
                 .filter { $0.isFeatured }
                 .prefix(productExperienceService.maxFeaturedProducts)
         )
+    }
+
+    private var spotlightSourceProducts: [Product] {
+        let source = featuredProducts.isEmpty ? filteredProducts : featuredProducts
+        return source
+    }
+
+    private var spotlightProduct: Product? {
+        guard !spotlightSourceProducts.isEmpty else { return nil }
+        let halfHourBucket = Int(spotlightClock.timeIntervalSince1970 / 1800)
+        let index = abs(halfHourBucket) % spotlightSourceProducts.count
+        return spotlightSourceProducts[index]
     }
 
     private var isInitialLoading: Bool {
@@ -79,6 +92,9 @@ struct HomeView: View {
                     } else if filteredProducts.isEmpty {
                         emptySection
                     } else {
+                        if let spotlightProduct {
+                            spotlightSection(product: spotlightProduct)
+                        }
                         if productExperienceService.showFeaturedSection, !featuredProducts.isEmpty {
                             featuredSection
                         }
@@ -104,6 +120,9 @@ struct HomeView: View {
             productExperienceService.fetchVariables()
             profileService.fetchUserProfile { _ in }
             CleverTapService.shared.trackScreenViewed(screenName: "Home")
+        }
+        .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { tick in
+            spotlightClock = tick
         }
     }
 }
@@ -339,6 +358,24 @@ private extension HomeView {
         }
     }
 
+    func spotlightSection(product: Product) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("Spotlight")
+                    .font(.title2.weight(.bold))
+                Spacer()
+                Text("Switches every 30 mins")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.secondary)
+            }
+
+            NavigationLink(destination: ProductDetailView(product: product)) {
+                HomeSpotlightCard(product: product, subtitle: productExperienceService.homeHeaderTitle)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
     var productGridSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
@@ -361,6 +398,52 @@ private extension HomeView {
                     .buttonStyle(.plain)
                 }
             }
+        }
+    }
+}
+
+private struct HomeSpotlightCard: View {
+    let product: Product
+    let subtitle: String
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            AppAsyncImage(urlString: product.mainImageURL) { phase in
+                if let image = phase.image {
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } else {
+                    Color.gray.opacity(0.15)
+                }
+            }
+            .frame(height: 300)
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+
+            LinearGradient(
+                colors: [.clear, Color.black.opacity(0.75)],
+                startPoint: .center,
+                endPoint: .bottom
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("SPOTLIGHT")
+                    .font(.caption2.weight(.bold))
+                    .foregroundColor(.white.opacity(0.86))
+                Text(product.name)
+                    .font(.title3.weight(.heavy))
+                    .foregroundColor(.white)
+                    .lineLimit(2)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.84))
+                    .lineLimit(1)
+                Text("₹\(Int(product.price))")
+                    .font(.headline.weight(.bold))
+                    .foregroundColor(.white)
+            }
+            .padding(18)
         }
     }
 }
