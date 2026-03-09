@@ -23,6 +23,8 @@ struct CleverTapTestViewV2: View {
     @State private var traceSearchText = ""
     @State private var traceSortNewestFirst = true
     @State private var selectedTraceFilter: TraceFilter = .all
+    @State private var timerPushEventMode: TimerPushMode = .allAliases
+    @State private var showUsageGuide = false
 
     private enum Tab: String, CaseIterable {
         case actions = "Actions"
@@ -95,6 +97,33 @@ struct CleverTapTestViewV2: View {
         }
     }
 
+    private enum TimerPushMode: String, CaseIterable, Identifiable {
+        case allAliases
+        case primary
+        case legacy
+        case delayFlow
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .allAliases: return "All Aliases"
+            case .primary: return "Primary"
+            case .legacy: return "Legacy"
+            case .delayFlow: return "Delay Flow"
+            }
+        }
+
+        var serviceMode: CleverTapInAppService.TimerPushEventMode {
+            switch self {
+            case .allAliases: return .allAliases
+            case .primary: return .primary
+            case .legacy: return .legacy
+            case .delayFlow: return .delayFlow
+            }
+        }
+    }
+
     private struct SavedPresetProp: Codable {
         let key: String
         let value: String
@@ -107,6 +136,37 @@ struct CleverTapTestViewV2: View {
         let props: [SavedPresetProp]
         let shouldRefreshDiagnostics: Bool
         let pushAction: PresetPushAction
+    }
+
+    private enum InsightSeverity {
+        case critical
+        case warning
+        case info
+
+        var color: Color {
+            switch self {
+            case .critical: return .red
+            case .warning: return .orange
+            case .info: return .blue
+            }
+        }
+
+        var label: String {
+            switch self {
+            case .critical: return "Critical"
+            case .warning: return "Warning"
+            case .info: return "Info"
+            }
+        }
+    }
+
+    private struct TraceInsightItem: Identifiable {
+        let id = UUID()
+        let severity: InsightSeverity
+        let title: String
+        let matches: Int
+        let likelyCause: String
+        let recommendedFix: String
     }
 
     private var isDarkMode: Bool {
@@ -226,7 +286,7 @@ struct CleverTapTestViewV2: View {
                 subtitle: "Trigger delayed campaign",
                 icon: "timer",
                 action: {
-                    inAppService.triggerTimerPushNotification()
+                    inAppService.triggerTimerPushNotification(mode: timerPushEventMode.serviceMode)
                     showMessage("Triggered Timer Push event")
                 }
             ),
@@ -270,7 +330,7 @@ struct CleverTapTestViewV2: View {
                 icon: "clock.arrow.2.circlepath",
                 action: {
                     inAppService.refreshDiagnostics()
-                    inAppService.triggerTimerPushNotification()
+                    inAppService.triggerTimerPushNotification(mode: timerPushEventMode.serviceMode)
                     showMessage("Delay flow scenario completed")
                 }
             )
@@ -318,6 +378,71 @@ struct CleverTapTestViewV2: View {
             return filteredBySearch
         }
         return Array(filteredBySearch.reversed())
+    }
+
+    private var traceInsights: [TraceInsightItem] {
+        let traces = recentNSETraces
+        let reason = nseLastReason.lowercased()
+
+        let sdkNilCount = traces.filter { $0.event.lowercased().contains("sdk nil") }.count
+        let identityMismatchCount = traces.filter {
+            let event = $0.event.lowercased()
+            return event.contains("identity mismatch") || $0.profileID == "-"
+        }.count
+        let missingWzrkCount = traces.filter { $0.wzrkID == "-" || $0.wzrkID.lowercased() == "unknown" }.count
+        let viewedCount = traces.filter { $0.event.lowercased().contains("view recorded") }.count
+
+        var items: [TraceInsightItem] = []
+
+        if sdkNilCount > 0 || reason.contains("sdk nil") || reason.contains("sdk_nil") {
+            items.append(
+                TraceInsightItem(
+                    severity: .critical,
+                    title: "SDK unavailable in NSE path",
+                    matches: max(sdkNilCount, 1),
+                    likelyCause: "Notification Service Extension could not access CleverTap shared instance or app group context in time.",
+                    recommendedFix: "Verify NSE target embeds CleverTap, app group is identical across app/NSE/NCE, and extension starts before timeout."
+                )
+            )
+        }
+
+        if identityMismatchCount > 0 || reason.contains("identity mismatch") {
+            items.append(
+                TraceInsightItem(
+                    severity: .warning,
+                    title: "Identity mismatch risk",
+                    matches: max(identityMismatchCount, 1),
+                    likelyCause: "NSE payload profile identifier does not align with app-side logged-in identity or shared defaults data is stale.",
+                    recommendedFix: "Log out/in once, re-sync identity to app group, and validate `ct_identity` in shared defaults before sending campaign."
+                )
+            )
+        }
+
+        if missingWzrkCount > 0 {
+            items.append(
+                TraceInsightItem(
+                    severity: .warning,
+                    title: "Missing campaign identifiers",
+                    matches: missingWzrkCount,
+                    likelyCause: "Push payload is missing CleverTap campaign metadata (`wzrk_id`) or not recognized as CleverTap payload.",
+                    recommendedFix: "Send via CleverTap campaign and verify payload includes `wzrk_id`/CleverTap keys in APNS debugger."
+                )
+            )
+        }
+
+        if viewedCount > 0 && items.isEmpty {
+            items.append(
+                TraceInsightItem(
+                    severity: .info,
+                    title: "Impression path healthy",
+                    matches: viewedCount,
+                    likelyCause: "Recent traces indicate `view recorded` events are being captured.",
+                    recommendedFix: "Validate click/open events next to complete end-to-end push pipeline checks."
+                )
+            )
+        }
+
+        return items
     }
 
     var body: some View {
@@ -404,6 +529,9 @@ struct CleverTapTestViewV2: View {
         .sheet(item: $selectedTrace) { trace in
             traceDetailSheet(trace: trace)
         }
+        .sheet(isPresented: $showUsageGuide) {
+            usageGuideSheet
+        }
     }
 
     private var header: some View {
@@ -472,6 +600,18 @@ struct CleverTapTestViewV2: View {
                     .font(.caption.weight(.medium))
                     .foregroundStyle(secondaryText)
                     .lineLimit(1)
+                Spacer()
+                Button {
+                    showUsageGuide = true
+                } label: {
+                    Label("How to Use", systemImage: "questionmark.circle")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(coolAccent)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(coolAccent.opacity(0.14), in: Capsule())
+                }
+                .buttonStyle(.plain)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -524,6 +664,34 @@ struct CleverTapTestViewV2: View {
     private var actionsSection: some View {
         VStack(spacing: 14) {
             sectionHeader("Scenarios", subtitle: "Run grouped QA flows")
+
+            HStack(spacing: 8) {
+                Text("Timer Event Mode")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(secondaryText)
+                Spacer()
+                Picker("Timer Event Mode", selection: $timerPushEventMode) {
+                    ForEach(TimerPushMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                .pickerStyle(.menu)
+                .font(.caption)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(panelFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(panelStroke, lineWidth: 1)
+            )
+
+            Text("How it works: this controls which timer event name is fired when you run Timer Push/Delay Flow. Use `All Aliases` for compatibility; use `Primary`, `Legacy`, or `Delay Flow` when validating a specific campaign trigger in CleverTap dashboard.")
+                .font(.caption2)
+                .foregroundStyle(secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 2)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
@@ -923,6 +1091,14 @@ struct CleverTapTestViewV2: View {
                 }
             }
 
+            if !traceInsights.isEmpty {
+                sectionHeader("Trace Insights", subtitle: "Auto diagnosis from latest traces")
+
+                ForEach(traceInsights) { insight in
+                    traceInsightCard(insight)
+                }
+            }
+
             if !recentNSETraces.isEmpty {
                 sectionHeader("NSE Trace Timeline", subtitle: "\(filteredNSETraces.count) filtered")
 
@@ -1233,6 +1409,171 @@ struct CleverTapTestViewV2: View {
         .background(coolAccent.opacity(0.14), in: Capsule())
     }
 
+    private var usageGuideSheet: some View {
+        NavigationStack {
+            ZStack {
+                LinearGradient(colors: chromeGradient, startPoint: .topLeading, endPoint: .bottomTrailing)
+                    .ignoresSafeArea()
+
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 14) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("TEST LAB V2 GUIDE")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(coolAccent)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(coolAccent.opacity(0.14), in: Capsule())
+
+                            Text("How to use Event Payload Editor + Scenario Runner")
+                                .font(.system(size: 28, weight: .heavy, design: .rounded))
+                                .foregroundStyle(primaryText)
+
+                            Text("Use this flow for repeatable QA validation and campaign trigger checks.")
+                                .font(.subheadline)
+                                .foregroundStyle(secondaryText)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(16)
+                        .background(panelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(panelStroke, lineWidth: 1)
+                        )
+
+                        guideSectionCard(
+                            title: "Event Payload Editor",
+                            subtitle: "Create and trigger a custom CleverTap event",
+                            icon: "slider.horizontal.3"
+                        ) {
+                            guideStep(1, "Enter event name", "Example: `QA_Custom_Event`")
+                            guideStep(2, "Add properties", "Tap `Add Property` and fill key/value pairs")
+                            guideStep(3, "Trigger event", "Tap `Trigger Event` to send event to CleverTap")
+                            guideStep(4, "Validate output", "Open `Activity` tab and confirm event log entry")
+                        }
+
+                        guideSectionCard(
+                            title: "Scenario Runner",
+                            subtitle: "Save and replay complete test flows",
+                            icon: "play.rectangle.fill"
+                        ) {
+                            guideStep(1, "Prepare editor values", "Set event name + properties first")
+                            guideStep(2, "Configure runner", "Set preset name, diagnostics toggle, push action")
+                            guideStep(3, "Save preset", "Tap `Save Current Flow as Preset`")
+                            guideStep(4, "Run preset", "Tap `Run` to execute event + optional push action")
+                            guideStep(5, "Reuse preset", "Use `Load` to edit and `Delete` to remove")
+                        }
+
+                        guideSectionCard(
+                            title: "Timer Event Mode",
+                            subtitle: "Use the right trigger name for delay flow campaigns",
+                            icon: "timer"
+                        ) {
+                            guideStep(1, "All Aliases", "Best default for compatibility")
+                            guideStep(2, "Primary", "Fires `Trigger_Timer_Push_Notification` only")
+                            guideStep(3, "Legacy", "Fires `Trigger_Timer_Push` only")
+                            guideStep(4, "Delay Flow", "Fires `Delay_Flow_Trigger` only")
+                        }
+                    }
+                    .padding(16)
+                    .padding(.bottom, 24)
+                }
+            }
+            .navigationTitle("How to Use")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        showUsageGuide = false
+                    }
+                }
+            }
+        }
+        .presentationDetents([.large])
+    }
+
+    private func guideSectionCard<Content: View>(title: String, subtitle: String, icon: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(coolAccent.opacity(0.18))
+                        .frame(width: 32, height: 32)
+                    Image(systemName: icon)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(coolAccent)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(primaryText)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                }
+                Spacer()
+            }
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(panelFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(panelStroke, lineWidth: 1)
+        )
+    }
+
+    private func guideStep(_ number: Int, _ title: String, _ description: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text("\(number).")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(accentStart)
+                .frame(width: 16, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(primaryText)
+                Text(description)
+                    .font(.caption2)
+                    .foregroundStyle(secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+        }
+    }
+
+    private func traceInsightCard(_ insight: TraceInsightItem) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(insight.title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(primaryText)
+                Spacer()
+                Text("\(insight.severity.label) • \(insight.matches)")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(insight.severity.color)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(insight.severity.color.opacity(0.14), in: Capsule())
+            }
+
+            Text("Likely cause: \(insight.likelyCause)")
+                .font(.caption)
+                .foregroundStyle(secondaryText)
+
+            Text("Suggested fix: \(insight.recommendedFix)")
+                .font(.caption)
+                .foregroundStyle(primaryText)
+        }
+        .padding(10)
+        .background(panelFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(panelStroke, lineWidth: 1)
+        )
+    }
+
     private func showMessage(_ message: String) {
         toastMessage = message
         withAnimation {
@@ -1338,7 +1679,7 @@ struct CleverTapTestViewV2: View {
         case .richPush:
             inAppService.triggerRichPushNotification()
         case .timerPush:
-            inAppService.triggerTimerPushNotification()
+            inAppService.triggerTimerPushNotification(mode: timerPushEventMode.serviceMode)
         }
     }
 

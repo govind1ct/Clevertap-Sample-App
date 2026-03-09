@@ -70,6 +70,13 @@ class CleverTapInAppService: ObservableObject {
             }
         }
     }
+
+    enum TimerPushEventMode {
+        case allAliases
+        case primary
+        case legacy
+        case delayFlow
+    }
     
     private init() {
         checkCleverTapConnection()
@@ -553,7 +560,7 @@ class CleverTapInAppService: ObservableObject {
         )
     }
 
-    func triggerTimerPushNotification() {
+    func triggerTimerPushNotification(mode: TimerPushEventMode = .allAliases) {
         let eventData = [
             "Push Type": "Timer Push",
             "Timestamp": Date().timeIntervalSince1970,
@@ -562,12 +569,30 @@ class CleverTapInAppService: ObservableObject {
             "Timer Delay Seconds": 60
         ] as [String : Any]
 
-        CleverTap.sharedInstance()?.recordEvent("Trigger_Timer_Push_Notification", withProps: eventData)
+        let firedEventAliases: [String]
+        switch mode {
+        case .allAliases:
+            firedEventAliases = [
+                "Trigger_Timer_Push_Notification",
+                "Trigger_Timer_Push",
+                "Delay_Flow_Trigger"
+            ]
+        case .primary:
+            firedEventAliases = ["Trigger_Timer_Push_Notification"]
+        case .legacy:
+            firedEventAliases = ["Trigger_Timer_Push"]
+        case .delayFlow:
+            firedEventAliases = ["Delay_Flow_Trigger"]
+        }
+
+        for eventName in firedEventAliases {
+            CleverTap.sharedInstance()?.recordEvent(eventName, withProps: eventData)
+        }
         pushNotificationCount += 1
 
         addNotificationLog(
             eventName: "Timer Push Triggered",
-            payload: eventData,
+            payload: eventData.merging(["event_aliases": firedEventAliases]) { current, _ in current },
             status: .pushSent
         )
     }
