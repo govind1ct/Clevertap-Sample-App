@@ -3,7 +3,7 @@
 //  Clevertap Sample App NSE
 //
 //  Created by Govind Pathak on 05/01/26.
-//
+
 
 
 import UserNotifications
@@ -14,6 +14,8 @@ class NotificationService: CTNotificationServiceExtension {
 
     private var contentHandler: ((UNNotificationContent) -> Void)?
     private var bestAttemptContent: UNMutableNotificationContent?
+    private var shouldUseRichCategory = false
+    private var shouldUseManualCarouselCategory = false
     private enum SharedPushIdentityConfig {
         static let appGroupID = "group.com.govind.clevertap-sample-app"
         static let identityKey = "ct_identity"
@@ -35,14 +37,21 @@ class NotificationService: CTNotificationServiceExtension {
         }
 
         let userInfo = bestAttemptContent.userInfo
-        let shouldUseRichCategory = isRichTemplatePayload(userInfo)
-        let shouldUseCarouselCategory = isCarouselTemplatePayload(userInfo)
+        shouldUseRichCategory = isRichTemplatePayload(userInfo)
+        shouldUseManualCarouselCategory = isManualCarouselTemplatePayload(userInfo)
 
         // Record impression with normalized payload.
         // Keep identity sync guarded for actual CleverTap payloads only.
         guard let sdk = CleverTap.sharedInstance() else {
             persistImpressionDebugFlag(reason: "sdk_nil")
-            super.didReceive(request, withContentHandler: contentHandler)
+            super.didReceive(request, withContentHandler: { content in
+                guard let mutableContent = content.mutableCopy() as? UNMutableNotificationContent else {
+                    contentHandler(content)
+                    return
+                }
+                self.applyRichCategoryIfNeeded(on: mutableContent)
+                contentHandler(mutableContent)
+            })
             return
         }
 
@@ -59,17 +68,7 @@ class NotificationService: CTNotificationServiceExtension {
                 return
             }
 
-            // Apply CT content extension category by payload type.
-            // - CTCarouselNotification: carousel only (shows actions)
-            // - CTNotification: rich/template non-carousel (no actions)
-            if shouldUseCarouselCategory {
-                mutableContent.categoryIdentifier = "CTCarouselNotification"
-            } else if shouldUseRichCategory {
-                mutableContent.categoryIdentifier = "CTNotification"
-            } else if mutableContent.categoryIdentifier == "CTNotification" ||
-                        mutableContent.categoryIdentifier == "CTCarouselNotification" {
-                mutableContent.categoryIdentifier = ""
-            }
+            self.applyRichCategoryIfNeeded(on: mutableContent)
             contentHandler(mutableContent)
         })
     }
@@ -78,6 +77,7 @@ class NotificationService: CTNotificationServiceExtension {
     override func serviceExtensionTimeWillExpire() {
         if let contentHandler = contentHandler,
            let bestAttemptContent = bestAttemptContent {
+            applyRichCategoryIfNeeded(on: bestAttemptContent)
             contentHandler(bestAttemptContent)
         }
     }
@@ -112,44 +112,38 @@ class NotificationService: CTNotificationServiceExtension {
         return templateKeys.contains { userInfo[$0] != nil }
     }
 
-    private func isCarouselTemplatePayload(_ userInfo: [AnyHashable: Any]) -> Bool {
-        // 1) Explicit category/template hints in payload.
-        let explicitCarouselHints = [
-            userInfo["category"],
-            userInfo["ct_category"],
-            userInfo["wzrk_category"],
-            userInfo["template_type"],
+    private func isManualCarouselTemplatePayload(_ userInfo: [AnyHashable: Any]) -> Bool {
+        // CleverTap template keys:
+        // - Auto carousel: pt_id = pt_carousel
+        // - Manual carousel: pt_id = pt_manual_carousel
+        let templateIDCandidates = [
+            userInfo["pt_id"],
+            userInfo["wzrk_pt_id"],
             userInfo["pt_type"],
-            userInfo["wzrk_pt_type"]
+            userInfo["wzrk_pt_type"],
+            userInfo["template_type"]
         ]
 
-        for hint in explicitCarouselHints {
-            if let text = normalizedString(hint), text.contains("carousel") {
-                return true
-            }
-            if let text = normalizedString(hint), text == "ctcarouselnotification" {
+        for candidate in templateIDCandidates {
+            if let value = normalizedString(candidate), value == "ptmanualcarousel" {
                 return true
             }
         }
 
-        // 2) APNS category fallback.
-        if let aps = userInfo["aps"] as? [AnyHashable: Any],
-           let category = normalizedString(aps["category"]),
-           category == "ctcarouselnotification" || category.contains("carousel") {
-            return true
+        // Explicit manual hints if integrator sends category variants.
+        let manualHints = [
+            userInfo["category"],
+            userInfo["ct_category"],
+            userInfo["wzrk_category"]
+        ]
+
+        for hint in manualHints {
+            if let value = normalizedString(hint), value.contains("manualcarousel") {
+                return true
+            }
         }
 
-        // 3) Legacy/known CleverTap carousel key patterns.
-        if userInfo["pt_img2"] != nil || userInfo["pt_img3"] != nil {
-            return true
-        }
-
-        // 4) Generic image key scan (pt_img1, pt_img2, ...). Carousel requires >= 2 images.
-        let imageKeys = userInfo.keys
-            .compactMap { $0 as? String }
-            .filter { $0.lowercased().hasPrefix("pt_img") }
-
-        return imageKeys.count >= 2
+        return false
     }
 
     private func normalizedString(_ value: Any?) -> String? {
@@ -182,5 +176,18 @@ class NotificationService: CTNotificationServiceExtension {
         }
 
         return payload
+    }
+
+    private func applyRichCategoryIfNeeded(on content: UNMutableNotificationContent) {
+        // - Manual carousel -> CTCarouselNotification (Back/Next actions)
+        // - Auto carousel + other rich templates -> CTNotification (no manual nav actions)
+        if shouldUseManualCarouselCategory {
+            content.categoryIdentifier = "CTCarouselNotification"
+        } else if shouldUseRichCategory {
+            content.categoryIdentifier = "CTNotification"
+        } else if content.categoryIdentifier == "CTNotification" ||
+                    content.categoryIdentifier == "CTCarouselNotification" {
+            content.categoryIdentifier = ""
+        }
     }
 }
