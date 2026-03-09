@@ -552,6 +552,25 @@ class CleverTapInAppService: ObservableObject {
             status: .pushSent
         )
     }
+
+    func triggerTimerPushNotification() {
+        let eventData = [
+            "Push Type": "Timer Push",
+            "Timestamp": Date().timeIntervalSince1970,
+            "User ID": CleverTap.sharedInstance()?.profileGetID() ?? "Unknown",
+            "Message": "Timer-based push notification test trigger",
+            "Timer Delay Seconds": 60
+        ] as [String : Any]
+
+        CleverTap.sharedInstance()?.recordEvent("Trigger_Timer_Push_Notification", withProps: eventData)
+        pushNotificationCount += 1
+
+        addNotificationLog(
+            eventName: "Timer Push Triggered",
+            payload: eventData,
+            status: .pushSent
+        )
+    }
     
     // MARK: - App Inbox
     

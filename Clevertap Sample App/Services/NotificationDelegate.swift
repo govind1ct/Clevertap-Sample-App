@@ -132,25 +132,10 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, UIApplic
             return
         }
 
-        let normalizedPayload = normalizedPayloadForImpression(from: userInfo)
-        sdk.recordNotificationViewedEvent(withData: normalizedPayload)
+        // Pass the original CleverTap payload as-is for viewed tracking.
+        sdk.recordNotificationViewedEvent(withData: userInfo)
     }
 
-    private func normalizedPayloadForImpression(from userInfo: [AnyHashable: Any]) -> [AnyHashable: Any] {
-        var payload = userInfo
-
-        if payload["wzrk_id"] == nil {
-            if let fallbackID = payload["W$id"] ?? payload["wzrk_pt_id"] ?? payload["pt_id"] {
-                payload["wzrk_id"] = fallbackID
-            }
-        }
-
-        if payload["wzrk_nm"] == nil, let title = payload["pt_title"] {
-            payload["wzrk_nm"] = title
-        }
-
-        return payload
-    }
 }
 
 extension NotificationDelegate {

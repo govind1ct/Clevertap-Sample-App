@@ -300,6 +300,7 @@ class AppDelegate: UIResponder,
         if let profileId = CleverTap.sharedInstance()?.profileGetID() {
             print("🔧 CleverTap Profile ID: \(profileId)")
         }
+
         if Auth.auth().currentUser != nil {
             CleverTapService.shared.syncPushIdentityForExtensions()
         } else {

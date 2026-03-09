@@ -21,6 +21,8 @@ class NotificationService: CTNotificationServiceExtension {
         static let identityKey = "ct_identity"
         static let emailKey = "ct_email"
         static let lastImpressionDebugKey = "ct_last_impression_debug"
+        static let traceLogsKey = "ct_nse_trace_logs"
+        static let maxTraceLogEntries = 40
     }
 
     // MARK: - Main Entry - this is where we have to define the Rich Media Support
@@ -32,18 +34,27 @@ class NotificationService: CTNotificationServiceExtension {
         self.bestAttemptContent = (request.content.mutableCopy() as? UNMutableNotificationContent)
 
         guard let bestAttemptContent = bestAttemptContent else {
+            appendTrace(
+                event: "no_mutable_content",
+                userInfo: request.content.userInfo,
+                requestID: request.identifier
+            )
             contentHandler(request.content)
             return
         }
 
         let userInfo = bestAttemptContent.userInfo
+        appendTrace(event: "did_receive_start", userInfo: userInfo, requestID: request.identifier)
         shouldUseRichCategory = isRichTemplatePayload(userInfo)
         shouldUseManualCarouselCategory = isManualCarouselTemplatePayload(userInfo)
 
-        // Record impression with normalized payload.
         // Keep identity sync guarded for actual CleverTap payloads only.
         guard let sdk = CleverTap.sharedInstance() else {
-            persistImpressionDebugFlag(reason: "sdk_nil")
+            // Avoid noisy debug flips from non-CleverTap notifications.
+            if isLikelyCleverTapPayload(userInfo) {
+                persistImpressionDebugFlag(reason: "sdk_nil")
+            }
+            appendTrace(event: "sdk_nil", userInfo: userInfo, requestID: request.identifier)
             super.didReceive(request, withContentHandler: { content in
                 guard let mutableContent = content.mutableCopy() as? UNMutableNotificationContent else {
                     contentHandler(content)
@@ -55,12 +66,28 @@ class NotificationService: CTNotificationServiceExtension {
             return
         }
 
-        if sdk.isCleverTapNotification(userInfo) {
-            maybeSetCTUserIdentity()
+        guard sdk.isCleverTapNotification(userInfo) else {
+            if isLikelyCleverTapPayload(userInfo) {
+                persistImpressionDebugFlag(reason: "not_ct_payload")
+            }
+            appendTrace(event: "not_ct_payload", userInfo: userInfo, requestID: request.identifier)
+            super.didReceive(request, withContentHandler: { content in
+                guard let mutableContent = content.mutableCopy() as? UNMutableNotificationContent else {
+                    contentHandler(content)
+                    return
+                }
+                self.applyRichCategoryIfNeeded(on: mutableContent)
+                contentHandler(mutableContent)
+            })
+            return
         }
 
-        let normalizedPayload = normalizedPayloadForImpression(from: userInfo)
-        sdk.recordNotificationViewedEvent(withData: normalizedPayload)
+        maybeSetCTUserIdentity()
+        appendTrace(event: "ct_payload_verified", userInfo: userInfo, requestID: request.identifier)
+        // Per CleverTap docs, pass original payload while recording viewed event.
+        sdk.recordNotificationViewedEvent(withData: userInfo)
+        persistImpressionDebugFlag(reason: "viewed_recorded")
+        appendTrace(event: "viewed_recorded", userInfo: userInfo, requestID: request.identifier)
 
         super.didReceive(request, withContentHandler: { content in
             guard let mutableContent = content.mutableCopy() as? UNMutableNotificationContent else {
@@ -77,6 +104,7 @@ class NotificationService: CTNotificationServiceExtension {
     override func serviceExtensionTimeWillExpire() {
         if let contentHandler = contentHandler,
            let bestAttemptContent = bestAttemptContent {
+            appendTrace(event: "time_will_expire", userInfo: bestAttemptContent.userInfo)
             applyRichCategoryIfNeeded(on: bestAttemptContent)
             contentHandler(bestAttemptContent)
         }
@@ -154,6 +182,15 @@ class NotificationService: CTNotificationServiceExtension {
             .replacingOccurrences(of: "_", with: "")
     }
 
+    private func isLikelyCleverTapPayload(_ userInfo: [AnyHashable: Any]) -> Bool {
+        for key in userInfo.keys {
+            if let keyString = key as? String, keyString.lowercased().hasPrefix("wzrk_") {
+                return true
+            }
+        }
+        return false
+    }
+
     private func persistImpressionDebugFlag(reason: String) {
         guard let sharedDefaults = UserDefaults(suiteName: SharedPushIdentityConfig.appGroupID) else {
             return
@@ -162,20 +199,54 @@ class NotificationService: CTNotificationServiceExtension {
         sharedDefaults.set(["reason": reason, "timestamp": Date().timeIntervalSince1970], forKey: SharedPushIdentityConfig.lastImpressionDebugKey)
     }
 
-    private func normalizedPayloadForImpression(from userInfo: [AnyHashable: Any]) -> [AnyHashable: Any] {
-        var payload = userInfo
+    private func appendTrace(
+        event: String,
+        userInfo: [AnyHashable: Any],
+        requestID: String? = nil
+    ) {
+        guard let sharedDefaults = UserDefaults(suiteName: SharedPushIdentityConfig.appGroupID) else {
+            return
+        }
 
-        if payload["wzrk_id"] == nil {
-            if let fallbackID = payload["W$id"] ?? payload["wzrk_pt_id"] ?? payload["pt_id"] {
-                payload["wzrk_id"] = fallbackID
+        var logs = sharedDefaults.array(forKey: SharedPushIdentityConfig.traceLogsKey) as? [[String: String]] ?? []
+
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let wzrkID = stringValue(in: userInfo, keys: ["wzrk_id", "W$id", "wzrk_pid"]) ?? ""
+        let ptID = stringValue(in: userInfo, keys: ["pt_id", "wzrk_pt_id"]) ?? ""
+        let profileID = CleverTap.sharedInstance()?.profileGetID() ?? ""
+
+        var entry: [String: String] = [
+            "timestamp": timestamp,
+            "event": event,
+            "is_ct_candidate": isLikelyCleverTapPayload(userInfo) ? "true" : "false",
+            "wzrk_id": wzrkID,
+            "pt_id": ptID,
+            "ct_profile_id": profileID,
+            "category": shouldUseManualCarouselCategory ? "CTCarouselNotification" : (shouldUseRichCategory ? "CTNotification" : "none")
+        ]
+
+        if let requestID, !requestID.isEmpty {
+            entry["request_id"] = requestID
+        }
+
+        logs.append(entry)
+        if logs.count > SharedPushIdentityConfig.maxTraceLogEntries {
+            logs.removeFirst(logs.count - SharedPushIdentityConfig.maxTraceLogEntries)
+        }
+
+        sharedDefaults.set(logs, forKey: SharedPushIdentityConfig.traceLogsKey)
+    }
+
+    private func stringValue(in userInfo: [AnyHashable: Any], keys: [String]) -> String? {
+        for key in keys {
+            if let value = userInfo[key] {
+                let stringValue = String(describing: value).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !stringValue.isEmpty {
+                    return stringValue
+                }
             }
         }
-
-        if payload["wzrk_nm"] == nil, let title = payload["pt_title"] {
-            payload["wzrk_nm"] = title
-        }
-
-        return payload
+        return nil
     }
 
     private func applyRichCategoryIfNeeded(on content: UNMutableNotificationContent) {

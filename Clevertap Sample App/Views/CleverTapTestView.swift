@@ -115,6 +115,92 @@ struct CleverTapTestView: View {
     private var appInboxStatus: String {
         inAppService.appInboxCount > 0 ? "Active (\(inAppService.appInboxCount))" : "Empty"
     }
+
+    private enum SharedPushIdentityConfig {
+        static let appGroupID = "group.com.govind.clevertap-sample-app"
+        static let identityKey = "ct_identity"
+        static let emailKey = "ct_email"
+        static let lastImpressionDebugKey = "ct_last_impression_debug"
+        static let traceLogsKey = "ct_nse_trace_logs"
+    }
+
+    private var sharedPushIdentity: String {
+        guard let sharedDefaults = UserDefaults(suiteName: SharedPushIdentityConfig.appGroupID) else {
+            return "Unavailable"
+        }
+        let identity = (sharedDefaults.string(forKey: SharedPushIdentityConfig.identityKey) ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return identity.isEmpty ? "Not Set" : identity
+    }
+
+    private var sharedPushEmail: String {
+        guard let sharedDefaults = UserDefaults(suiteName: SharedPushIdentityConfig.appGroupID) else {
+            return "Unavailable"
+        }
+        let email = (sharedDefaults.string(forKey: SharedPushIdentityConfig.emailKey) ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return email.isEmpty ? "Not Set" : email
+    }
+
+    private var nseImpressionDebugReason: String {
+        guard let sharedDefaults = UserDefaults(suiteName: SharedPushIdentityConfig.appGroupID),
+              let payload = sharedDefaults.dictionary(forKey: SharedPushIdentityConfig.lastImpressionDebugKey) else {
+            return "Not Set"
+        }
+
+        if let reason = payload["reason"] as? String, !reason.isEmpty {
+            return reason
+        }
+
+        return "Unknown"
+    }
+
+    private var nseImpressionDebugTimestampText: String {
+        guard let sharedDefaults = UserDefaults(suiteName: SharedPushIdentityConfig.appGroupID),
+              let payload = sharedDefaults.dictionary(forKey: SharedPushIdentityConfig.lastImpressionDebugKey),
+              let timestamp = payload["timestamp"] as? TimeInterval else {
+            return "Not Set"
+        }
+
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .medium
+        return formatter.string(from: Date(timeIntervalSince1970: timestamp))
+    }
+
+    private var nseTraceLogs: [[String: String]] {
+        guard let sharedDefaults = UserDefaults(suiteName: SharedPushIdentityConfig.appGroupID) else {
+            return []
+        }
+        return sharedDefaults.array(forKey: SharedPushIdentityConfig.traceLogsKey) as? [[String: String]] ?? []
+    }
+
+    private var nseTraceLogCountText: String {
+        "\(nseTraceLogs.count)"
+    }
+
+    private var nseLatestTraceEvent: String {
+        nseTraceLogs.last?["event"] ?? "Not Set"
+    }
+
+    private var nseLatestTraceDetails: String {
+        guard let latest = nseTraceLogs.last else {
+            return "Not Set"
+        }
+
+        let time = latest["timestamp"] ?? ""
+        let req = latest["request_id"] ?? "-"
+        let wzrk = latest["wzrk_id"] ?? "-"
+        return "\(time) | req: \(req) | wzrk: \(wzrk)"
+    }
+
+    private var nseLatestProfileID: String {
+        guard let latest = nseTraceLogs.last else {
+            return "Not Set"
+        }
+        let value = (latest["ct_profile_id"] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? "Not Set" : value
+    }
     
     struct TestEvent: Identifiable {
         let id = UUID()
@@ -151,7 +237,7 @@ struct CleverTapTestView: View {
                 )
 
             ScrollView {
-                VStack(spacing: 24) {
+                LazyVStack(spacing: 24) {
                     headerSection
                         .frame(maxWidth: .infinity)
 
@@ -196,7 +282,6 @@ struct CleverTapTestView: View {
             Button("OK") { }
         }
         .onAppear {
-            refreshDebugInfo()
             if !revealContent {
                 revealContent = true
             }
@@ -204,6 +289,11 @@ struct CleverTapTestView: View {
                 withAnimation(.easeInOut(duration: 5.5).repeatForever(autoreverses: true)) {
                     animateAmbientBackground = true
                 }
+            }
+
+            // Defer diagnostics to let the screen appear instantly.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                refreshDebugInfo()
             }
         }
     }
@@ -544,6 +634,16 @@ struct CleverTapTestView: View {
                         action: { inAppService.triggerCarouselPush() }
                     )
                 }
+
+                // Row 3: Timer Push
+                TestActionCard(
+                    title: "Timer Push",
+                    subtitle: "Time-based campaign trigger",
+                    icon: "timer",
+                    gradient: [Color.indigo, Color.blue],
+                    action: { inAppService.triggerTimerPushNotification() },
+                    isWide: true
+                )
             }
         }
         .padding(.vertical, 20)
@@ -804,6 +904,61 @@ struct CleverTapTestView: View {
                     )
                 }
 
+                debugInfoGroupCard(title: "NSE Impression Trace") {
+                    DebugInfoRow(
+                        title: "Shared Identity",
+                        value: sharedPushIdentity,
+                        icon: "person.crop.circle.badge.checkmark",
+                        status: sharedPushIdentity == "Not Set" ? .warn : .good
+                    )
+
+                    DebugInfoRow(
+                        title: "Shared Email",
+                        value: sharedPushEmail,
+                        icon: "envelope.badge",
+                        status: sharedPushEmail == "Not Set" ? .warn : .good
+                    )
+
+                    DebugInfoRow(
+                        title: "NSE Last Reason",
+                        value: nseImpressionDebugReason,
+                        icon: "waveform.path.ecg",
+                        status: debugStatusForNSEReason(nseImpressionDebugReason)
+                    )
+
+                    DebugInfoRow(
+                        title: "NSE Last Timestamp",
+                        value: nseImpressionDebugTimestampText,
+                        icon: "clock.badge.checkmark"
+                    )
+
+                    DebugInfoRow(
+                        title: "NSE Trace Count",
+                        value: nseTraceLogCountText,
+                        icon: "list.number"
+                    )
+
+                    DebugInfoRow(
+                        title: "NSE Latest Event",
+                        value: nseLatestTraceEvent,
+                        icon: "dot.scope",
+                        status: debugStatusForNSEEvent(nseLatestTraceEvent)
+                    )
+
+                    DebugInfoRow(
+                        title: "NSE Latest Profile ID",
+                        value: nseLatestProfileID,
+                        icon: "person.crop.circle",
+                        status: nseLatestProfileID == "Not Set" ? .warn : .good
+                    )
+
+                    DebugInfoRow(
+                        title: "NSE Latest Details",
+                        value: nseLatestTraceDetails,
+                        icon: "text.alignleft"
+                    )
+                }
+
                 debugInfoGroupCard(title: "Push & Inbox") {
                     DebugInfoRow(
                         title: "Push Permissions",
@@ -1001,6 +1156,31 @@ struct CleverTapTestView: View {
 
     private func debugStatusForInbox(_ value: String) -> DebugInfoRow.DebugStatus {
         value.lowercased().contains("active") ? .good : .warn
+    }
+
+    private func debugStatusForNSEReason(_ value: String) -> DebugInfoRow.DebugStatus {
+        let normalized = value.lowercased()
+        if normalized == "not set" {
+            return .warn
+        }
+        if normalized == "sdk_nil" || normalized == "not_ct_payload" {
+            return .bad
+        }
+        return .good
+    }
+
+    private func debugStatusForNSEEvent(_ value: String) -> DebugInfoRow.DebugStatus {
+        let normalized = value.lowercased()
+        if normalized == "viewed_recorded" {
+            return .good
+        }
+        if normalized == "sdk_nil" || normalized == "not_ct_payload" || normalized == "time_will_expire" {
+            return .bad
+        }
+        if normalized == "not set" {
+            return .warn
+        }
+        return .warn
     }
 
     @ViewBuilder
