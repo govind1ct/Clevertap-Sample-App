@@ -21,13 +21,15 @@ struct ProductExperiencesView: View {
     }
 
     private enum ExperienceDestination: Identifiable {
-        case testLab
+        case testLabDeveloper
+        case testLabMarketer
         case appInbox
         case nativeDisplay
 
         var id: String {
             switch self {
-            case .testLab: return "testLab"
+            case .testLabDeveloper: return "testLabDeveloper"
+            case .testLabMarketer: return "testLabMarketer"
             case .appInbox: return "appInbox"
             case .nativeDisplay: return "nativeDisplay"
             }
@@ -42,6 +44,7 @@ struct ProductExperiencesView: View {
     @State private var pushedDestination: ExperienceDestination?
     @State private var showStudioIntro = true
     @State private var introSelectedSection: ExperienceSection = .testLab
+    @State private var showRoleSelectionDialog = false
     @State private var animateContent = false
     @State private var animateAmbientBackground = false
     @State private var revealInteractiveCards = false
@@ -155,9 +158,17 @@ struct ProductExperiencesView: View {
                 SettingsView()
             }
         }
+        .sheet(isPresented: $showRoleSelectionDialog) {
+            roleSelectionSheet
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(24)
+        }
         .navigationDestination(item: $pushedDestination) { destination in
             switch destination {
-            case .testLab:
+            case .testLabDeveloper:
+                CleverTapTestViewV2()
+            case .testLabMarketer:
                 CleverTapTestView()
             case .appInbox:
                 AppInboxView()
@@ -216,6 +227,177 @@ private extension ProductExperiencesView {
 
     var useCompactControlsLayout: Bool {
         horizontalSizeClass == .compact || dynamicTypeSize.isAccessibilitySize
+    }
+
+    var roleSelectionSheet: some View {
+        ZStack {
+            Color(.systemGroupedBackground)
+                .ignoresSafeArea()
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 16) {
+                    VStack(alignment: .leading, spacing: 14) {
+                        HStack(spacing: 10) {
+                            CleverTapLogo(size: 40, showText: false)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("CLEVERTAP TEST LAB")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundColor(Color("CleverTapPrimary"))
+                                Text("Workspace Selection")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(.primary)
+                            }
+
+                            Spacer()
+
+                            Text("Required")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(Color("CleverTapPrimary"))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(headerPillBackground, in: Capsule())
+                        }
+
+                        Text("Who is using Test Lab today?")
+                            .font(.system(size: 28, weight: .heavy, design: .rounded))
+                            .foregroundStyle(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text("Pick a workspace based on the audience. You can switch any time from the Experiences tab.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(20)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .stroke(sectionBorderColor, lineWidth: 1)
+                    )
+
+                    Button {
+                        showRoleSelectionDialog = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            pushedDestination = .testLabDeveloper
+                        }
+                    } label: {
+                        roleOptionRow(
+                            title: "Developer Workspace",
+                            subtitle: "Who uses this: Developers, QA, and support teams. Includes diagnostics, event traces, and validation tools.",
+                            imageName: "Clevertap2",
+                            icon: "hammer.fill",
+                            accent: Color("CleverTapSecondary"),
+                            badge: "Recommended"
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        showRoleSelectionDialog = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            pushedDestination = .testLabMarketer
+                        }
+                    } label: {
+                        roleOptionRow(
+                            title: "Demo Workspace",
+                            subtitle: "Who uses this: Marketing and sales teams. Best for campaign walkthroughs, demos, and stakeholder storytelling.",
+                            imageName: "Clevertap1",
+                            icon: "megaphone.fill",
+                            accent: Color("CleverTapPrimary"),
+                            badge: "Presentation"
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        showRoleSelectionDialog = false
+                    } label: {
+                        Text("Cancel")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(selectorBackgroundColor, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(sectionBorderColor, lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 18)
+                .padding(.bottom, 28)
+            }
+        }
+    }
+
+    func roleOptionRow(title: String, subtitle: String, imageName: String, icon: String, accent: Color, badge: String?) -> some View {
+        HStack(spacing: 14) {
+            Image(imageName)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 96, height: 104)
+                .padding(8)
+                .background(rowBackgroundColor, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.white.opacity(0.22), lineWidth: 1)
+                )
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: icon)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(accent)
+                        .frame(width: 28, height: 28)
+                        .background(accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                    Text(title)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+
+                    Spacer(minLength: 0)
+                }
+
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 8) {
+                    if let badge {
+                        Text(badge.uppercased())
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(accent)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(accent.opacity(0.14), in: Capsule())
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "arrow.right.circle.fill")
+                        .font(.headline)
+                        .foregroundStyle(accent)
+                }
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(selectorBackgroundColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(sectionBorderColor, lineWidth: 1)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     var introScreen: some View {
@@ -701,7 +883,7 @@ private extension ProductExperiencesView {
                 .foregroundColor(.secondary)
 
             NavigationLink {
-                CleverTapTestView()
+                CleverTapTestViewV2()
             } label: {
                 HStack(spacing: 12) {
                     Image(systemName: "brain.head.profile")
@@ -1086,7 +1268,7 @@ private extension ProductExperiencesView {
                 showStudioIntro = false
             }
         case .testLab:
-            pushedDestination = .testLab
+            showRoleSelectionDialog = true
         case .appInbox:
             pushedDestination = .appInbox
         case .nativeDisplay:
@@ -1097,7 +1279,7 @@ private extension ProductExperiencesView {
     private func openFromStudioSelection() {
         switch selectedSection {
         case .testLab:
-            pushedDestination = .testLab
+            showRoleSelectionDialog = true
         case .appInbox:
             pushedDestination = .appInbox
         case .nativeDisplay:
