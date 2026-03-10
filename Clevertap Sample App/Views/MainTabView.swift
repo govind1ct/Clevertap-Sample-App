@@ -36,7 +36,7 @@ struct MainTabView: View {
             ),
             WalkthroughStep(
                 tab: .experiences,
-                title: "Experiences",
+                title: "CleverTap Lab",
                 message: "Open CleverTap Test Lab, Product Experiences, App Inbox, and Native Display workflows.",
                 icon: "wand.and.stars"
             ),
@@ -85,7 +85,7 @@ struct MainTabView: View {
             }
             .tabItem {
                 Label {
-                    Text("Experiences")
+                    Text("CleverTap Lab")
                 } icon: {
                     Image(systemName: selectedTab == .experiences ? "wand.and.stars.inverse" : "wand.and.stars")
                 }
@@ -172,11 +172,11 @@ struct MainTabView: View {
                 CleverTapNativeDisplayService.shared.refreshDisplayUnits()
             }
             if selectedTab == .experiences {
-                CleverTapService.shared.trackEvent("Experiences Tab Opened", withProps: [
+                CleverTapService.shared.trackEvent("CleverTap Lab Tab Opened", withProps: [
                     "From Tab": String(describing: previousTab),
                     "Walkthrough Active": showWalkthroughNudges
                 ])
-                CleverTapService.shared.trackScreenViewed(screenName: "Experiences")
+                CleverTapService.shared.trackScreenViewed(screenName: "CleverTap Lab")
             }
             previousTab = selectedTab
         }
@@ -208,7 +208,7 @@ private struct GuestProfilePromptView: View {
                         .font(.title3.weight(.bold))
                         .multilineTextAlignment(.center)
 
-                    Text("You can explore Home, Experiences, Cart, and Developer without login. To use Profile features, sign in first.")
+                    Text("You can explore Home, CleverTap Lab, Cart, and Developer without login. To use Profile features, sign in first.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
