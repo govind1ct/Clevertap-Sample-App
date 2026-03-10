@@ -9,6 +9,7 @@ struct Clevertap_Sample_AppApp: App {
     @StateObject private var cartManager = CartManager()
     @StateObject private var nativeDisplayService = CleverTapNativeDisplayService.shared
     @StateObject private var productExperiencesService = CleverTapProductExperiencesService.shared
+    @StateObject private var themeManager = ThemeManager.shared
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
     @State private var showSplash = true
     
@@ -46,6 +47,7 @@ struct Clevertap_Sample_AppApp: App {
             .animation(.spring(response: 0.50, dampingFraction: 0.88), value: hasSeenOnboarding)
             .environmentObject(authViewModel)
             .environmentObject(cartManager)
+            .environmentObject(themeManager)
             .onAppear {
                 // Verify CleverTap delegate setup
                 print("✅ App Started - CleverTap delegate should be set in AppDelegate")
@@ -57,6 +59,8 @@ struct Clevertap_Sample_AppApp: App {
                 
                 productExperiencesService.fetchVariables()
                 productExperiencesService.syncVariablesInDebugBuild()
+                themeManager.registerConfigListener()
+                themeManager.loadThemeFromCleverTap()
             }
         }
     }

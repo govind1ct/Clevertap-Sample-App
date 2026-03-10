@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import CleverTapSDK
 
 struct ProductExperiencesView: View {
     private enum ExperienceSection: Hashable {
@@ -51,6 +52,7 @@ struct ProductExperiencesView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
         ZStack {
@@ -716,6 +718,10 @@ private extension ProductExperiencesView {
                 statusRow(title: "home_featured_section_title", value: productExperiencesService.featuredSectionTitle)
                 statusRow(title: "home_show_featured_section", value: productExperiencesService.showFeaturedSection ? "true" : "false")
                 statusRow(title: "home_max_featured_products", value: "\(productExperiencesService.maxFeaturedProducts)")
+                statusRow(title: "home_theme_gradient_start", value: productExperiencesService.homeThemeGradientStart)
+                statusRow(title: "home_theme_gradient_end", value: productExperiencesService.homeThemeGradientEnd)
+                statusRow(title: "home_header_badge", value: productExperiencesService.homeHeaderBadge)
+                statusRow(title: "home_show_header_badge", value: productExperiencesService.showHomeHeaderBadge ? "true" : "false")
             }
         }
         .padding(18)
@@ -783,6 +789,11 @@ private extension ProductExperiencesView {
             ) {
                 Button {
                     productExperiencesService.applyDemoPreset(.luxuryLaunch)
+                    CleverTap.sharedInstance()?.recordEvent(
+                        "luxury_preset_selected",
+                        withProps: ["source": "Product Experiences"]
+                    )
+                    themeManager.setLuxuryActive(true)
                     alertMessage = "Applied preset: Luxury Launch."
                     showAlert = true
                 } label: {
@@ -791,7 +802,18 @@ private extension ProductExperiencesView {
                 .disabled(!productExperiencesService.isFeatureEnabled)
 
                 Button {
+                    themeManager.setLuxuryActive(true)
+                    themeManager.refreshFromCleverTap()
+                    alertMessage = "Requested Luxury theme from Product Config."
+                    showAlert = true
+                } label: {
+                    actionLabel(title: "Luxury Theme", icon: "paintbrush.fill")
+                }
+                .disabled(!productExperiencesService.isFeatureEnabled)
+
+                Button {
                     productExperiencesService.applyDemoPreset(.festiveSale)
+                    themeManager.setLuxuryActive(false)
                     alertMessage = "Applied preset: Festive Sale."
                     showAlert = true
                 } label: {
@@ -801,6 +823,7 @@ private extension ProductExperiencesView {
 
                 Button {
                     productExperiencesService.applyDemoPreset(.reset)
+                    themeManager.setLuxuryActive(false)
                     alertMessage = "Reset to app defaults."
                     showAlert = true
                 } label: {
@@ -842,6 +865,53 @@ private extension ProductExperiencesView {
 
     var guideSection: some View {
         VStack(alignment: .leading, spacing: 12) {
+            let luxuryPayload = """
+            {
+                "home_header_title": "Luxury Atelier",
+                "home_header_subtitle": "Crafted pieces for elevated living.",
+                "home_featured_section_title": "The Signature Edit",
+                "home_show_featured_section": true,
+                "home_max_featured_products": 4,
+                "home_theme_gradient_start": "#1C1512",
+                "home_theme_gradient_end": "#8B6A4A",
+                "home_header_badge": "Private Collection",
+                "home_show_header_badge": true,
+                "theme": { "name": "luxury" },
+                "background": {
+                    "type": "gradient",
+                    "colors": ["#0F0F0F", "#1C1C1E", "#000000"]
+                },
+                "navigationBar": {
+                    "textColor": "#D4AF37",
+                    "glassOpacity": 0.28
+                },
+                "cards": {
+                    "background": "#1A1A1A",
+                    "borderColor": "#D4AF37",
+                    "cornerRadius": 20,
+                    "shadowOpacity": 0.35
+                },
+                "buttons": {
+                    "primary": { "background": "#D4AF37", "textColor": "#0B0F18" },
+                    "secondary": { "background": "#111111", "textColor": "#D4AF37" }
+                },
+                "typography": {
+                    "titleFont": "Georgia",
+                    "bodyFont": "System",
+                    "titleColor": "#E8D5A7",
+                    "bodyColor": "#C7B48B"
+                },
+                "spacing": {
+                    "section": 26,
+                    "card": 16
+                },
+                "animations": {
+                    "style": "smooth",
+                    "duration": 0.4
+                }
+            }
+            """
+
             Text("How To Use")
                 .font(.headline)
 
@@ -849,7 +919,7 @@ private extension ProductExperiencesView {
                 Image(systemName: "1.circle.fill")
                     .foregroundStyle(Color("CleverTapPrimary"))
                     .font(.title3)
-                Text("Use the toggle above to set Enable Product Experiences ON/OFF.")
+                Text("Enable Product Experiences and turn Demo Mode Lock OFF.")
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(.primary)
             }
@@ -860,7 +930,48 @@ private extension ProductExperiencesView {
                     .stroke(Color("CleverTapPrimary").opacity(0.25), lineWidth: 1)
             )
 
-            Text("After enabling, use Fetch to pull dashboard values from CleverTap.")
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "2.circle.fill")
+                    .foregroundStyle(Color("CleverTapPrimary"))
+                    .font(.title3)
+                Text("In the CleverTap dashboard, create a Product Experience triggered by event: luxury_preset_selected.")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.primary)
+            }
+            .padding(12)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(sectionBorderColor, lineWidth: 1)
+            )
+
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "3.circle.fill")
+                    .foregroundStyle(Color("CleverTapPrimary"))
+                    .font(.title3)
+                Text("Paste the payload below, publish, tap Luxury, then Fetch to apply.")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.primary)
+            }
+            .padding(12)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(sectionBorderColor, lineWidth: 1)
+            )
+
+            Text(luxuryPayload)
+                .font(.system(.caption, design: .monospaced))
+                .foregroundColor(.primary)
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(rowBackgroundColor, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(sectionBorderColor, lineWidth: 1)
+                )
+
+            Text("If the UI does not update, confirm the event fired and tap Fetch again.")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }

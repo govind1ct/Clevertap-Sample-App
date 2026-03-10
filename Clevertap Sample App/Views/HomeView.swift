@@ -7,11 +7,12 @@ struct HomeView: View {
     @StateObject private var productService = ProductService()
     @StateObject private var productExperienceService = CleverTapProductExperiencesService.shared
     @StateObject private var profileService = ProfileService()
+    @EnvironmentObject private var themeManager: ThemeManager
+    @Namespace private var productTransitionNamespace
 
     @State private var selectedCategory = "All"
     @State private var searchText = ""
     @State private var showingCart = false
-    @State private var spotlightClock = Date()
 
     private var categories: [String] {
         ["All"] + ProductCategory.allCases.map { $0.rawValue.capitalized }
@@ -36,18 +37,6 @@ struct HomeView: View {
                 .filter { $0.isFeatured }
                 .prefix(productExperienceService.maxFeaturedProducts)
         )
-    }
-
-    private var spotlightSourceProducts: [Product] {
-        let source = featuredProducts.isEmpty ? filteredProducts : featuredProducts
-        return source
-    }
-
-    private var spotlightProduct: Product? {
-        guard !spotlightSourceProducts.isEmpty else { return nil }
-        let halfHourBucket = Int(spotlightClock.timeIntervalSince1970 / 1800)
-        let index = abs(halfHourBucket) % spotlightSourceProducts.count
-        return spotlightSourceProducts[index]
     }
 
     private var isInitialLoading: Bool {
@@ -79,7 +68,7 @@ struct HomeView: View {
             backgroundView
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 24) {
+                VStack(spacing: themeManager.sectionSpacing) {
                     headerSection
                     searchSection
                     categorySection
@@ -92,9 +81,6 @@ struct HomeView: View {
                     } else if filteredProducts.isEmpty {
                         emptySection
                     } else {
-                        if let spotlightProduct {
-                            spotlightSection(product: spotlightProduct)
-                        }
                         if productExperienceService.showFeaturedSection, !featuredProducts.isEmpty {
                             featuredSection
                         }
@@ -121,33 +107,26 @@ struct HomeView: View {
             profileService.fetchUserProfile { _ in }
             CleverTapService.shared.trackScreenViewed(screenName: "Home")
         }
-        .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { tick in
-            spotlightClock = tick
-        }
     }
 }
 
 private extension HomeView {
     var backgroundView: some View {
         LinearGradient(
-            colors: [
-                Color("CleverTapPrimary").opacity(0.18),
-                Color("CleverTapSecondary").opacity(0.12),
-                Color(.systemGroupedBackground)
-            ],
+            colors: themeManager.backgroundGradient,
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
         .overlay(alignment: .topLeading) {
             Circle()
-                .fill(Color("CleverTapPrimary").opacity(0.22))
+                .fill(themeManager.primaryButtonBackground.opacity(0.18))
                 .frame(width: 260, height: 260)
                 .blur(radius: 36)
                 .offset(x: -70, y: -80)
         }
         .overlay(alignment: .bottomTrailing) {
             Circle()
-                .fill(Color("CleverTapSecondary").opacity(0.18))
+                .fill(themeManager.secondaryButtonBackground.opacity(0.18))
                 .frame(width: 240, height: 240)
                 .blur(radius: 36)
                 .offset(x: 70, y: 80)
@@ -160,18 +139,36 @@ private extension HomeView {
             VStack(alignment: .leading, spacing: 8) {
                 Text(currentDateLabel)
                     .font(.caption.weight(.semibold))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(themeManager.bodyTextColor)
                     .textCase(.uppercase)
 
-                Text("Welcome, \(firstName)")
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
+                if productExperienceService.showHomeHeaderBadge,
+                   !productExperienceService.homeHeaderBadge.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text(productExperienceService.homeHeaderBadge.uppercased())
+                        .font(.caption2.weight(.bold))
+                        .foregroundColor(themeManager.titleTextColor)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(themeManager.cardBackground.opacity(0.8), in: Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(themeManager.cardBorder, lineWidth: 1)
+                        )
+                }
+
+                Text(productExperienceService.homeHeaderTitle)
+                    .font(.custom(themeManager.titleFontName, size: 32))
+                    .foregroundColor(themeManager.titleTextColor)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
 
+                Text("Welcome, \(firstName)")
+                    .font(.custom(themeManager.bodyFontName, size: 12))
+                    .foregroundColor(themeManager.bodyTextColor)
+
                 Text(productExperienceService.homeHeaderSubtitle)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .font(.custom(themeManager.bodyFontName, size: 14))
+                    .foregroundColor(themeManager.bodyTextColor)
                     .lineLimit(2)
 
                 HStack(spacing: 8) {
@@ -195,7 +192,11 @@ private extension HomeView {
                     Image(systemName: "cart.fill")
                         .font(.title3)
                         .frame(width: 46, height: 46)
-                        .liquidGlassSurface(shape: Circle())
+                        .background(themeManager.cardBackground.opacity(0.85), in: Circle())
+                        .overlay(
+                            Circle()
+                                .stroke(themeManager.cardBorder, lineWidth: 1)
+                        )
 
                     if cartManager.itemCount > 0 {
                         Text("\(cartManager.itemCount)")
@@ -210,7 +211,15 @@ private extension HomeView {
             }
         }
         .padding(14)
-        .liquidGlassSurface(cornerRadius: 22, tint: Color.white.opacity(0.06))
+        .background(
+            RoundedRectangle(cornerRadius: themeManager.cardCornerRadius, style: .continuous)
+                .fill(themeManager.cardBackground.opacity(0.85))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: themeManager.cardCornerRadius, style: .continuous)
+                .stroke(themeManager.cardBorder, lineWidth: 1)
+        )
+        .shadow(color: themeManager.cardBorder.opacity(themeManager.cardShadowOpacity), radius: 12, y: 8)
     }
 
     func summaryPill(icon: String, text: String) -> some View {
@@ -220,16 +229,20 @@ private extension HomeView {
             Text(text)
                 .font(.caption.weight(.medium))
         }
-        .foregroundColor(.secondary)
+        .foregroundColor(themeManager.bodyTextColor)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .liquidGlassSurface(shape: Capsule())
+        .background(themeManager.cardBackground.opacity(0.75), in: Capsule())
+        .overlay(
+            Capsule()
+                .stroke(themeManager.cardBorder, lineWidth: 1)
+        )
     }
 
     var searchSection: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .foregroundColor(.secondary)
+                .foregroundColor(themeManager.bodyTextColor)
 
             TextField("Search products or categories", text: $searchText)
                 .textFieldStyle(.plain)
@@ -240,13 +253,20 @@ private extension HomeView {
                     searchText = ""
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(themeManager.bodyTextColor)
                 }
             }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .liquidGlassSurface(cornerRadius: 16, tint: Color("CleverTapPrimary").opacity(0.08))
+        .background(
+            RoundedRectangle(cornerRadius: themeManager.cardCornerRadius, style: .continuous)
+                .fill(themeManager.cardBackground.opacity(0.75))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: themeManager.cardCornerRadius, style: .continuous)
+                .stroke(themeManager.cardBorder, lineWidth: 1)
+        )
     }
 
     var categorySection: some View {
@@ -260,7 +280,7 @@ private extension HomeView {
                     } label: {
                         Text(category)
                             .font(.subheadline.weight(.semibold))
-                            .foregroundColor(selectedCategory == category ? .white : .primary)
+                            .foregroundColor(selectedCategory == category ? themeManager.primaryButtonText : themeManager.bodyTextColor)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 9)
                             .background(categoryChipBackground(for: category), in: Capsule())
@@ -276,14 +296,37 @@ private extension HomeView {
         if selectedCategory == category {
             AnyShapeStyle(
                 LinearGradient(
-                    colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
+                    colors: [themeManager.primaryButtonBackground, themeManager.secondaryButtonBackground],
                     startPoint: .leading,
                     endPoint: .trailing
                 )
             )
         } else {
-            AnyShapeStyle(Color.white.opacity(0.35))
+            AnyShapeStyle(themeManager.cardBackground.opacity(0.6))
         }
+    }
+
+    private var homeBackgroundGradientColors: [Color] {
+        if let start = colorFromHex(productExperienceService.homeThemeGradientStart),
+           let end = colorFromHex(productExperienceService.homeThemeGradientEnd) {
+            return [start, end, Color(.systemGroupedBackground)]
+        }
+        return [
+            Color("CleverTapPrimary").opacity(0.18),
+            Color("CleverTapSecondary").opacity(0.12),
+            Color(.systemGroupedBackground)
+        ]
+    }
+
+    private func colorFromHex(_ hex: String) -> Color? {
+        let trimmed = hex.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let normalized = trimmed.hasPrefix("#") ? String(trimmed.dropFirst()) : trimmed
+        guard normalized.count == 6, let value = Int(normalized, radix: 16) else { return nil }
+
+        let red = Double((value >> 16) & 0xFF) / 255.0
+        let green = Double((value >> 8) & 0xFF) / 255.0
+        let blue = Double(value & 0xFF) / 255.0
+        return Color(red: red, green: green, blue: blue)
     }
 
     var loadingSection: some View {
@@ -343,36 +386,30 @@ private extension HomeView {
     var featuredSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(productExperienceService.featuredSectionTitle)
-                .font(.title2.weight(.bold))
+                .font(.custom(themeManager.titleFontName, size: 22))
+                .foregroundColor(themeManager.titleTextColor)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 16) {
                     ForEach(featuredProducts) { product in
-                        NavigationLink(destination: ProductDetailView(product: product)) {
+                        NavigationLink {
+                            if #available(iOS 17.0, *) {
+                                ProductDetailView(product: product)
+                                    .navigationTransition(.zoom(sourceID: "featured-\(product.id ?? product.name)", in: productTransitionNamespace))
+                            } else {
+                                ProductDetailView(product: product)
+                            }
+                        } label: {
                             FeaturedProductCard(product: product)
+                                .matchedTransitionIfAvailable(id: "featured-\(product.id ?? product.name)", in: productTransitionNamespace)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(ProductPressStyle())
+                        .transaction { transaction in
+                            transaction.animation = .spring(response: 0.48, dampingFraction: 0.9)
+                        }
                     }
                 }
             }
-        }
-    }
-
-    func spotlightSection(product: Product) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text("Spotlight")
-                    .font(.title2.weight(.bold))
-                Spacer()
-                Text("Switches every 30 mins")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.secondary)
-            }
-
-            NavigationLink(destination: ProductDetailView(product: product)) {
-                HomeSpotlightCard(product: product, subtitle: productExperienceService.homeHeaderTitle)
-            }
-            .buttonStyle(.plain)
         }
     }
 
@@ -380,11 +417,12 @@ private extension HomeView {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text("All Products")
-                    .font(.title2.weight(.bold))
+                    .font(.custom(themeManager.titleFontName, size: 22))
+                    .foregroundColor(themeManager.titleTextColor)
                 Spacer()
                 Text("\(filteredProducts.count) items")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.secondary)
+                    .font(.custom(themeManager.bodyFontName, size: 12))
+                    .foregroundColor(themeManager.bodyTextColor)
             }
 
             LazyVGrid(
@@ -392,64 +430,52 @@ private extension HomeView {
                 spacing: 16
             ) {
                 ForEach(filteredProducts) { product in
-                    NavigationLink(destination: ProductDetailView(product: product)) {
+                    NavigationLink {
+                        if #available(iOS 17.0, *) {
+                            ProductDetailView(product: product)
+                                .navigationTransition(.zoom(sourceID: "grid-\(product.id ?? product.name)", in: productTransitionNamespace))
+                        } else {
+                            ProductDetailView(product: product)
+                        }
+                    } label: {
                         GridProductCard(product: product)
+                            .matchedTransitionIfAvailable(id: "grid-\(product.id ?? product.name)", in: productTransitionNamespace)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(ProductPressStyle())
+                    .transaction { transaction in
+                        transaction.animation = .spring(response: 0.48, dampingFraction: 0.9)
+                    }
                 }
             }
         }
     }
+
 }
 
-private struct HomeSpotlightCard: View {
-    let product: Product
-    let subtitle: String
-
-    var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            AppAsyncImage(urlString: product.mainImageURL) { phase in
-                if let image = phase.image {
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } else {
-                    Color.gray.opacity(0.15)
-                }
-            }
-            .frame(height: 300)
-            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-
-            LinearGradient(
-                colors: [.clear, Color.black.opacity(0.75)],
-                startPoint: .center,
-                endPoint: .bottom
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("SPOTLIGHT")
-                    .font(.caption2.weight(.bold))
-                    .foregroundColor(.white.opacity(0.86))
-                Text(product.name)
-                    .font(.title3.weight(.heavy))
-                    .foregroundColor(.white)
-                    .lineLimit(2)
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.84))
-                    .lineLimit(1)
-                Text("₹\(Int(product.price))")
-                    .font(.headline.weight(.bold))
-                    .foregroundColor(.white)
-            }
-            .padding(18)
+private extension View {
+    @ViewBuilder
+    func matchedTransitionIfAvailable(id: some Hashable, in namespace: Namespace.ID) -> some View {
+        if #available(iOS 17.0, *) {
+            self.matchedTransitionSource(id: id, in: namespace)
+        } else {
+            self
         }
+    }
+}
+
+private struct ProductPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .rotation3DEffect(.degrees(configuration.isPressed ? 4 : 0), axis: (x: 1, y: -1, z: 0))
+            .shadow(color: Color.black.opacity(configuration.isPressed ? 0.18 : 0.08), radius: configuration.isPressed ? 16 : 8, y: configuration.isPressed ? 10 : 6)
+            .animation(.spring(response: 0.34, dampingFraction: 0.85), value: configuration.isPressed)
     }
 }
 
 private struct FeaturedProductCard: View {
     let product: Product
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -466,7 +492,7 @@ private struct FeaturedProductCard: View {
             .clipShape(RoundedRectangle(cornerRadius: 26))
 
             LinearGradient(
-                colors: [.clear, Color.black.opacity(0.65)],
+                colors: [.clear, Color.black.opacity(0.75)],
                 startPoint: .center,
                 endPoint: .bottom
             )
@@ -474,40 +500,61 @@ private struct FeaturedProductCard: View {
 
             VStack(alignment: .leading, spacing: 7) {
                 Text("FEATURED")
-                    .font(.caption2.weight(.bold))
-                    .foregroundColor(.white.opacity(0.85))
+                    .font(.custom(themeManager.bodyFontName, size: 11))
+                    .foregroundColor(themeManager.titleTextColor)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(themeManager.cardBackground.opacity(0.85), in: Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(themeManager.cardBorder, lineWidth: 1)
+                    )
 
                 Text(product.name)
-                    .font(.title3.weight(.bold))
-                    .foregroundColor(.white)
+                    .font(.custom(themeManager.titleFontName, size: 20))
+                    .foregroundColor(themeManager.titleTextColor)
                     .lineLimit(2)
 
                 Text(product.shortDescription ?? product.category.capitalized)
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.85))
+                    .font(.custom(themeManager.bodyFontName, size: 12))
+                    .foregroundColor(themeManager.bodyTextColor)
                     .lineLimit(1)
 
                 HStack(spacing: 6) {
                     Text("₹\(Int(product.price))")
-                        .font(.headline.weight(.semibold))
-                        .foregroundColor(.white)
+                        .font(.custom(themeManager.titleFontName, size: 16))
+                        .foregroundColor(themeManager.titleTextColor)
                     if product.originalPrice > product.price {
                         Text("₹\(Int(product.originalPrice))")
-                            .font(.caption)
+                            .font(.custom(themeManager.bodyFontName, size: 11))
                             .strikethrough()
-                            .foregroundColor(.white.opacity(0.7))
+                            .foregroundColor(themeManager.bodyTextColor)
                     }
                 }
             }
-            .padding(18)
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(themeManager.cardBackground.opacity(0.88))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(themeManager.cardBorder, lineWidth: 1)
+            )
+            .padding(16)
         }
         .frame(width: 290, height: 350)
-        .shadow(color: Color.black.opacity(0.2), radius: 14, y: 8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 26)
+                .stroke(themeManager.cardBorder, lineWidth: 1)
+        )
+        .shadow(color: themeManager.cardBorder.opacity(themeManager.cardShadowOpacity), radius: 14, y: 8)
     }
 }
 
 private struct GridProductCard: View {
     let product: Product
+    @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -524,31 +571,44 @@ private struct GridProductCard: View {
             .clipShape(RoundedRectangle(cornerRadius: 18))
 
             Text(product.category.capitalized)
-                .font(.caption2.weight(.semibold))
-                .foregroundColor(.secondary)
+                .font(.custom(themeManager.bodyFontName, size: 11))
+                .foregroundColor(themeManager.bodyTextColor)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(Color.primary.opacity(0.08), in: Capsule())
+                .background(themeManager.cardBackground.opacity(0.75), in: Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(themeManager.cardBorder, lineWidth: 1)
+                )
 
             Text(product.name)
-                .font(.subheadline.weight(.semibold))
-                .foregroundColor(.primary)
+                .font(.custom(themeManager.titleFontName, size: 14))
+                .foregroundColor(themeManager.titleTextColor)
                 .lineLimit(2)
                 .frame(minHeight: 38, alignment: .top)
 
             HStack(spacing: 6) {
                 Text("₹\(Int(product.price))")
-                    .font(.headline.weight(.bold))
+                    .font(.custom(themeManager.titleFontName, size: 14))
+                    .foregroundColor(themeManager.titleTextColor)
                 if product.originalPrice > product.price {
                     Text("₹\(Int(product.originalPrice))")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.custom(themeManager.bodyFontName, size: 11))
+                        .foregroundColor(themeManager.bodyTextColor)
                         .strikethrough()
                 }
             }
         }
         .padding(12)
-        .liquidGlassSurface(cornerRadius: 18)
+        .background(
+            RoundedRectangle(cornerRadius: themeManager.cardCornerRadius, style: .continuous)
+                .fill(themeManager.cardBackground.opacity(0.85))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: themeManager.cardCornerRadius, style: .continuous)
+                .stroke(themeManager.cardBorder, lineWidth: 1)
+        )
+        .shadow(color: themeManager.cardBorder.opacity(themeManager.cardShadowOpacity), radius: 10, y: 6)
     }
 }
 

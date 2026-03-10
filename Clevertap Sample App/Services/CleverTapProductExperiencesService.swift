@@ -24,6 +24,10 @@ final class CleverTapProductExperiencesService: ObservableObject {
     @Published private(set) var featuredSectionTitle: String = "Featured"
     @Published private(set) var showFeaturedSection: Bool = true
     @Published private(set) var maxFeaturedProducts: Int = 8
+    @Published private(set) var homeThemeGradientStart: String = ""
+    @Published private(set) var homeThemeGradientEnd: String = ""
+    @Published private(set) var homeHeaderBadge: String = ""
+    @Published private(set) var showHomeHeaderBadge: Bool = false
     @Published private(set) var hasFetchedVariables: Bool = false
     @Published private(set) var isDemoModeLocked: Bool = false
     @Published private(set) var isFeatureEnabled: Bool = true
@@ -33,12 +37,20 @@ final class CleverTapProductExperiencesService: ObservableObject {
     private var featuredSectionTitleVar: CleverTapSDK.Var?
     private var showFeaturedSectionVar: CleverTapSDK.Var?
     private var maxFeaturedProductsVar: CleverTapSDK.Var?
+    private var homeThemeGradientStartVar: CleverTapSDK.Var?
+    private var homeThemeGradientEndVar: CleverTapSDK.Var?
+    private var homeHeaderBadgeVar: CleverTapSDK.Var?
+    private var showHomeHeaderBadgeVar: CleverTapSDK.Var?
 
     private let defaultHeaderTitle = "Today"
     private let defaultHeaderSubtitle = "Discover something beautiful."
     private let defaultFeaturedSectionTitle = "Featured"
     private let defaultShowFeaturedSection = true
     private let defaultMaxFeaturedProducts: Int32 = 8
+    private let defaultHomeThemeGradientStart = ""
+    private let defaultHomeThemeGradientEnd = ""
+    private let defaultHomeHeaderBadge = ""
+    private let defaultShowHomeHeaderBadge = false
     private let demoModeLockUserDefaultsKey = "product_experiences_demo_mode_locked"
     private var hasRegisteredCallbacks = false
 
@@ -74,6 +86,22 @@ final class CleverTapProductExperiencesService: ObservableObject {
         maxFeaturedProductsVar = CleverTap.sharedInstance()?.defineVar(
             name: "home_max_featured_products",
             integer: defaultMaxFeaturedProducts
+        )
+        homeThemeGradientStartVar = CleverTap.sharedInstance()?.defineVar(
+            name: "home_theme_gradient_start",
+            string: defaultHomeThemeGradientStart
+        )
+        homeThemeGradientEndVar = CleverTap.sharedInstance()?.defineVar(
+            name: "home_theme_gradient_end",
+            string: defaultHomeThemeGradientEnd
+        )
+        homeHeaderBadgeVar = CleverTap.sharedInstance()?.defineVar(
+            name: "home_header_badge",
+            string: defaultHomeHeaderBadge
+        )
+        showHomeHeaderBadgeVar = CleverTap.sharedInstance()?.defineVar(
+            name: "home_show_header_badge",
+            boolean: defaultShowHomeHeaderBadge
         )
 
         applyCurrentValues()
@@ -120,6 +148,30 @@ final class CleverTapProductExperiencesService: ObservableObject {
                 self?.applyCurrentValues()
             }
         }
+        homeThemeGradientStartVar?.onValueChanged { [weak self] in
+            Task { @MainActor in
+                guard self?.isDemoModeLocked == false else { return }
+                self?.applyCurrentValues()
+            }
+        }
+        homeThemeGradientEndVar?.onValueChanged { [weak self] in
+            Task { @MainActor in
+                guard self?.isDemoModeLocked == false else { return }
+                self?.applyCurrentValues()
+            }
+        }
+        homeHeaderBadgeVar?.onValueChanged { [weak self] in
+            Task { @MainActor in
+                guard self?.isDemoModeLocked == false else { return }
+                self?.applyCurrentValues()
+            }
+        }
+        showHomeHeaderBadgeVar?.onValueChanged { [weak self] in
+            Task { @MainActor in
+                guard self?.isDemoModeLocked == false else { return }
+                self?.applyCurrentValues()
+            }
+        }
     }
 
     private func applyCurrentValues() {
@@ -130,6 +182,10 @@ final class CleverTapProductExperiencesService: ObservableObject {
 
         let configuredMax = maxFeaturedProductsVar?.numberValue?.intValue ?? Int(defaultMaxFeaturedProducts)
         maxFeaturedProducts = max(1, configuredMax)
+        homeThemeGradientStart = homeThemeGradientStartVar?.stringValue ?? defaultHomeThemeGradientStart
+        homeThemeGradientEnd = homeThemeGradientEndVar?.stringValue ?? defaultHomeThemeGradientEnd
+        homeHeaderBadge = homeHeaderBadgeVar?.stringValue ?? defaultHomeHeaderBadge
+        showHomeHeaderBadge = showHomeHeaderBadgeVar?.value as? Bool ?? defaultShowHomeHeaderBadge
     }
 
     private func applyDefaultValues() {
@@ -138,6 +194,10 @@ final class CleverTapProductExperiencesService: ObservableObject {
         featuredSectionTitle = defaultFeaturedSectionTitle
         showFeaturedSection = defaultShowFeaturedSection
         maxFeaturedProducts = Int(defaultMaxFeaturedProducts)
+        homeThemeGradientStart = defaultHomeThemeGradientStart
+        homeThemeGradientEnd = defaultHomeThemeGradientEnd
+        homeHeaderBadge = defaultHomeHeaderBadge
+        showHomeHeaderBadge = defaultShowHomeHeaderBadge
     }
 
     func fetchVariables(completion: ((Bool) -> Void)? = nil) {
@@ -194,23 +254,35 @@ final class CleverTapProductExperiencesService: ObservableObject {
         guard isFeatureEnabled else { return }
         switch preset {
         case .luxuryLaunch:
-            homeHeaderTitle = "Luxury Launch"
-            homeHeaderSubtitle = "Curated picks for premium shoppers."
-            featuredSectionTitle = "Signature Collection"
+            homeHeaderTitle = "Luxury Atelier"
+            homeHeaderSubtitle = "Crafted pieces for elevated living."
+            featuredSectionTitle = "The Signature Edit"
             showFeaturedSection = true
             maxFeaturedProducts = 4
+            homeThemeGradientStart = "#1C1512"
+            homeThemeGradientEnd = "#8B6A4A"
+            homeHeaderBadge = "Private Collection"
+            showHomeHeaderBadge = true
         case .festiveSale:
             homeHeaderTitle = "Festive Specials"
             homeHeaderSubtitle = "Limited-time celebration offers."
             featuredSectionTitle = "Trending Offers"
             showFeaturedSection = true
             maxFeaturedProducts = 6
+            homeThemeGradientStart = "#4C1F3A"
+            homeThemeGradientEnd = "#E08B3A"
+            homeHeaderBadge = "Festive Picks"
+            showHomeHeaderBadge = true
         case .reset:
             homeHeaderTitle = defaultHeaderTitle
             homeHeaderSubtitle = defaultHeaderSubtitle
             featuredSectionTitle = defaultFeaturedSectionTitle
             showFeaturedSection = defaultShowFeaturedSection
             maxFeaturedProducts = Int(defaultMaxFeaturedProducts)
+            homeThemeGradientStart = defaultHomeThemeGradientStart
+            homeThemeGradientEnd = defaultHomeThemeGradientEnd
+            homeHeaderBadge = defaultHomeHeaderBadge
+            showHomeHeaderBadge = defaultShowHomeHeaderBadge
         }
 
         hasFetchedVariables = true

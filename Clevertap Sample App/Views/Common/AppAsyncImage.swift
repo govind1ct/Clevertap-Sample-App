@@ -3,6 +3,7 @@ import FirebaseStorage
 
 private enum AppAsyncImageCache {
     static let urlCache = NSCache<NSString, NSURL>()
+    static let imageCache = NSCache<NSString, UIImage>()
 }
 
 struct AppAsyncImage<Content: View>: View {
@@ -10,6 +11,7 @@ struct AppAsyncImage<Content: View>: View {
     let content: (AsyncImagePhase) -> Content
 
     @State private var resolvedURL: URL?
+    @StateObject private var loader = AppAsyncImageLoader()
 
     init(urlString: String?, @ViewBuilder content: @escaping (AsyncImagePhase) -> Content) {
         self.urlString = urlString
@@ -18,14 +20,21 @@ struct AppAsyncImage<Content: View>: View {
 
     var body: some View {
         Group {
-            if let resolvedURL {
-                AsyncImage(url: resolvedURL, content: content)
+            if let image = loader.image {
+                content(.success(Image(uiImage: image)))
+            } else if let error = loader.error {
+                content(.failure(error))
             } else {
                 content(.empty)
             }
         }
         .task(id: urlString ?? "") {
             resolvedURL = await resolveURL(from: urlString)
+            if let resolvedURL {
+                await loader.load(url: resolvedURL)
+            } else {
+                loader.reset()
+            }
         }
     }
 
@@ -85,6 +94,40 @@ struct AppAsyncImage<Content: View>: View {
                     continuation.resume(throwing: URLError(.badURL))
                 }
             }
+        }
+    }
+}
+
+@MainActor
+private final class AppAsyncImageLoader: ObservableObject {
+    @Published var image: UIImage?
+    @Published var error: Error?
+
+    func reset() {
+        image = nil
+        error = nil
+    }
+
+    func load(url: URL) async {
+        let cacheKey = url.absoluteString as NSString
+        if let cached = AppAsyncImageCache.imageCache.object(forKey: cacheKey) {
+            image = cached
+            error = nil
+            return
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  200..<300 ~= httpResponse.statusCode,
+                  let fetchedImage = UIImage(data: data) else {
+                throw URLError(.badServerResponse)
+            }
+            AppAsyncImageCache.imageCache.setObject(fetchedImage, forKey: cacheKey)
+            image = fetchedImage
+            error = nil
+        } catch {
+            self.error = error
         }
     }
 }
