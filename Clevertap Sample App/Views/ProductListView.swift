@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProductListView: View {
     @StateObject private var productService = ProductService()
+    @EnvironmentObject private var cartManager: CartManager
     @Environment(\.colorScheme) private var colorScheme
 
     @State private var searchText = ""
@@ -9,6 +10,25 @@ struct ProductListView: View {
     @State private var selectedCategory: String = "All"
     @State private var showingFilters = false
     @State private var sortOption: SortOption = .name
+    @State private var viewMode: ViewMode = .grid
+    @State private var showOnlyDiscounts = false
+    @State private var showNewLaunches = false
+    @State private var minPriceFilter: Double = 0
+    @State private var maxPriceFilter: Double = 0
+    @State private var availableMinPrice: Double = 0
+    @State private var availableMaxPrice: Double = 0
+
+    enum ViewMode: String, CaseIterable {
+        case grid = "Grid"
+        case list = "List"
+
+        var systemImage: String {
+            switch self {
+            case .grid: return "square.grid.2x2"
+            case .list: return "rectangle.grid.1x2"
+            }
+        }
+    }
 
     enum SortOption: String, CaseIterable {
         case name = "Name"
@@ -33,6 +53,18 @@ struct ProductListView: View {
 
         if selectedCategory != "All" {
             products = products.filter { $0.category.capitalized == selectedCategory }
+        }
+
+        if showOnlyDiscounts {
+            products = products.filter { $0.originalPrice > $0.price }
+        }
+
+        if showNewLaunches {
+            products = products.filter { $0.isNewLaunch }
+        }
+
+        if maxPriceFilter > 0 {
+            products = products.filter { $0.price >= minPriceFilter && $0.price <= maxPriceFilter }
         }
 
         if !searchText.isEmpty {
@@ -72,6 +104,27 @@ struct ProductListView: View {
         isDarkMode ? Color.white.opacity(0.16) : Color.white.opacity(0.9)
     }
 
+    private func updatePriceBoundsIfNeeded() {
+        let prices = productService.products.map { $0.price }
+        guard let minPrice = prices.min(), let maxPrice = prices.max() else { return }
+
+        availableMinPrice = minPrice
+        availableMaxPrice = maxPrice
+
+        if maxPriceFilter == 0 {
+            minPriceFilter = minPrice
+            maxPriceFilter = maxPrice
+            return
+        }
+
+        minPriceFilter = max(minPriceFilter, minPrice)
+        maxPriceFilter = min(maxPriceFilter, maxPrice)
+        if minPriceFilter > maxPriceFilter {
+            minPriceFilter = minPrice
+            maxPriceFilter = maxPrice
+        }
+    }
+
     var body: some View {
         ZStack {
             backgroundLayer
@@ -88,8 +141,10 @@ struct ProductListView: View {
                         errorState(error)
                     } else if filteredProducts.isEmpty {
                         emptyState
-                    } else {
+                    } else if viewMode == .grid {
                         productGrid
+                    } else {
+                        productList
                     }
                 }
             }
@@ -99,10 +154,20 @@ struct ProductListView: View {
             productService.fetchProducts()
             CleverTapService.shared.trackScreenViewed(screenName: "Product List")
         }
+        .onChange(of: productService.products.count) { _, _ in
+            updatePriceBoundsIfNeeded()
+        }
         .sheet(isPresented: $showingFilters) {
             FiltersSheet(
                 selectedCategory: $selectedCategory,
                 sortOption: $sortOption,
+                viewMode: $viewMode,
+                showOnlyDiscounts: $showOnlyDiscounts,
+                showNewLaunches: $showNewLaunches,
+                minPrice: $minPriceFilter,
+                maxPrice: $maxPriceFilter,
+                availableMinPrice: availableMinPrice,
+                availableMaxPrice: availableMaxPrice,
                 categories: categories
             )
         }
@@ -230,6 +295,15 @@ private extension ProductListView {
                     .padding(.vertical, 8)
                     .background(Color("CleverTapPrimary").opacity(0.12), in: Capsule())
                 }
+
+                Picker("Layout", selection: $viewMode) {
+                    ForEach(ViewMode.allCases, id: \.self) { mode in
+                        Label(mode.rawValue, systemImage: mode.systemImage)
+                            .tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 160)
             }
         }
         .padding(.horizontal, 16)
@@ -280,7 +354,9 @@ private extension ProductListView {
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
                     ForEach(Array(filteredProducts.enumerated()), id: \.element.id) { index, product in
                         NavigationLink(destination: ProductDetailView(product: product)) {
-                            ProductTileCard(product: product)
+                            ProductTileCard(product: product) {
+                                cartManager.addToCart(product)
+                            }
                         }
                         .buttonStyle(.plain)
 
@@ -299,6 +375,23 @@ private extension ProductListView {
             .padding(.horizontal, 16)
             .padding(.bottom, 20)
         }
+        .refreshable {
+            productService.fetchProducts()
+            try? await Task.sleep(nanoseconds: 600_000_000)
+        }
+    }
+
+    var productList: some View {
+        List {
+            ForEach(filteredProducts) { product in
+                NavigationLink(destination: ProductDetailView(product: product)) {
+                    ProductRowCard(product: product) {
+                        cartManager.addToCart(product)
+                    }
+                }
+            }
+        }
+        .listStyle(.plain)
         .refreshable {
             productService.fetchProducts()
             try? await Task.sleep(nanoseconds: 600_000_000)
@@ -368,6 +461,7 @@ private extension ProductListView {
 
 private struct ProductTileCard: View {
     let product: Product
+    let onAddToCart: () -> Void
     @Environment(\.colorScheme) private var colorScheme
 
     private var hasDiscount: Bool {
@@ -401,6 +495,16 @@ private struct ProductTileCard: View {
                 }
                 .frame(height: 140)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(alignment: .topTrailing) {
+                    Button(action: onAddToCart) {
+                        Image(systemName: "plus")
+                            .font(.caption.weight(.bold))
+                            .foregroundColor(.white)
+                            .frame(width: 28, height: 28)
+                            .background(Color("CleverTapPrimary"), in: Circle())
+                    }
+                    .padding(8)
+                }
 
                 if hasDiscount {
                     Text("\(discountPercent)% OFF")
@@ -455,15 +559,110 @@ private struct ProductTileCard: View {
     }
 }
 
+private struct ProductRowCard: View {
+    let product: Product
+    let onAddToCart: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var hasDiscount: Bool {
+        product.originalPrice > product.price
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            AppAsyncImage(urlString: product.mainImageURL) { phase in
+                if let image = phase.image {
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } else {
+                    Color(.secondarySystemBackground)
+                        .overlay(
+                            Image(systemName: "photo")
+                                .foregroundColor(.secondary)
+                        )
+                }
+            }
+            .frame(width: 80, height: 90)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(product.name)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(2)
+
+                Text(product.category.capitalized)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                HStack(spacing: 6) {
+                    Text("₹\(Int(product.price))")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundColor(Color("CleverTapPrimary"))
+
+                    if hasDiscount {
+                        Text("₹\(Int(product.originalPrice))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .strikethrough()
+                    }
+                }
+            }
+
+            Spacer()
+
+            Button(action: onAddToCart) {
+                Image(systemName: "plus")
+                    .font(.headline.weight(.bold))
+                    .foregroundColor(.white)
+                    .frame(width: 34, height: 34)
+                    .background(Color("CleverTapPrimary"), in: Circle())
+            }
+        }
+        .padding(.vertical, 8)
+    }
+}
+
 struct FiltersSheet: View {
     @Binding var selectedCategory: String
     @Binding var sortOption: ProductListView.SortOption
+    @Binding var viewMode: ProductListView.ViewMode
+    @Binding var showOnlyDiscounts: Bool
+    @Binding var showNewLaunches: Bool
+    @Binding var minPrice: Double
+    @Binding var maxPrice: Double
+    let availableMinPrice: Double
+    let availableMaxPrice: Double
     let categories: [String]
     @Environment(\.dismiss) private var dismiss
+
+    private var formattedPriceRange: String {
+        let lower = Int(minPrice)
+        let upper = Int(maxPrice)
+        return "₹\(lower) - ₹\(upper)"
+    }
+
+    private var safeMinPrice: Double {
+        availableMinPrice
+    }
+
+    private var safeMaxPrice: Double {
+        max(availableMaxPrice, availableMinPrice + 1)
+    }
 
     var body: some View {
         NavigationStack {
             List {
+                Section("Layout") {
+                    Picker("View", selection: $viewMode) {
+                        ForEach(ProductListView.ViewMode.allCases, id: \.self) { mode in
+                            Label(mode.rawValue, systemImage: mode.systemImage)
+                                .tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+
                 Section("Category") {
                     ForEach(categories, id: \.self) { category in
                         HStack {
@@ -497,6 +696,37 @@ struct FiltersSheet: View {
                         }
                     }
                 }
+
+                Section("Filters") {
+                    Toggle("Only discounts", isOn: $showOnlyDiscounts)
+                    Toggle("New launches", isOn: $showNewLaunches)
+                }
+
+                Section("Price Range") {
+                    Text(formattedPriceRange)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(Color("CleverTapPrimary"))
+
+                    Slider(value: $minPrice, in: safeMinPrice...safeMaxPrice, step: 50) {
+                        Text("Min Price")
+                    } minimumValueLabel: {
+                        Text("₹\(Int(safeMinPrice))")
+                            .font(.caption)
+                    } maximumValueLabel: {
+                        Text("₹\(Int(safeMaxPrice))")
+                            .font(.caption)
+                    }
+
+                    Slider(value: $maxPrice, in: safeMinPrice...safeMaxPrice, step: 50) {
+                        Text("Max Price")
+                    } minimumValueLabel: {
+                        Text("₹\(Int(safeMinPrice))")
+                            .font(.caption)
+                    } maximumValueLabel: {
+                        Text("₹\(Int(safeMaxPrice))")
+                            .font(.caption)
+                    }
+                }
             }
             .navigationTitle("Filters")
             .toolbar {
@@ -505,12 +735,23 @@ struct FiltersSheet: View {
                 }
             }
         }
+        .onChange(of: minPrice) { _, newValue in
+            if newValue > maxPrice {
+                maxPrice = newValue
+            }
+        }
+        .onChange(of: maxPrice) { _, newValue in
+            if newValue < minPrice {
+                minPrice = newValue
+            }
+        }
     }
 }
 
 #Preview {
     NavigationStack {
         ProductListView()
+            .environmentObject(CartManager())
     }
 }
 

@@ -213,6 +213,13 @@ private extension ProductDetailView {
                         .padding(.vertical, 6)
                         .background(Color.green.opacity(0.14), in: Capsule())
                 }
+
+                Text(product.stockLabel)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(stockBadgeColor)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(stockBadgeColor.opacity(0.14), in: Capsule())
             }
 
             Text(product.name)
@@ -249,8 +256,21 @@ private extension ProductDetailView {
     var trustSection: some View {
         HStack(spacing: 10) {
             trustBadge(icon: "bolt.fill", text: "Energy \(product.energyLevel)/5", color: .yellow)
-            trustBadge(icon: "shippingbox.fill", text: "Fast delivery", color: .blue)
+            trustBadge(icon: "shippingbox.fill", text: "Stock \(product.resolvedStockQuantity)", color: stockBadgeColor)
             trustBadge(icon: "checkmark.shield.fill", text: "Verified quality", color: .green)
+        }
+    }
+
+    var stockBadgeColor: Color {
+        switch product.effectiveStatus {
+        case "draft":
+            return .orange
+        case "archived":
+            return .gray
+        default:
+            if product.resolvedStockQuantity == 0 { return .red }
+            if product.isLowStock { return .orange }
+            return .green
         }
     }
 
@@ -421,6 +441,7 @@ private extension ProductDetailView {
                 quantitySelector
 
                 Button {
+                    guard product.isPurchasable else { return }
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         cartManager.addToCart(product, quantity: selectedQuantity)
                         isAddedToCart = true
@@ -431,8 +452,8 @@ private extension ProductDetailView {
                     }
                 } label: {
                     HStack(spacing: 8) {
-                        Image(systemName: isAddedToCart ? "checkmark.circle.fill" : "bag.fill")
-                        Text(isAddedToCart ? "Added" : "Add to Cart")
+                        Image(systemName: isAddedToCart ? "checkmark.circle.fill" : (product.isPurchasable ? "bag.fill" : "slash.circle"))
+                        Text(isAddedToCart ? "Added" : (product.isPurchasable ? "Add to Cart" : product.stockLabel))
                             .fontWeight(.semibold)
                     }
                     .font(.subheadline)
@@ -448,6 +469,8 @@ private extension ProductDetailView {
                         in: RoundedRectangle(cornerRadius: 14, style: .continuous)
                     )
                 }
+                .disabled(!product.isPurchasable)
+                .opacity(product.isPurchasable ? 1 : 0.7)
             }
         }
         .padding(.horizontal, 16)
@@ -512,10 +535,13 @@ private extension ProductDetailView {
                 isFeatured: true,
                 specifications: ["Material": "Natural Quartz", "Weight": "30g"],
                 searchKeywords: ["rose quartz", "bracelet"],
-                createdAt: Date()
+                createdAt: Date(),
+                status: "active",
+                stockQuantity: 12,
+                lowStockThreshold: 3,
+                availabilityMessage: "Ready to ship"
             )
         )
         .environmentObject(CartManager())
     }
 }
-

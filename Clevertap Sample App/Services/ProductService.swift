@@ -9,8 +9,10 @@ class ProductService: ObservableObject {
     
     private var db = Firestore.firestore()
     private var cancellables = Set<AnyCancellable>()
+    private let includeInactiveProducts: Bool
     
-    init() {
+    init(includeInactiveProducts: Bool = false) {
+        self.includeInactiveProducts = includeInactiveProducts
         // Load sample data if Firebase is not configured
        // loadSampleData()
     }
@@ -38,8 +40,12 @@ class ProductService: ObservableObject {
                     return
                 }
 
-                let decodedProducts = documents.compactMap { doc in
+                var decodedProducts = documents.compactMap { doc in
                     try? doc.data(as: Product.self)
+                }
+
+                if !self.includeInactiveProducts {
+                    decodedProducts = decodedProducts.filter { $0.effectiveStatus == "active" }
                 }
 
                 self.products = decodedProducts

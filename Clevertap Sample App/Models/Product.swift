@@ -21,6 +21,10 @@ struct Product: Identifiable, Codable {
     let specifications: [String: String]?
     let searchKeywords: [String]
     let createdAt: Date?
+    let status: String?
+    let stockQuantity: Int?
+    let lowStockThreshold: Int?
+    let availabilityMessage: String?
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -42,11 +46,44 @@ struct Product: Identifiable, Codable {
         case specifications
         case searchKeywords
         case createdAt
+        case status
+        case stockQuantity
+        case lowStockThreshold
+        case availabilityMessage
     }
     
     // Computed property to get the main image URL
     var mainImageURL: String {
         return imageURL ?? images.first ?? ""
+    }
+
+    var effectiveStatus: String {
+        let normalized = status?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+        return normalized.isEmpty ? "active" : normalized
+    }
+
+    var resolvedStockQuantity: Int {
+        max(stockQuantity ?? 0, 0)
+    }
+
+    var resolvedLowStockThreshold: Int {
+        max(lowStockThreshold ?? 3, 1)
+    }
+
+    var isPurchasable: Bool {
+        effectiveStatus == "active" && resolvedStockQuantity > 0
+    }
+
+    var isLowStock: Bool {
+        isPurchasable && resolvedStockQuantity <= resolvedLowStockThreshold
+    }
+
+    var stockLabel: String {
+        if effectiveStatus == "draft" { return "Draft" }
+        if effectiveStatus == "archived" { return "Archived" }
+        if resolvedStockQuantity == 0 { return "Out of Stock" }
+        if isLowStock { return "Low Stock" }
+        return "In Stock"
     }
     
     // CleverTap Event Properties
@@ -55,7 +92,9 @@ struct Product: Identifiable, Codable {
             "product_id": id,
             "product_name": name,
             "price": price,
-            "category": category
+            "category": category,
+            "status": effectiveStatus,
+            "stock_quantity": resolvedStockQuantity
         ]
     }
-} 
+}

@@ -111,6 +111,7 @@ struct ProfileView: View {
 
                     profileManagementSection
                     cleverTapIntegrationSection
+                    adminToolsSection
                     orderHistorySection
                     logoutButton
                 }
@@ -754,6 +755,60 @@ struct ProfileView: View {
         .padding(.horizontal, horizontalInset)
     }
     
+    // MARK: - Admin Tools
+    private var adminToolsSection: some View {
+        Group {
+            if authViewModel.isAdmin {
+                VStack(spacing: 16) {
+                    SectionHeader(
+                        title: "Admin Tools",
+                        subtitle: "Manage backend content"
+                    )
+
+                    NavigationLink {
+                        AdminDashboardView()
+                    } label: {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(Color("CleverTapPrimary").opacity(0.18))
+                                    .frame(width: 42, height: 42)
+                                Image(systemName: "shippingbox.fill")
+                                    .foregroundColor(Color("CleverTapPrimary"))
+                                    .font(.headline.weight(.semibold))
+                            }
+
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Product Admin")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(.primary)
+                                Text("Add, edit, or remove catalog items")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.bold))
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(14)
+                        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
+                    .buttonStyle(ScalePressButtonStyle())
+                }
+                .padding(sectionCardPadding)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(Color.white.opacity(0.22), lineWidth: 1)
+                )
+                .padding(.horizontal, horizontalInset)
+            }
+        }
+    }
+
     // MARK: - Order History
     private var orderHistorySection: some View {
         VStack(spacing: 16) {
@@ -2253,4 +2308,3 @@ struct MeetDeveloperView: View {
         )
     }
 }
-

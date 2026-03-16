@@ -38,6 +38,10 @@ class CartManager: ObservableObject {
         let specifications: [String: String]?
         let searchKeywords: [String]
         let createdAt: Date?
+        let status: String?
+        let stockQuantity: Int?
+        let lowStockThreshold: Int?
+        let availabilityMessage: String?
 
         init(from product: Product) {
             self.id = product.id
@@ -59,6 +63,10 @@ class CartManager: ObservableObject {
             self.specifications = product.specifications
             self.searchKeywords = product.searchKeywords
             self.createdAt = product.createdAt
+            self.status = product.status
+            self.stockQuantity = product.stockQuantity
+            self.lowStockThreshold = product.lowStockThreshold
+            self.availabilityMessage = product.availabilityMessage
         }
 
         var product: Product {
@@ -81,7 +89,11 @@ class CartManager: ObservableObject {
                 isFeatured: isFeatured,
                 specifications: specifications,
                 searchKeywords: searchKeywords,
-                createdAt: createdAt
+                createdAt: createdAt,
+                status: status,
+                stockQuantity: stockQuantity,
+                lowStockThreshold: lowStockThreshold,
+                availabilityMessage: availabilityMessage
             )
         }
     }
@@ -101,6 +113,7 @@ class CartManager: ObservableObject {
     }
 
     func addToCart(_ product: Product, quantity: Int) {
+        guard product.isPurchasable else { return }
         let quantityToAdd = max(1, quantity)
 
         if let index = items.firstIndex(where: { $0.product.id == product.id }) {
