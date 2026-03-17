@@ -4,18 +4,33 @@ import SwiftUI
 
 class CleverTapNativeDisplayService: NSObject, ObservableObject, CleverTapDisplayUnitDelegate {
     static let shared = CleverTapNativeDisplayService()
+    private static let featureEnabledUserDefaultsKey = "native_display_feature_enabled"
+
+    static var isFeatureEnabled: Bool {
+        if UserDefaults.standard.object(forKey: featureEnabledUserDefaultsKey) == nil {
+            return true
+        }
+        return UserDefaults.standard.bool(forKey: featureEnabledUserDefaultsKey)
+    }
     
     @Published var displayUnits: [CleverTapDisplayUnit] = []
     @Published var isLoading = false
     @Published var lastUpdated: Date?
+    @Published private(set) var isFeatureEnabled: Bool = true
+    @Published private(set) var isResetStateActive: Bool = false
     
     // Location-based display units cache
     private var locationBasedUnits: [String: [CleverTapDisplayUnit]] = [:]
     
     private override init() {
         super.init()
+        isFeatureEnabled = Self.isFeatureEnabled
         setupDisplayUnitDelegate()
-        refreshDisplayUnits()
+        if isFeatureEnabled {
+            refreshDisplayUnits()
+        } else {
+            resetLocalState()
+        }
     }
     
     // MARK: - Setup
@@ -29,6 +44,15 @@ class CleverTapNativeDisplayService: NSObject, ObservableObject, CleverTapDispla
     
     func displayUnitsUpdated(_ displayUnits: [CleverTapDisplayUnit]) {
         DispatchQueue.main.async {
+            guard self.isFeatureEnabled else {
+                self.resetLocalState()
+                return
+            }
+            guard !self.isResetStateActive else {
+                self.resetLocalState()
+                return
+            }
+
             self.displayUnits = displayUnits
             self.isLoading = false
             self.lastUpdated = Date()
@@ -52,14 +76,17 @@ class CleverTapNativeDisplayService: NSObject, ObservableObject, CleverTapDispla
     // MARK: - Public Methods
     
     func getAllDisplayUnits() -> [CleverTapDisplayUnit] {
+        guard isFeatureEnabled, !isResetStateActive else { return [] }
         return CleverTap.sharedInstance()?.getAllDisplayUnits() ?? []
     }
     
     func getDisplayUnit(for unitID: String) -> CleverTapDisplayUnit? {
+        guard isFeatureEnabled, !isResetStateActive else { return nil }
         return CleverTap.sharedInstance()?.getDisplayUnit(forID: unitID)
     }
     
     func recordDisplayUnitViewed(unitID: String) {
+        guard isFeatureEnabled else { return }
         CleverTap.sharedInstance()?.recordDisplayUnitViewedEvent(forID: unitID)
         
         // Track in our analytics
@@ -73,6 +100,7 @@ class CleverTapNativeDisplayService: NSObject, ObservableObject, CleverTapDispla
     }
     
     func recordDisplayUnitClicked(unitID: String) {
+        guard isFeatureEnabled else { return }
         CleverTap.sharedInstance()?.recordDisplayUnitClickedEvent(forID: unitID)
         
         // Track in our analytics
@@ -86,11 +114,33 @@ class CleverTapNativeDisplayService: NSObject, ObservableObject, CleverTapDispla
     }
     
     func refreshDisplayUnits() {
+        guard isFeatureEnabled else {
+            resetLocalState()
+            return
+        }
+        isResetStateActive = false
         isLoading = true
         displayUnits = getAllDisplayUnits()
         updateLocationBasedCache()
         isLoading = false
         print("🔄 Native Display Units refreshed")
+    }
+
+    func resetDisplayUnits() {
+        isResetStateActive = true
+        resetLocalState()
+    }
+
+    func setFeatureEnabled(_ enabled: Bool) {
+        isFeatureEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: Self.featureEnabledUserDefaultsKey)
+
+        if enabled {
+            isResetStateActive = false
+            refreshDisplayUnits()
+        } else {
+            resetLocalState()
+        }
     }
     
     // MARK: - Location-based Methods
@@ -332,6 +382,8 @@ class CleverTapNativeDisplayService: NSObject, ObservableObject, CleverTapDispla
     // MARK: - Testing Methods (for development)
     
     func triggerTestEvent(for location: String) {
+        guard isFeatureEnabled else { return }
+        isResetStateActive = false
         let eventData: [String: Any] = [
             "location": location,
             "timestamp": Date().timeIntervalSince1970,
@@ -339,5 +391,12 @@ class CleverTapNativeDisplayService: NSObject, ObservableObject, CleverTapDispla
         ]
         CleverTap.sharedInstance()?.recordEvent("Native Display Test", withProps: eventData)
         print("🧪 Test event triggered for location: \(location)")
+    }
+
+    private func resetLocalState() {
+        displayUnits = []
+        locationBasedUnits.removeAll()
+        lastUpdated = nil
+        isLoading = false
     }
 } 

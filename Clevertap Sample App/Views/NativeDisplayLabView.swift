@@ -9,10 +9,13 @@ struct NativeDisplayLabView: View {
         "product_detail_related"
     ]
 
+    @StateObject private var nativeDisplayService = CleverTapNativeDisplayService.shared
+
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 18) {
                 headerCard
+                controlsSection
 
                 NativeDisplayStatusCard()
                 NativeDisplayImplementationCard()
@@ -30,7 +33,7 @@ struct NativeDisplayLabView: View {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                         ForEach(nativeDisplayLocations, id: \.self) { location in
                             Button {
-                                CleverTapNativeDisplayService.shared.triggerTestEvent(for: location)
+                                nativeDisplayService.triggerTestEvent(for: location)
                             } label: {
                                 VStack(alignment: .leading, spacing: 6) {
                                     HStack(spacing: 6) {
@@ -56,6 +59,8 @@ struct NativeDisplayLabView: View {
                                 )
                             }
                             .buttonStyle(.plain)
+                            .disabled(!nativeDisplayService.isFeatureEnabled)
+                            .opacity(nativeDisplayService.isFeatureEnabled ? 1 : 0.45)
                         }
                     }
                 }
@@ -68,7 +73,7 @@ struct NativeDisplayLabView: View {
 
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
-                        CleverTapNativeDisplayService.shared.refreshDisplayUnits()
+                        nativeDisplayService.refreshDisplayUnits()
                     }
                 } label: {
                     HStack(spacing: 8) {
@@ -99,6 +104,8 @@ struct NativeDisplayLabView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .disabled(!nativeDisplayService.isFeatureEnabled)
+                .opacity(nativeDisplayService.isFeatureEnabled ? 1 : 0.45)
 
                 NavigationLink(destination: NativeDisplayDebugView()) {
                     HStack {
@@ -162,6 +169,77 @@ struct NativeDisplayLabView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.white.opacity(0.22), lineWidth: 1)
+        )
+    }
+
+    var controlsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Toggle("Enable Native Display", isOn: Binding(
+                get: { nativeDisplayService.isFeatureEnabled },
+                set: { nativeDisplayService.setFeatureEnabled($0) }
+            ))
+            .toggleStyle(.switch)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+            if !nativeDisplayService.isFeatureEnabled {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "pause.circle.fill")
+                        .font(.title3)
+                        .foregroundColor(.orange)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Native Display Disabled")
+                            .font(.subheadline.weight(.semibold))
+                        Text("Display units are hidden and test triggers are ignored until you enable this again.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(12)
+                .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            } else if nativeDisplayService.isResetStateActive {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "arrow.uturn.backward.circle.fill")
+                        .font(.title3)
+                        .foregroundColor(Color("CleverTapPrimary"))
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Native Display Reset")
+                            .font(.subheadline.weight(.semibold))
+                        Text("Display units are cleared locally. Use Refresh or trigger a location event to load units again.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(12)
+                .background(Color("CleverTapPrimary").opacity(0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    nativeDisplayService.resetDisplayUnits()
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.uturn.backward")
+                    Text("Reset Native Display")
+                        .fontWeight(.semibold)
+                    Spacer()
+                }
+                .foregroundColor(Color("CleverTapPrimary"))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(Color("CleverTapPrimary").opacity(0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(16)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(Color.white.opacity(0.22), lineWidth: 1)
