@@ -1,12 +1,20 @@
 import SwiftUI
 
 struct AdminDashboardView: View {
+    private enum Workspace: String, CaseIterable, Identifiable {
+        case overview = "Overview"
+        case products = "Products"
+
+        var id: String { rawValue }
+    }
+
     @StateObject private var productService = ProductService(includeInactiveProducts: true)
     @StateObject private var adminProductService = AdminProductService()
     @StateObject private var orderService = AdminOrderService()
     @Environment(\.colorScheme) private var colorScheme
 
     @State private var searchText = ""
+    @State private var debouncedSearchText = ""
     @State private var showAddSheet = false
     @State private var editProduct: Product?
     @State private var pendingDelete: Product?
@@ -16,9 +24,12 @@ struct AdminDashboardView: View {
     @State private var showAdminError = false
     @State private var isSelectionMode = false
     @State private var selectedProductIDs: Set<String> = []
+    @State private var selectedWorkspace: Workspace = .overview
+    @State private var searchDebounceTask: Task<Void, Never>?
+    @State private var orderPrefetchTask: Task<Void, Never>?
 
     private var filteredProducts: [Product] {
-        let trimmedSearch = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedSearch = debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedSearch.isEmpty else { return productService.products }
         return productService.products.filter {
             $0.name.localizedCaseInsensitiveContains(trimmedSearch) ||
@@ -33,21 +44,8 @@ struct AdminDashboardView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 22) {
                     headerSection
-                    attentionSection
-                    if isSelectionMode {
-                        selectionToolbar
-                    }
-                    searchSection
-
-                    if productService.isLoading {
-                        loadingState
-                    } else if let error = productService.errorMessage {
-                        errorState(error)
-                    } else if filteredProducts.isEmpty {
-                        emptyState
-                    } else {
-                        productList
-                    }
+                    workspaceSwitcher
+                    workspaceContent
                 }
                 .padding(.horizontal, 18)
                 .padding(.top, 12)
@@ -60,12 +58,29 @@ struct AdminDashboardView: View {
             if productService.products.isEmpty {
                 productService.fetchProducts()
             }
-            if orderService.orders.isEmpty {
-                await orderService.fetchOrders()
-            }
+            scheduleOrderPrefetchIfNeeded()
         }
         .onChange(of: adminProductService.errorMessage) { _, newValue in
             showAdminError = newValue != nil
+        }
+        .onChange(of: searchText) { _, newValue in
+            searchDebounceTask?.cancel()
+            searchDebounceTask = Task {
+                try? await Task.sleep(nanoseconds: 220_000_000)
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    debouncedSearchText = newValue
+                }
+            }
+        }
+        .onAppear {
+            if debouncedSearchText != searchText {
+                debouncedSearchText = searchText
+            }
+        }
+        .onDisappear {
+            searchDebounceTask?.cancel()
+            orderPrefetchTask?.cancel()
         }
         .alert("Admin Action Failed", isPresented: $showAdminError, presenting: adminProductService.errorMessage) { _ in
             Button("OK", role: .cancel) {}
@@ -143,6 +158,20 @@ struct AdminDashboardView: View {
 private extension AdminDashboardView {
     var isDarkMode: Bool {
         colorScheme == .dark
+    }
+
+    func scheduleOrderPrefetchIfNeeded() {
+        guard orderService.orders.isEmpty else { return }
+        guard orderPrefetchTask == nil else { return }
+
+        orderPrefetchTask = Task(priority: .utility) {
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            guard !Task.isCancelled else { return }
+            await orderService.fetchOrders()
+            await MainActor.run {
+                orderPrefetchTask = nil
+            }
+        }
     }
 
     var catalogCount: Int {
@@ -233,19 +262,23 @@ private extension AdminDashboardView {
             LinearGradient(
                 colors: isDarkMode
                     ? [
-                        Color(red: 0.05, green: 0.07, blue: 0.10),
-                        Color(red: 0.08, green: 0.11, blue: 0.16),
-                        Color(red: 0.11, green: 0.10, blue: 0.14)
+                        Color(red: 0.05, green: 0.06, blue: 0.09),
+                        Color(red: 0.08, green: 0.10, blue: 0.14),
+                        Color(red: 0.10, green: 0.10, blue: 0.13)
                     ]
                     : [
-                        Color(red: 0.95, green: 0.96, blue: 0.99),
-                        Color(red: 0.90, green: 0.93, blue: 0.98),
-                        Color(red: 0.98, green: 0.96, blue: 0.94)
+                        Color(red: 0.96, green: 0.97, blue: 0.99),
+                        Color(red: 0.92, green: 0.94, blue: 0.98),
+                        Color(red: 0.98, green: 0.97, blue: 0.95)
                     ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
+
+            Rectangle()
+                .fill(isDarkMode ? Color.black.opacity(0.18) : Color.white.opacity(0.14))
+                .ignoresSafeArea()
 
             Circle()
                 .fill(Color("CleverTapPrimary").opacity(isDarkMode ? 0.30 : 0.18))
@@ -281,6 +314,84 @@ private extension AdminDashboardView {
             onAdd: { showAddSheet = true },
             onToggleSelection: { toggleSelectionMode() }
         )
+    }
+
+    var workspaceSwitcher: some View {
+        HStack(spacing: 8) {
+            ForEach(Workspace.allCases) { workspace in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.20)) {
+                        selectedWorkspace = workspace
+                    }
+                } label: {
+                    AdminWorkspaceChip(
+                        title: workspace.rawValue,
+                        isSelected: selectedWorkspace == workspace,
+                        selectedTextColor: selectedWorkspaceTextColor,
+                        secondaryTextColor: sectionSecondaryText,
+                        surfaceFill: sectionSurfaceFill,
+                        surfaceBorder: sectionSurfaceBorder
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    @ViewBuilder
+    var workspaceContent: some View {
+        switch selectedWorkspace {
+        case .overview:
+            overviewWorkspace
+        case .products:
+            productsWorkspace
+        }
+    }
+
+    var overviewWorkspace: some View {
+        VStack(spacing: 18) {
+            attentionSection
+            operationsPanel
+        }
+    }
+
+    var productsWorkspace: some View {
+        VStack(spacing: 18) {
+            if isSelectionMode {
+                selectionToolbar
+            }
+            searchSection
+
+            if productService.isLoading {
+                loadingState
+            } else if let error = productService.errorMessage {
+                errorState(error)
+            } else if filteredProducts.isEmpty {
+                emptyState
+            } else {
+                productList
+            }
+        }
+    }
+
+    var sectionSurfaceFill: Color {
+        isDarkMode ? Color.white.opacity(0.06) : Color.white.opacity(0.82)
+    }
+
+    var sectionSurfaceBorder: Color {
+        isDarkMode ? Color.white.opacity(0.10) : Color.black.opacity(0.08)
+    }
+
+    var sectionPrimaryText: Color {
+        isDarkMode ? .white : Color.black.opacity(0.94)
+    }
+
+    var sectionSecondaryText: Color {
+        isDarkMode ? Color.white.opacity(0.68) : Color.black.opacity(0.56)
+    }
+
+    var selectedWorkspaceTextColor: Color {
+        isDarkMode ? Color.black.opacity(0.90) : .white
     }
 
     var headerButtonRow: some View {
@@ -386,23 +497,74 @@ private extension AdminDashboardView {
             }
         }
         .padding(16)
-        .background(Color.black.opacity(isDarkMode ? 0.18 : 0.06), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(sectionSurfaceFill, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(sectionSurfaceBorder, lineWidth: 1)
+        )
     }
 
     var attentionSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Attention Needed")
-                        .font(.headline.weight(.black))
-                        .foregroundColor(isDarkMode ? .white : .primary)
-                    Text("Use this strip to jump into the parts of the business that need action first.")
-                        .font(.caption)
-                        .foregroundColor(isDarkMode ? .white.opacity(0.64) : .secondary)
-                }
+        VStack(alignment: .leading, spacing: 12) {
+            Text("At a glance")
+                .font(.headline.weight(.bold))
+                .foregroundColor(sectionPrimaryText)
 
-                Spacer()
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    attentionCard(
+                        title: "Processing",
+                        value: "\(processingOrderCount)",
+                        subtitle: "Orders",
+                        tint: .orange,
+                        systemImage: "shippingbox.and.arrow.backward"
+                    ) {
+                        AdminOrdersView()
+                    }
+
+                    attentionCard(
+                        title: "Low Stock",
+                        value: "\(lowStockCount)",
+                        subtitle: "Products",
+                        tint: .red,
+                        systemImage: "exclamationmark.circle.fill"
+                    )
+
+                    attentionCard(
+                        title: "Drafts",
+                        value: "\(draftCount)",
+                        subtitle: "Pending",
+                        tint: Color("CleverTapPrimary"),
+                        systemImage: "square.and.pencil"
+                    )
+
+                    attentionCard(
+                        title: "Archived",
+                        value: "\(archivedCount)",
+                        subtitle: "Hidden",
+                        tint: .gray,
+                        systemImage: "archivebox.fill"
+                    )
+                }
             }
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(sectionSurfaceFill)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(sectionSurfaceBorder, lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(isDarkMode ? 0.14 : 0.04), radius: 10, y: 6)
+    }
+
+    var operationsPanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Quick Actions")
+                .font(.headline.weight(.bold))
+                .foregroundColor(sectionPrimaryText)
 
             LazyVGrid(
                 columns: [
@@ -411,57 +573,66 @@ private extension AdminDashboardView {
                 ],
                 spacing: 12
             ) {
-                attentionCard(
-                    title: "Processing Orders",
-                    value: "\(processingOrderCount)",
-                    subtitle: "Needs order action",
-                    tint: .orange,
-                    systemImage: "shippingbox.and.arrow.backward"
-                ) {
-                    AdminOrdersView()
+                Button {
+                    showAddSheet = true
+                    selectedWorkspace = .products
+                } label: {
+                    overviewActionCard(title: "New Product", subtitle: "Create and publish", tint: Color("CleverTapPrimary"), systemImage: "plus.circle.fill")
                 }
+                .buttonStyle(.plain)
 
-                attentionCard(
-                    title: "Low Stock",
-                    value: "\(lowStockCount)",
-                    subtitle: "Needs replenishment",
-                    tint: .red,
-                    systemImage: "exclamationmark.circle.fill"
-                )
+                NavigationLink {
+                    AdminOrdersView()
+                } label: {
+                    overviewActionCard(title: "Orders", subtitle: "Track fulfillment", tint: Color("CleverTapSecondary"), systemImage: "shippingbox.fill")
+                }
+                .buttonStyle(.plain)
 
-                attentionCard(
-                    title: "Draft Products",
-                    value: "\(draftCount)",
-                    subtitle: "Not yet live",
-                    tint: Color("CleverTapPrimary"),
-                    systemImage: "square.and.pencil"
-                )
+                NavigationLink {
+                    AdminAuditLogView()
+                } label: {
+                    overviewActionCard(title: "Audit Trail", subtitle: "See admin activity", tint: .orange, systemImage: "clock.arrow.circlepath")
+                }
+                .buttonStyle(.plain)
 
-                attentionCard(
-                    title: "Archived",
-                    value: "\(archivedCount)",
-                    subtitle: "Hidden from users",
-                    tint: .gray,
-                    systemImage: "archivebox.fill"
-                )
-            }
-
-            HStack(spacing: 10) {
-                dashboardTag(title: "\(outOfStockCount) unavailable to buy", tint: .red)
-                dashboardTag(title: "\(orderCount) total orders", tint: Color("CleverTapSecondary"))
-                dashboardTag(title: "\(catalogCount) total products", tint: .green)
-                Spacer(minLength: 0)
+                Button {
+                    selectedWorkspace = .products
+                    toggleSelectionMode()
+                } label: {
+                    overviewActionCard(title: isSelectionMode ? "Exit Bulk" : "Bulk Actions", subtitle: "Manage many products", tint: .green, systemImage: isSelectionMode ? "checkmark.circle.fill" : "checklist")
+                }
+                .buttonStyle(.plain)
             }
         }
-        .padding(16)
+        .padding(14)
         .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(isDarkMode ? Color.white.opacity(0.06) : Color.white.opacity(0.48))
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(sectionSurfaceFill)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(isDarkMode ? Color.white.opacity(0.10) : Color.white.opacity(0.70), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(sectionSurfaceBorder, lineWidth: 1)
         )
+        .shadow(color: Color.black.opacity(isDarkMode ? 0.14 : 0.04), radius: 10, y: 6)
+    }
+
+    func overviewActionCard(title: String, subtitle: String, tint: Color, systemImage: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Image(systemName: systemImage)
+                .font(.headline.weight(.bold))
+                .foregroundColor(tint)
+
+            Text(title)
+                .font(.subheadline.weight(.bold))
+                .foregroundColor(sectionPrimaryText)
+
+            Text(subtitle)
+                .font(.caption)
+                .foregroundColor(sectionSecondaryText)
+        }
+        .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
+        .padding(14)
+        .background(tint.opacity(isDarkMode ? 0.16 : 0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     func attentionCard<Destination: View>(
@@ -507,26 +678,26 @@ private extension AdminDashboardView {
                 if isInteractive {
                     Image(systemName: "arrow.up.right")
                         .font(.caption.weight(.bold))
-                        .foregroundColor(isDarkMode ? .white.opacity(0.64) : .secondary)
+                        .foregroundColor(sectionSecondaryText)
                 }
             }
 
             Text(value)
                 .font(.system(size: 22, weight: .black, design: .rounded))
-                .foregroundColor(isDarkMode ? .white : .primary)
+                .foregroundColor(sectionPrimaryText)
 
             Text(title)
                 .font(.caption.weight(.bold))
-                .foregroundColor(isDarkMode ? .white : .primary)
+                .foregroundColor(sectionPrimaryText)
 
             Text(subtitle)
                 .font(.caption)
-                .foregroundColor(isDarkMode ? .white.opacity(0.66) : .secondary)
+                .foregroundColor(sectionSecondaryText)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(tint.opacity(isDarkMode ? 0.18 : 0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .frame(width: 132, alignment: .leading)
+        .background(tint.opacity(isDarkMode ? 0.16 : 0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     func bulkActionButton(title: String, systemImage: String, tint: Color, action: @escaping () -> Void) -> some View {
@@ -562,7 +733,7 @@ private extension AdminDashboardView {
         VStack(spacing: 14) {
             HStack(spacing: 12) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(isDarkMode ? .white.opacity(0.58) : .secondary)
+                    .foregroundColor(sectionSecondaryText)
 
                 TextField("Search products, categories, stock state", text: $searchText)
                     .textFieldStyle(.plain)
@@ -573,31 +744,32 @@ private extension AdminDashboardView {
                         searchText = ""
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(isDarkMode ? .white.opacity(0.58) : .secondary)
+                            .foregroundColor(sectionSecondaryText)
                     }
                 }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .background(Color.black.opacity(isDarkMode ? 0.14 : 0.04), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(isDarkMode ? Color.white.opacity(0.05) : Color.black.opacity(0.035), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     dashboardTag(title: isSelectionMode ? "Bulk mode on" : "Single edit mode", tint: isSelectionMode ? .orange : Color("CleverTapPrimary"))
                     dashboardTag(title: productService.isLoading ? "Syncing" : "Live catalog", tint: productService.isLoading ? .blue : .green)
                     dashboardTag(title: "\(filteredProducts.count) results", tint: .secondary, isNeutral: true)
+                    dashboardTag(title: "\(outOfStockCount) unavailable", tint: .red)
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(isDarkMode ? Color.white.opacity(0.04) : Color.white.opacity(0.34))
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(sectionSurfaceFill)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(isDarkMode ? Color.white.opacity(0.08) : Color.white.opacity(0.55), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(sectionSurfaceBorder, lineWidth: 1)
         )
     }
 
@@ -605,12 +777,12 @@ private extension AdminDashboardView {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Product Workspace")
-                        .font(.headline.weight(.black))
-                        .foregroundColor(isDarkMode ? .white : .primary)
-                    Text("Search, review, edit, and merchandise products from the live catalog below.")
+                    Text("Products")
+                        .font(.headline.weight(.bold))
+                        .foregroundColor(sectionPrimaryText)
+                    Text("Edit and manage the live catalog.")
                         .font(.caption)
-                        .foregroundColor(isDarkMode ? .white.opacity(0.64) : .secondary)
+                        .foregroundColor(sectionSecondaryText)
                 }
 
                 Spacer()
@@ -620,7 +792,7 @@ private extension AdminDashboardView {
                     .foregroundColor(isDarkMode ? .white.opacity(0.72) : Color("CleverTapPrimary"))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(Color.black.opacity(isDarkMode ? 0.14 : 0.05), in: Capsule())
+                    .background(isDarkMode ? Color.white.opacity(0.06) : Color.black.opacity(0.04), in: Capsule())
             }
 
             LazyVStack(spacing: 14) {
@@ -648,15 +820,7 @@ private extension AdminDashboardView {
                 }
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(isDarkMode ? Color.white.opacity(0.04) : Color.white.opacity(0.32))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(isDarkMode ? Color.white.opacity(0.08) : Color.white.opacity(0.55), lineWidth: 1)
-        )
+        .padding(.top, 2)
         .refreshable {
             productService.fetchProducts()
             try? await Task.sleep(nanoseconds: 600_000_000)
@@ -912,7 +1076,7 @@ private struct AdminProductCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 14) {
                 productImage
 
@@ -920,7 +1084,7 @@ private struct AdminProductCard: View {
                     HStack(alignment: .top, spacing: 10) {
                         VStack(alignment: .leading, spacing: 6) {
                             Text(product.name)
-                                .font(.headline.weight(.black))
+                                .font(.headline.weight(.bold))
                                 .foregroundColor(.primary)
                                 .lineLimit(2)
 
@@ -947,7 +1111,7 @@ private struct AdminProductCard: View {
 
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text("₹\(Int(product.price))")
-                            .font(.title3.weight(.black))
+                            .font(.headline.weight(.bold))
                             .foregroundColor(Color("CleverTapPrimary"))
 
                         if hasDiscount {
@@ -963,49 +1127,39 @@ private struct AdminProductCard: View {
             HStack(spacing: 10) {
                 summaryMetric(title: "Status", value: product.effectiveStatus.capitalized, tint: stockColor)
                 summaryMetric(title: "Stock", value: "\(product.resolvedStockQuantity)", tint: stockColor)
-                summaryMetric(title: "Keywords", value: "\(product.searchKeywords.count)", tint: Color("CleverTapPrimary"))
+                if !isSelectionMode {
+                    summaryMetric(title: "Keywords", value: "\(product.searchKeywords.count)", tint: Color("CleverTapPrimary"))
+                }
             }
 
             if !isSelectionMode {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Actions")
-                        .font(.caption.weight(.bold))
-                        .foregroundColor(.secondary)
-
-                    LazyVGrid(
-                        columns: [
-                            GridItem(.flexible(), spacing: 10),
-                            GridItem(.flexible(), spacing: 10)
-                        ],
-                        spacing: 10
-                    ) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
                         quickActionButton(label: "Edit", systemName: "square.and.pencil", tint: Color("CleverTapPrimary"), action: onEdit)
-                        quickActionButton(label: product.isFeatured ? "Featured" : "Mark Featured", systemName: product.isFeatured ? "star.fill" : "star", tint: .orange, action: onToggleFeatured)
-                        quickActionButton(label: product.isNewLaunch ? "New Launch" : "Mark Launch", systemName: "sparkles", tint: .green, action: onToggleNewLaunch)
-                        quickActionButton(label: "Change Status", systemName: "arrow.triangle.2.circlepath", tint: stockColor, action: onCycleStatus)
+                        quickActionButton(label: product.isFeatured ? "Featured" : "Feature", systemName: product.isFeatured ? "star.fill" : "star", tint: .orange, action: onToggleFeatured)
+                        quickActionButton(label: product.isNewLaunch ? "Launch" : "Mark Launch", systemName: "sparkles", tint: .green, action: onToggleNewLaunch)
+                        quickActionButton(label: "Status", systemName: "arrow.triangle.2.circlepath", tint: stockColor, action: onCycleStatus)
                         quickActionButton(label: "Delete", systemName: "trash", tint: .red, action: onDelete)
                     }
                 }
-                .padding(14)
-                .background(Color.black.opacity(isDarkMode ? 0.18 : 0.05), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
         }
-        .padding(18)
+        .padding(16)
         .background(
             LinearGradient(
                 colors: isDarkMode
-                    ? [Color.white.opacity(0.10), Color.white.opacity(0.05)]
-                    : [Color.white.opacity(0.92), Color.white.opacity(0.74)],
+                    ? [Color.white.opacity(0.09), Color.white.opacity(0.04)]
+                    : [Color.white.opacity(0.90), Color.white.opacity(0.80)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             ),
-            in: RoundedRectangle(cornerRadius: 28, style: .continuous)
+            in: RoundedRectangle(cornerRadius: 22, style: .continuous)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(isDarkMode ? Color.white.opacity(0.12) : Color.white.opacity(0.72), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(cardBorder, lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(isDarkMode ? 0.26 : 0.08), radius: 18, y: 10)
+        .shadow(color: Color.black.opacity(isDarkMode ? 0.14 : 0.04), radius: 10, y: 6)
         .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .onTapGesture {
             if isSelectionMode {
@@ -1034,29 +1188,27 @@ private struct AdminProductCard: View {
             }
         }
         .frame(width: 86, height: 102)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private var cardBorder: Color {
+        isDarkMode ? Color.white.opacity(0.10) : Color.black.opacity(0.08)
     }
 
     func quickActionButton(label: String, systemName: String, tint: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(alignment: .center, spacing: 10) {
+            HStack(alignment: .center, spacing: 8) {
                 Image(systemName: systemName)
-                    .font(.subheadline.weight(.bold))
-                    .frame(width: 18)
+                    .font(.caption.weight(.bold))
 
                 Text(label)
                     .font(.caption.weight(.bold))
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(2)
-
-                Spacer(minLength: 0)
+                    .lineLimit(1)
             }
             .foregroundColor(tint)
-            .frame(maxWidth: .infinity)
-            .frame(minHeight: 46, alignment: .leading)
             .padding(.horizontal, 12)
-            .padding(.vertical, 11)
-            .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(.vertical, 10)
+            .background(tint.opacity(0.14), in: Capsule())
         }
         .buttonStyle(.plain)
     }
@@ -1089,7 +1241,7 @@ private struct AdminProductCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 10)
         .padding(.horizontal, 12)
-        .background(Color.black.opacity(isDarkMode ? 0.18 : 0.05), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(isDarkMode ? Color.white.opacity(0.05) : Color.black.opacity(0.035), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     func statusPill(title: String, tint: Color) -> some View {
@@ -1108,6 +1260,42 @@ private struct AdminProductCard: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(Color.red, in: Capsule())
+    }
+}
+
+private struct AdminWorkspaceChip: View {
+    let title: String
+    let isSelected: Bool
+    let selectedTextColor: Color
+    let secondaryTextColor: Color
+    let surfaceFill: Color
+    let surfaceBorder: Color
+
+    var body: some View {
+        Text(title)
+            .font(.subheadline.weight(.semibold))
+            .foregroundColor(isSelected ? selectedTextColor : secondaryTextColor)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 11)
+            .background(backgroundStyle, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(isSelected ? Color.clear : surfaceBorder, lineWidth: 1)
+            )
+    }
+
+    private var backgroundStyle: AnyShapeStyle {
+        if isSelected {
+            return AnyShapeStyle(
+                LinearGradient(
+                    colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+        } else {
+            return AnyShapeStyle(surfaceFill)
+        }
     }
 }
 

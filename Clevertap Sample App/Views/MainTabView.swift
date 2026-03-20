@@ -9,7 +9,7 @@ struct MainTabView: View {
     @StateObject private var nativeDisplayService = CleverTapNativeDisplayService.shared
     
     enum Tab: Int {
-        case home, experiences, cart, profile, developer
+        case home, experiences, cart, profile, admin
     }
     
     @State private var selectedTab: Tab = .home
@@ -27,7 +27,7 @@ struct MainTabView: View {
     }
 
     private var walkthroughSteps: [WalkthroughStep] {
-        [
+        var steps = [
             WalkthroughStep(
                 tab: .home,
                 title: "Home",
@@ -51,14 +51,21 @@ struct MainTabView: View {
                 title: "Profile",
                 message: "Manage profile data, preferences, and CleverTap-linked account actions.",
                 icon: "person.crop.circle.fill"
-            ),
-            WalkthroughStep(
-                tab: .developer,
-                title: "Developer",
-                message: "See project credits and implementation context in the dedicated developer tab.",
-                icon: "person.crop.circle.badge.checkmark"
             )
         ]
+
+        if authViewModel.isAdmin {
+            steps.append(
+                WalkthroughStep(
+                tab: .admin,
+                title: "Admin",
+                message: "Open the admin control center with the same existing admin access rules.",
+                icon: "lock.shield.fill"
+            )
+            )
+        }
+
+        return steps
     }
     
     var body: some View {
@@ -129,20 +136,22 @@ struct MainTabView: View {
             }
             .tag(Tab.profile)
 
-            // MARK: - Developer
-            NavigationStack {
-                MeetDeveloperView()
-                    .navigationTitle("Developer")
-                    .navigationBarTitleDisplayMode(.inline)
-            }
-            .tabItem {
-                Label {
-                    Text("Developer")
-                } icon: {
-                    Image(systemName: selectedTab == .developer ? "person.crop.circle.badge.checkmark.fill" : "person.crop.circle.badge.checkmark")
+            if authViewModel.isAdmin {
+                // MARK: - Admin
+                NavigationStack {
+                    LazyTabContent(isActive: selectedTab == .admin) {
+                        AdminDashboardView()
+                    }
                 }
+                .tabItem {
+                    Label {
+                        Text("Admin")
+                    } icon: {
+                        Image(systemName: selectedTab == .admin ? "lock.shield.fill" : "lock.shield")
+                    }
+                }
+                .tag(Tab.admin)
             }
-            .tag(Tab.developer)
         }
         .animation(.easeInOut(duration: 0.2), value: selectedTab)
         .tint(Color("CleverTapPrimary"))
@@ -163,7 +172,7 @@ struct MainTabView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .openDeveloperTab)) { _ in
             withAnimation(.spring(response: 0.40, dampingFraction: 0.88)) {
-                selectedTab = .developer
+                selectedTab = .profile
             }
         }
         .onChange(of: selectedTab) { _, _ in
@@ -185,9 +194,30 @@ struct MainTabView: View {
                 showAuthLoginSheet = false
             }
         }
+        .onChange(of: authViewModel.isAdmin) { _, isAdmin in
+            if !isAdmin && selectedTab == .admin {
+                selectedTab = .home
+            }
+        }
         .sheet(isPresented: $showAuthLoginSheet) {
             AuthLoginView()
                 .environmentObject(authViewModel)
+        }
+    }
+}
+
+private struct LazyTabContent<Content: View>: View {
+    let isActive: Bool
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        Group {
+            if isActive {
+                content()
+            } else {
+                Color.clear
+                    .ignoresSafeArea()
+            }
         }
     }
 }
@@ -263,6 +293,58 @@ private struct GuestProfilePromptView: View {
             .ignoresSafeArea()
         )
         .navigationTitle("Profile")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct AdminAccessPromptView: View {
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 18) {
+                Image(systemName: "lock.shield")
+                    .font(.system(size: 54))
+                    .foregroundStyle(Color("CleverTapPrimary"))
+                    .padding(.top, 28)
+
+                VStack(spacing: 8) {
+                    Text("Admin Access Required")
+                        .font(.title3.weight(.bold))
+                        .multilineTextAlignment(.center)
+
+                    Text("This tab uses the same admin authorization logic as the existing admin tools. Sign in with an admin account to continue.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Label("Use an account with admin privileges.", systemImage: "checkmark.shield.fill")
+                    Label("Then reopen this tab to access the control center.", systemImage: "arrow.triangle.2.circlepath")
+                }
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(14)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                Spacer(minLength: 20)
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 24)
+        }
+        .background(
+            LinearGradient(
+                colors: [
+                    Color("CleverTapPrimary").opacity(0.14),
+                    Color(.systemBackground),
+                    Color(.systemBackground)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        )
+        .navigationTitle("Admin")
         .navigationBarTitleDisplayMode(.inline)
     }
 }

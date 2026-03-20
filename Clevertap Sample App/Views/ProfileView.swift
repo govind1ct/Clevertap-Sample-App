@@ -194,6 +194,18 @@ struct ProfileView: View {
                 Spacer()
 
                 VStack(spacing: 10) {
+                    NavigationLink {
+                        MeetDeveloperView()
+                            .navigationTitle("Developer")
+                            .navigationBarTitleDisplayMode(.inline)
+                    } label: {
+                        Image(systemName: "person.crop.circle.badge.checkmark")
+                            .font(.title3)
+                            .frame(width: 46, height: 46)
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                    .buttonStyle(ScalePressButtonStyle())
+
                     Button {
                         openEditProfile(source: "header_icon")
                     } label: {

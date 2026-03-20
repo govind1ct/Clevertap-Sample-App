@@ -40,16 +40,36 @@ struct AdminOrdersView: View {
         orderService.orders.filter { $0.status.caseInsensitiveCompare("Placed") == .orderedSame }.count
     }
 
+    private var surfaceFill: Color {
+        isDarkMode ? Color.white.opacity(0.06) : Color.white.opacity(0.84)
+    }
+
+    private var surfaceBorder: Color {
+        isDarkMode ? Color.white.opacity(0.10) : Color.black.opacity(0.08)
+    }
+
+    private var primaryText: Color {
+        isDarkMode ? .white : Color.black.opacity(0.94)
+    }
+
+    private var secondaryText: Color {
+        isDarkMode ? Color.white.opacity(0.68) : Color.black.opacity(0.56)
+    }
+
     var body: some View {
         ZStack {
             LinearGradient(
                 colors: isDarkMode
-                    ? [Color(.systemBackground), Color(red: 0.08, green: 0.10, blue: 0.14), Color(.systemGroupedBackground)]
-                    : [Color("CleverTapPrimary").opacity(0.12), Color("CleverTapSecondary").opacity(0.08), Color(.systemBackground)],
+                    ? [Color(red: 0.05, green: 0.06, blue: 0.09), Color(red: 0.08, green: 0.10, blue: 0.14), Color(red: 0.10, green: 0.10, blue: 0.13)]
+                    : [Color(red: 0.96, green: 0.97, blue: 0.99), Color(red: 0.92, green: 0.95, blue: 0.98), Color(red: 0.98, green: 0.97, blue: 0.95)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
+
+            Rectangle()
+                .fill(isDarkMode ? Color.black.opacity(0.18) : Color.white.opacity(0.14))
+                .ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 16) {
@@ -128,11 +148,11 @@ private extension AdminOrdersView {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Orders")
                         .font(.title2.weight(.black))
-                        .foregroundColor(isDarkMode ? .white : .primary)
+                        .foregroundColor(primaryText)
 
                     Text("Track, filter, and update fulfillment from one place.")
                         .font(.caption)
-                        .foregroundColor(isDarkMode ? .white.opacity(0.68) : .secondary)
+                        .foregroundColor(secondaryText)
                 }
 
                 Spacer(minLength: 0)
@@ -142,7 +162,7 @@ private extension AdminOrdersView {
                     .foregroundColor(isDarkMode ? .white.opacity(0.78) : Color("CleverTapPrimary"))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
-                    .background(Color.black.opacity(isDarkMode ? 0.16 : 0.05), in: Capsule())
+                    .background(isDarkMode ? Color.white.opacity(0.06) : Color.black.opacity(0.04), in: Capsule())
             }
 
             HStack(spacing: 10) {
@@ -156,8 +176,8 @@ private extension AdminOrdersView {
         .background(
             LinearGradient(
                 colors: isDarkMode
-                    ? [Color.white.opacity(0.06), Color.white.opacity(0.04)]
-                    : [Color.white.opacity(0.72), Color.white.opacity(0.34)],
+                    ? [Color.white.opacity(0.08), Color.white.opacity(0.04)]
+                    : [Color.white.opacity(0.90), Color.white.opacity(0.74)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             ),
@@ -165,21 +185,23 @@ private extension AdminOrdersView {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(isDarkMode ? Color.white.opacity(0.08) : Color.white.opacity(0.56), lineWidth: 1)
+                .stroke(surfaceBorder, lineWidth: 1)
         )
+        .shadow(color: Color.black.opacity(isDarkMode ? 0.20 : 0.06), radius: 16, y: 10)
     }
 
     var controlBar: some View {
         VStack(spacing: 12) {
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
+                    .foregroundColor(secondaryText)
                 TextField("Search by order ID, user ID, or email", text: $searchText)
                     .textFieldStyle(.plain)
+                    .foregroundColor(primaryText)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .background(Color.black.opacity(isDarkMode ? 0.14 : 0.04), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(isDarkMode ? Color.white.opacity(0.05) : Color.black.opacity(0.035), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
@@ -202,11 +224,11 @@ private extension AdminOrdersView {
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(isDarkMode ? Color.white.opacity(0.04) : Color.white.opacity(0.32))
+                .fill(surfaceFill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(isDarkMode ? Color.white.opacity(0.08) : Color.white.opacity(0.55), lineWidth: 1)
+                .stroke(surfaceBorder, lineWidth: 1)
         )
     }
 
@@ -222,14 +244,14 @@ private extension AdminOrdersView {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.caption2.weight(.bold))
-                .foregroundColor(isDarkMode ? .white.opacity(0.64) : .secondary)
+                .foregroundColor(secondaryText)
             Text(value)
                 .font(.subheadline.weight(.black))
-                .foregroundColor(isDarkMode ? .white : .primary)
+                .foregroundColor(primaryText)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Color.black.opacity(isDarkMode ? 0.14 : 0.05), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(isDarkMode ? Color.white.opacity(0.05) : Color.black.opacity(0.035), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     func orderStatCard(title: String, value: String, tint: Color) -> some View {
