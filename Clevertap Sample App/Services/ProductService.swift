@@ -58,4 +58,28 @@ class ProductService: ObservableObject {
             }
         }
     }
+
+    func fetchProductsByID(_ productIDs: [String]) async throws -> [String: Product] {
+        let normalizedIDs = Array(Set(productIDs.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }))
+
+        guard !normalizedIDs.isEmpty else { return [:] }
+
+        return try await withThrowingTaskGroup(of: (String, Product?).self) { group in
+            for productID in normalizedIDs {
+                group.addTask { [db] in
+                    let document = try await db.collection("products").document(productID).getDocument()
+                    let product = try document.data(as: Product.self)
+                    return (productID, product)
+                }
+            }
+
+            var productsByID: [String: Product] = [:]
+            for try await (productID, product) in group {
+                if let product {
+                    productsByID[productID] = product
+                }
+            }
+            return productsByID
+        }
+    }
 }

@@ -4,7 +4,9 @@ import CleverTapSDK
 struct CheckoutView: View {
     @EnvironmentObject var cartManager: CartManager
     @EnvironmentObject var authViewModel: AuthViewModel
+    @Environment(\.colorScheme) private var colorScheme
     @StateObject private var orderService = OrderService()
+    private let productService = ProductService(includeInactiveProducts: true)
     @State private var showSuccess = false
     @State private var addressFullName: String = ""
     @State private var addressStreet: String = ""
@@ -89,14 +91,88 @@ struct CheckoutView: View {
         localValidationError == nil
     }
 
+    private var surfaceFill: Color {
+        colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.84)
+    }
+
+    private var secondarySurfaceFill: Color {
+        colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.035)
+    }
+
+    private var surfaceBorder: Color {
+        colorScheme == .dark ? Color.white.opacity(0.12) : Color.black.opacity(0.07)
+    }
+
+    private var primaryText: Color {
+        colorScheme == .dark ? .white : Color.black.opacity(0.88)
+    }
+
+    private var secondaryText: Color {
+        colorScheme == .dark ? Color.white.opacity(0.72) : Color.black.opacity(0.60)
+    }
+
+    private func checkoutStorageKey(_ suffix: String, userID: String) -> String {
+        "checkout.\(userID).\(suffix)"
+    }
+
+    private func resetCheckoutState() {
+        addressFullName = ""
+        addressStreet = ""
+        addressCity = ""
+        addressPincode = ""
+        paymentMethod = "Cash on Delivery"
+        pincodeValidationError = nil
+        pincodeValidationInfo = nil
+        lastValidatedPincode = ""
+        errorMessage = nil
+    }
+
+    private func loadCheckoutState() {
+        guard let userID = authViewModel.user?.uid else {
+            resetCheckoutState()
+            return
+        }
+
+        addressFullName = UserDefaults.standard.string(forKey: checkoutStorageKey("address.fullName", userID: userID)) ?? ""
+        addressStreet = UserDefaults.standard.string(forKey: checkoutStorageKey("address.street", userID: userID)) ?? ""
+        addressCity = UserDefaults.standard.string(forKey: checkoutStorageKey("address.city", userID: userID)) ?? ""
+        addressPincode = UserDefaults.standard.string(forKey: checkoutStorageKey("address.pincode", userID: userID)) ?? ""
+
+        if let cachedPayment = UserDefaults.standard.string(forKey: checkoutStorageKey("paymentMethod", userID: userID)),
+           supportedPaymentMethods.contains(cachedPayment) {
+            paymentMethod = cachedPayment
+        }
+    }
+
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: [Color(.systemGroupedBackground), Color(.secondarySystemGroupedBackground)],
+                colors: colorScheme == .dark
+                    ? [
+                        Color(red: 0.07, green: 0.08, blue: 0.12),
+                        Color(red: 0.09, green: 0.11, blue: 0.16),
+                        Color.black
+                    ]
+                    : [
+                        Color("CleverTapPrimary").opacity(0.10),
+                        Color("CleverTapSecondary").opacity(0.06),
+                        Color.white,
+                        Color(.systemGroupedBackground)
+                    ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
+            Circle()
+                .fill(Color("CleverTapPrimary").opacity(colorScheme == .dark ? 0.18 : 0.10))
+                .frame(width: 260, height: 260)
+                .blur(radius: 52)
+                .offset(x: -140, y: -280)
+            Circle()
+                .fill(Color("CleverTapSecondary").opacity(colorScheme == .dark ? 0.14 : 0.08))
+                .frame(width: 280, height: 280)
+                .blur(radius: 60)
+                .offset(x: 150, y: 220)
 
             VStack(spacing: 0) {
                 BannerNotification(title: bannerTitle, message: bannerMessage, type: bannerType, isVisible: $showBanner)
@@ -107,9 +183,10 @@ struct CheckoutView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Checkout")
                                 .font(.largeTitle.bold())
+                                .foregroundColor(primaryText)
                             Text("Review your order and confirm payment")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(secondaryText)
                         }
                         .padding(.top, 10)
 
@@ -121,22 +198,17 @@ struct CheckoutView: View {
                                 Text(currencyFormatter.string(from: NSNumber(value: total)) ?? "₹\(Int(total))")
                                     .font(.title3.bold())
                             }
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(primaryText)
                             Text("Total payable including tax")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(secondaryText)
                         }
-                        .padding(16)
-                        .background(Color(.secondarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
-                        )
+                        .checkoutCardStyle(fill: surfaceFill, border: surfaceBorder, darkMode: colorScheme == .dark)
 
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Order Summary")
                                 .font(.headline)
+                                .foregroundColor(primaryText)
                             ForEach(cartManager.items) { item in
                                 HStack(spacing: 12) {
                                     AppAsyncImage(urlString: item.product.images.first) { phase in
@@ -152,42 +224,40 @@ struct CheckoutView: View {
                                     VStack(alignment: .leading, spacing: 3) {
                                         Text(item.product.name)
                                             .font(.subheadline.weight(.semibold))
+                                            .foregroundColor(primaryText)
                                             .lineLimit(1)
                                         Text("Qty \(item.quantity)")
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundColor(secondaryText)
                                     }
                                     Spacer()
                                     Text(currencyFormatter.string(from: NSNumber(value: item.product.price * Double(item.quantity))) ?? "₹\(Int(item.product.price * Double(item.quantity)))")
                                         .font(.subheadline.weight(.semibold))
+                                        .foregroundColor(primaryText)
                                 }
                                 .padding(.vertical, 2)
                             }
                         }
-                        .padding(16)
-                        .background(Color(.secondarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
-                        )
+                        .checkoutCardStyle(fill: surfaceFill, border: surfaceBorder, darkMode: colorScheme == .dark)
 
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
                                 Text("Delivery Address")
                                     .font(.headline)
+                                    .foregroundColor(primaryText)
                                 Spacer()
                                 Button("Edit") { showAddressEdit = true }
                                     .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(Color("CleverTapPrimary"))
                             }
                             if addressSummary.isEmpty {
                                 Text("Add your delivery address")
                                     .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(secondaryText)
                             } else {
                                 Text(addressSummary)
                                     .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(secondaryText)
                             }
                             if let pincodeInfo = pincodeValidationInfo {
                                 Label(pincodeInfo, systemImage: "checkmark.seal.fill")
@@ -200,79 +270,66 @@ struct CheckoutView: View {
                                     .foregroundColor(.red)
                             }
                         }
-                        .padding(16)
-                        .background(Color(.secondarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
-                        )
                         .sheet(isPresented: $showAddressEdit) {
                             EditAddressSheet(
                                 fullName: $addressFullName,
                                 street: $addressStreet,
-                                city: $addressCity,
-                                pincode: $addressPincode
+                                    city: $addressCity,
+                                    pincode: $addressPincode
                             )
                         }
+                        .checkoutCardStyle(fill: surfaceFill, border: surfaceBorder, darkMode: colorScheme == .dark)
 
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
                                 Text("Payment Method")
                                     .font(.headline)
+                                    .foregroundColor(primaryText)
                             }
                             Text(paymentMethod)
                                 .font(.subheadline)
-                                .foregroundColor(.primary)
+                                .foregroundColor(primaryText)
                             Label("Online payments (PayU / UPI / Cards) coming soon", systemImage: "clock.badge.exclamationmark")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(secondaryText)
                         }
-                        .padding(16)
-                        .background(Color(.secondarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
-                        )
+                        .checkoutCardStyle(fill: surfaceFill, border: surfaceBorder, darkMode: colorScheme == .dark)
 
                         VStack(spacing: 10) {
                             HStack {
                                 Text("Subtotal")
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(secondaryText)
                                 Spacer()
                                 Text(currencyFormatter.string(from: NSNumber(value: subtotal)) ?? "₹\(Int(subtotal))")
+                                    .foregroundColor(primaryText)
                             }
                             HStack {
                                 Text("Shipping")
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(secondaryText)
                                 Spacer()
                                 Text("Free")
                                     .foregroundColor(.green)
                             }
                             HStack {
                                 Text("Tax (18%)")
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(secondaryText)
                                 Spacer()
                                 Text(currencyFormatter.string(from: NSNumber(value: tax)) ?? "₹\(Int(tax))")
+                                    .foregroundColor(primaryText)
                             }
                             Divider().padding(.vertical, 2)
                             HStack {
                                 Text("Total")
                                     .font(.headline)
+                                    .foregroundColor(primaryText)
                                 Spacer()
                                 Text(currencyFormatter.string(from: NSNumber(value: total)) ?? "₹\(Int(total))")
                                     .font(.headline)
+                                    .foregroundColor(primaryText)
                             }
                         }
                         .font(.subheadline.weight(.medium))
-                        .padding(16)
-                        .background(Color(.secondarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
-                        )
+                        .checkoutCardStyle(fill: surfaceFill, border: surfaceBorder, darkMode: colorScheme == .dark)
 
                         if let error = errorMessage {
                             Label(error, systemImage: "exclamationmark.circle.fill")
@@ -288,28 +345,10 @@ struct CheckoutView: View {
             }
         }
         .onAppear {
-            // Optionally preload cached address/payment from local storage
-            if addressFullName.isEmpty {
-                addressFullName = UserDefaults.standard.string(forKey: "checkout.address.fullName") ?? ""
-            }
-            if addressStreet.isEmpty {
-                addressStreet = UserDefaults.standard.string(forKey: "checkout.address.street") ?? ""
-            }
-            if addressCity.isEmpty {
-                addressCity = UserDefaults.standard.string(forKey: "checkout.address.city") ?? ""
-            }
-            if addressPincode.isEmpty {
-                addressPincode = UserDefaults.standard.string(forKey: "checkout.address.pincode") ?? ""
-            }
-            // Backwards compatibility: if old single-line address exists and no structured street yet
-            if addressStreet.isEmpty,
-               let legacyAddress = UserDefaults.standard.string(forKey: "checkout.address"),
-               !legacyAddress.isEmpty {
-                addressStreet = legacyAddress
-            }
-            if let cachedPayment = UserDefaults.standard.string(forKey: "checkout.paymentMethod"), supportedPaymentMethods.contains(cachedPayment) {
-                paymentMethod = cachedPayment
-            }
+            loadCheckoutState()
+        }
+        .onChange(of: authViewModel.user?.uid) { _, _ in
+            loadCheckoutState()
         }
         .onChange(of: addressPincode) { _, _ in
             pincodeValidationError = nil
@@ -321,10 +360,11 @@ struct CheckoutView: View {
                 HStack {
                     Text("Payable")
                         .font(.footnote)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(secondaryText)
                     Spacer()
                     Text(currencyFormatter.string(from: NSNumber(value: total)) ?? "₹\(Int(total))")
                         .font(.headline)
+                        .foregroundColor(primaryText)
                 }
                 Button(action: placeOrder) {
                     if isPlacingOrder || isValidatingPincode {
@@ -339,13 +379,18 @@ struct CheckoutView: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.green)
+                .tint(Color("CleverTapPrimary"))
                 .disabled(!isCheckoutValid || isPlacingOrder || isValidatingPincode)
             }
             .padding(.horizontal, 16)
             .padding(.top, 12)
             .padding(.bottom, 10)
-            .background(.ultraThinMaterial)
+            .background(surfaceFill.opacity(colorScheme == .dark ? 0.96 : 0.92))
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(surfaceBorder)
+                    .frame(height: 1)
+            }
         }
         .fullScreenCover(isPresented: $showSuccess) {
             OrderSuccessView()
@@ -378,6 +423,8 @@ struct CheckoutView: View {
 
         Task {
             do {
+                let refreshedCartItems = try await validateCartItemsAgainstCurrentProducts()
+
                 let validationResult: PincodeValidationResult
                 if lastValidatedPincode == normalizedPincode, let existingInfo = pincodeValidationInfo, !existingInfo.isEmpty {
                     validationResult = PincodeValidationResult(
@@ -391,6 +438,7 @@ struct CheckoutView: View {
                 }
 
                 await MainActor.run {
+                    cartManager.items = refreshedCartItems
                     lastValidatedPincode = normalizedPincode
                     if !validationResult.district.isEmpty, !validationResult.state.isEmpty {
                         pincodeValidationInfo = "Pincode verified: \(validationResult.district), \(validationResult.state)"
@@ -413,12 +461,54 @@ struct CheckoutView: View {
                     errorMessage = message
                     pincodeValidationError = message
                     bannerType = .error
-                    bannerTitle = "Pincode Validation Failed"
+                    bannerTitle = error is CheckoutValidationError ? "Checkout Updated" : "Pincode Validation Failed"
                     bannerMessage = message
                     showBanner = true
                 }
             }
         }
+    }
+
+    private func validateCartItemsAgainstCurrentProducts() async throws -> [CartItem] {
+        let cartItems = cartManager.items
+        let productIDs = cartItems.compactMap { $0.product.id }
+        let productsByID = try await productService.fetchProductsByID(productIDs)
+
+        var refreshedItems: [CartItem] = []
+        var priceChangeMessages: [String] = []
+
+        for item in cartItems {
+            guard let productID = item.product.id else {
+                throw CheckoutValidationError.generic("One of the cart items is missing a product ID. Remove it and try again.")
+            }
+
+            guard let latestProduct = productsByID[productID] else {
+                throw CheckoutValidationError.generic("\(item.product.name) is no longer available. Remove it from the cart and try again.")
+            }
+
+            guard latestProduct.isPurchasable else {
+                throw CheckoutValidationError.generic("\(latestProduct.name) is no longer available for purchase.")
+            }
+
+            guard item.quantity <= latestProduct.resolvedStockQuantity else {
+                throw CheckoutValidationError.generic("Only \(latestProduct.resolvedStockQuantity) unit(s) of \(latestProduct.name) are currently available.")
+            }
+
+            if latestProduct.price != item.product.price {
+                priceChangeMessages.append("\(latestProduct.name): ₹\(Int(item.product.price)) to ₹\(Int(latestProduct.price))")
+            }
+
+            refreshedItems.append(CartItem(id: item.id, product: latestProduct, quantity: item.quantity))
+        }
+
+        if !priceChangeMessages.isEmpty {
+            await MainActor.run {
+                cartManager.items = refreshedItems
+            }
+            throw CheckoutValidationError.generic("Prices changed for: \(priceChangeMessages.joined(separator: ", ")). Review the updated total and place the order again.")
+        }
+
+        return refreshedItems
     }
 
     private func placeOrderAfterValidation(userId: String, userEmail: String?, normalizedPincode: String) {
@@ -445,13 +535,11 @@ struct CheckoutView: View {
             createdAt: Date()
         )
         // Persist user preferences locally
-        UserDefaults.standard.set(addressFullName, forKey: "checkout.address.fullName")
-        UserDefaults.standard.set(addressStreet, forKey: "checkout.address.street")
-        UserDefaults.standard.set(addressCity, forKey: "checkout.address.city")
-        UserDefaults.standard.set(normalizedPincode, forKey: "checkout.address.pincode")
-        // Legacy combined address for backward compatibility
-        UserDefaults.standard.set(addressSummary, forKey: "checkout.address")
-        UserDefaults.standard.set(paymentMethod, forKey: "checkout.paymentMethod")
+        UserDefaults.standard.set(addressFullName, forKey: checkoutStorageKey("address.fullName", userID: userId))
+        UserDefaults.standard.set(addressStreet, forKey: checkoutStorageKey("address.street", userID: userId))
+        UserDefaults.standard.set(addressCity, forKey: checkoutStorageKey("address.city", userID: userId))
+        UserDefaults.standard.set(normalizedPincode, forKey: checkoutStorageKey("address.pincode", userID: userId))
+        UserDefaults.standard.set(paymentMethod, forKey: checkoutStorageKey("paymentMethod", userID: userId))
 
         orderService.placeOrder(order: order) { result in
             DispatchQueue.main.async {
@@ -781,6 +869,35 @@ struct EditAddressSheet: View {
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .stroke(Color(.separator).opacity(0.25), lineWidth: 1)
+            )
+    }
+}
+
+private enum CheckoutValidationError: LocalizedError {
+    case generic(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .generic(let message):
+            return message
+        }
+    }
+}
+
+private extension View {
+    func checkoutCardStyle(fill: Color, border: Color, darkMode: Bool) -> some View {
+        self
+            .padding(16)
+            .background(fill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(border, lineWidth: 1)
+            )
+            .shadow(
+                color: .black.opacity(darkMode ? 0.22 : 0.06),
+                radius: darkMode ? 24 : 16,
+                x: 0,
+                y: darkMode ? 12 : 8
             )
     }
 }

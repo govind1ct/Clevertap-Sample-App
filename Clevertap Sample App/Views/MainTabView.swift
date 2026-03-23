@@ -5,6 +5,7 @@ struct MainTabView: View {
     
     @EnvironmentObject private var authViewModel: AuthViewModel
     @EnvironmentObject private var cartManager: CartManager
+    @Environment(\.colorScheme) private var colorScheme
     @StateObject private var inAppService = CleverTapInAppService.shared
     @StateObject private var nativeDisplayService = CleverTapNativeDisplayService.shared
     
@@ -66,6 +67,18 @@ struct MainTabView: View {
         }
 
         return steps
+    }
+
+    private var nudgeSurfaceFill: Color {
+        colorScheme == .dark ? Color(red: 0.12, green: 0.14, blue: 0.20).opacity(0.96) : Color.white.opacity(0.88)
+    }
+
+    private var nudgeBorder: Color {
+        colorScheme == .dark ? Color.white.opacity(0.18) : Color.black.opacity(0.07)
+    }
+
+    private var nudgeSecondaryFill: Color {
+        colorScheme == .dark ? Color.white.opacity(0.12) : Color.black.opacity(0.04)
     }
     
     var body: some View {
@@ -354,58 +367,89 @@ private struct AdminAccessPromptView: View {
 private extension MainTabView {
     var walkthroughNudgeCard: some View {
         let step = walkthroughSteps[walkthroughStepIndex]
-        return VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: step.icon)
-                    .font(.headline)
-                    .foregroundStyle(Color("CleverTapPrimary"))
-                    .frame(width: 34, height: 34)
-                    .background(Color("CleverTapPrimary").opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 12) {
+                HStack(spacing: 10) {
+                    Image(systemName: step.icon)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(Color("CleverTapPrimary"))
+                        .frame(width: 38, height: 38)
+                        .background(Color("CleverTapPrimary").opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("First-time walkthrough")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Text(step.title)
-                        .font(.headline)
-                    Text(step.message)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("GUIDED WALKTHROUGH")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(Color("CleverTapPrimary"))
+                            .tracking(0.8)
+                        Text(step.title)
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.98) : Color.black.opacity(0.88))
+                    }
                 }
 
                 Spacer(minLength: 8)
 
-                Text("\(walkthroughStepIndex + 1)/\(walkthroughSteps.count)")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                Text("\(walkthroughStepIndex + 1) of \(walkthroughSteps.count)")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.84) : Color.black.opacity(0.58))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(nudgeSecondaryFill, in: Capsule())
             }
+
+            HStack(spacing: 6) {
+                ForEach(0..<walkthroughSteps.count, id: \.self) { idx in
+                    Capsule()
+                        .fill(idx <= walkthroughStepIndex
+                              ? AnyShapeStyle(Color("CleverTapPrimary"))
+                              : AnyShapeStyle(nudgeSecondaryFill))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 5)
+                }
+            }
+
+            Text(step.message)
+                .font(.subheadline)
+                .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.82) : Color.black.opacity(0.62))
+                .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 10) {
-                Button("Skip") {
+                Button {
                     finishWalkthrough()
+                } label: {
+                    Text("Skip")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.92) : Color.black.opacity(0.78))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .background(nudgeSecondaryFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .buttonStyle(.plain)
 
-                Spacer()
-
-                Button(walkthroughStepIndex == walkthroughSteps.count - 1 ? "Got it" : "Next") {
+                Button {
                     advanceWalkthrough()
+                } label: {
+                    HStack(spacing: 8) {
+                        Text(walkthroughStepIndex == walkthroughSteps.count - 1 ? "Got it" : "Next")
+                        Image(systemName: walkthroughStepIndex == walkthroughSteps.count - 1 ? "checkmark" : "arrow.right")
+                            .font(.caption.weight(.bold))
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(Color("CleverTapPrimary"), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(Color("CleverTapPrimary"), in: Capsule())
+                .buttonStyle(.plain)
             }
         }
-        .padding(14)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(16)
+        .background(nudgeSurfaceFill, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.white.opacity(0.24), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(nudgeBorder, lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.12), radius: 8, y: 4)
+        .shadow(color: .black.opacity(colorScheme == .dark ? 0.34 : 0.10), radius: 20, y: 12)
     }
 
     func startWalkthroughIfNeeded() {

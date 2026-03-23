@@ -60,7 +60,7 @@ struct ProductListView: View {
         }
 
         if showNewLaunches {
-            products = products.filter { $0.isNewLaunch }
+            products = products.filter { $0.isNewLaunchActive }
         }
 
         if maxPriceFilter > 0 {
@@ -77,16 +77,65 @@ struct ProductListView: View {
 
         switch sortOption {
         case .name:
-            products = products.sorted { $0.name < $1.name }
+            products = products.sorted(by: defaultCatalogOrder)
         case .priceLow:
-            products = products.sorted { $0.price < $1.price }
+            products = products.sorted { lhs, rhs in
+                if lhs.resolvedCategoryPinned != rhs.resolvedCategoryPinned {
+                    return lhs.resolvedCategoryPinned && !rhs.resolvedCategoryPinned
+                }
+                if lhs.price != rhs.price {
+                    return lhs.price < rhs.price
+                }
+                if lhs.resolvedCategorySortPriority != rhs.resolvedCategorySortPriority {
+                    return lhs.resolvedCategorySortPriority > rhs.resolvedCategorySortPriority
+                }
+                return lhs.resolvedMerchandisingPriority > rhs.resolvedMerchandisingPriority
+            }
         case .priceHigh:
-            products = products.sorted { $0.price > $1.price }
+            products = products.sorted { lhs, rhs in
+                if lhs.resolvedCategoryPinned != rhs.resolvedCategoryPinned {
+                    return lhs.resolvedCategoryPinned && !rhs.resolvedCategoryPinned
+                }
+                if lhs.price != rhs.price {
+                    return lhs.price > rhs.price
+                }
+                if lhs.resolvedCategorySortPriority != rhs.resolvedCategorySortPriority {
+                    return lhs.resolvedCategorySortPriority > rhs.resolvedCategorySortPriority
+                }
+                return lhs.resolvedMerchandisingPriority > rhs.resolvedMerchandisingPriority
+            }
         case .newest:
-            products = products.sorted { $0.isNewLaunch && !$1.isNewLaunch }
+            products = products.sorted { lhs, rhs in
+                if lhs.resolvedCategoryPinned != rhs.resolvedCategoryPinned {
+                    return lhs.resolvedCategoryPinned && !rhs.resolvedCategoryPinned
+                }
+                if lhs.isNewLaunchActive != rhs.isNewLaunchActive {
+                    return lhs.isNewLaunchActive && !rhs.isNewLaunchActive
+                }
+                if lhs.resolvedCategorySortPriority != rhs.resolvedCategorySortPriority {
+                    return lhs.resolvedCategorySortPriority > rhs.resolvedCategorySortPriority
+                }
+                if lhs.resolvedMerchandisingPriority != rhs.resolvedMerchandisingPriority {
+                    return lhs.resolvedMerchandisingPriority > rhs.resolvedMerchandisingPriority
+                }
+                return (lhs.createdAt ?? .distantPast) > (rhs.createdAt ?? .distantPast)
+            }
         }
 
         return products
+    }
+
+    private func defaultCatalogOrder(_ lhs: Product, _ rhs: Product) -> Bool {
+        if lhs.resolvedCategoryPinned != rhs.resolvedCategoryPinned {
+            return lhs.resolvedCategoryPinned && !rhs.resolvedCategoryPinned
+        }
+        if lhs.resolvedCategorySortPriority != rhs.resolvedCategorySortPriority {
+            return lhs.resolvedCategorySortPriority > rhs.resolvedCategorySortPriority
+        }
+        if lhs.resolvedMerchandisingPriority != rhs.resolvedMerchandisingPriority {
+            return lhs.resolvedMerchandisingPriority > rhs.resolvedMerchandisingPriority
+        }
+        return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
     }
 
     private var isDarkMode: Bool {
@@ -522,10 +571,10 @@ private struct ProductTileCard: View {
                     .font(.caption2.weight(.semibold))
                     .foregroundColor(.secondary)
                 Spacer()
-                if product.isNewLaunch {
-                    Text("NEW")
-                        .font(.caption2.weight(.bold))
-                        .foregroundColor(.green)
+                if product.isFeaturedActive {
+                    badgeLabel("FEATURED", color: .orange)
+                } else if product.isNewLaunchActive {
+                    badgeLabel("NEW", color: .green)
                 }
             }
 
@@ -556,6 +605,12 @@ private struct ProductTileCard: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(isDarkMode ? Color.white.opacity(0.16) : Color.white.opacity(0.9), lineWidth: 1)
         )
+    }
+
+    private func badgeLabel(_ title: String, color: Color) -> some View {
+        Text(title)
+            .font(.caption2.weight(.bold))
+            .foregroundColor(color)
     }
 }
 
@@ -595,6 +650,17 @@ private struct ProductRowCard: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
 
+                if product.isFeaturedActive || product.isNewLaunchActive {
+                    HStack(spacing: 6) {
+                        if product.isFeaturedActive {
+                            badgeLabel("Featured", color: .orange)
+                        }
+                        if product.isNewLaunchActive {
+                            badgeLabel("New", color: .green)
+                        }
+                    }
+                }
+
                 HStack(spacing: 6) {
                     Text("₹\(Int(product.price))")
                         .font(.subheadline.weight(.bold))
@@ -620,6 +686,15 @@ private struct ProductRowCard: View {
             }
         }
         .padding(.vertical, 8)
+    }
+
+    private func badgeLabel(_ title: String, color: Color) -> some View {
+        Text(title)
+            .font(.caption2.weight(.bold))
+            .foregroundColor(color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(color.opacity(0.12), in: Capsule())
     }
 }
 

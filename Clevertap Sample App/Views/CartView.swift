@@ -6,7 +6,12 @@ struct CartView: View {
     @State private var showingDeleteAlert = false
     @State private var productToDelete: Product?
     @State private var animateContent = false
+    @State private var isRefreshingCart = false
+    @State private var cartSyncMessage: String?
+    @State private var showCartSyncAlert = false
     @Environment(\.colorScheme) var colorScheme
+
+    private let productService = ProductService(includeInactiveProducts: true)
 
     private let taxRate: Double = 0.18
 
@@ -59,6 +64,9 @@ struct CartView: View {
             }
             CleverTapService.shared.trackScreenViewed(screenName: "Cart")
         }
+        .task {
+            await refreshCartAgainstLiveProducts()
+        }
         .alert("Remove Item", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Remove", role: .destructive) {
@@ -69,6 +77,11 @@ struct CartView: View {
             }
         } message: {
             Text("Are you sure you want to remove this item from your cart?")
+        }
+        .alert("Cart Updated", isPresented: $showCartSyncAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(cartSyncMessage ?? "Your cart was updated.")
         }
         .sheet(isPresented: $showCheckout) {
             CheckoutView()
@@ -226,6 +239,7 @@ struct CartView: View {
                     ForEach(cartManager.items) { item in
                         ModernCartItemRow(
                             item: item,
+                            isRefreshing: isRefreshingCart,
                             onQuantityChange: { newQuantity in
                                 cartManager.updateQuantity(for: item.product, quantity: newQuantity)
                                 CleverTapService.shared.setUserProperty(key: "Last Cart Update", value: Date())
@@ -254,6 +268,73 @@ struct CartView: View {
         }
     }
     
+    private func refreshCartAgainstLiveProducts() async {
+        guard !isRefreshingCart else { return }
+
+        let cartItems = cartManager.items
+        let productIDs = cartItems.compactMap { $0.product.id }
+        guard !productIDs.isEmpty else { return }
+
+        isRefreshingCart = true
+        defer { isRefreshingCart = false }
+
+        do {
+            let productsByID = try await productService.fetchProductsByID(productIDs)
+            var refreshedItems: [CartItem] = []
+            var messages: [String] = []
+
+            for item in cartItems {
+                guard let productID = item.product.id,
+                      let latestProduct = productsByID[productID] else {
+                    messages.append("\(item.product.name) was removed because it is no longer available.")
+                    continue
+                }
+
+                guard latestProduct.isPurchasable else {
+                    messages.append("\(latestProduct.name) was removed because it is no longer available for purchase.")
+                    continue
+                }
+
+                let allowedQuantity = min(item.quantity, latestProduct.resolvedStockQuantity)
+                guard allowedQuantity > 0 else {
+                    messages.append("\(latestProduct.name) was removed because it is out of stock.")
+                    continue
+                }
+
+                if latestProduct.price != item.product.price {
+                    messages.append("\(latestProduct.name) price changed to ₹\(Int(latestProduct.price)).")
+                }
+
+                if allowedQuantity != item.quantity {
+                    messages.append("\(latestProduct.name) quantity was adjusted to \(allowedQuantity) due to stock limits.")
+                }
+
+                refreshedItems.append(CartItem(id: item.id, product: latestProduct, quantity: allowedQuantity))
+            }
+
+            let hasChanged = refreshedItems.count != cartItems.count || zip(refreshedItems, cartItems).contains {
+                $0.id != $1.id ||
+                $0.quantity != $1.quantity ||
+                $0.product.id != $1.product.id ||
+                $0.product.price != $1.product.price ||
+                $0.product.resolvedStockQuantity != $1.product.resolvedStockQuantity ||
+                $0.product.effectiveStatus != $1.product.effectiveStatus
+            }
+
+            if hasChanged {
+                cartManager.replaceItems(refreshedItems)
+            }
+
+            if !messages.isEmpty {
+                cartSyncMessage = messages.joined(separator: "\n")
+                showCartSyncAlert = true
+            }
+        } catch {
+            cartSyncMessage = "Could not refresh cart items right now. Prices and stock may have changed."
+            showCartSyncAlert = true
+        }
+    }
+
     // MARK: - Cart Summary Section
     private var cartSummarySection: some View {
         VStack(spacing: 20) {
@@ -345,9 +426,14 @@ struct CartView: View {
 
 struct ModernCartItemRow: View {
     let item: CartItem
+    let isRefreshing: Bool
     let onQuantityChange: (Int) -> Void
     let onRemove: () -> Void
-    
+
+    private var maxAvailableQuantity: Int {
+        max(item.product.resolvedStockQuantity, 1)
+    }
+
     var body: some View {
         HStack(spacing: 16) {
             // Product Image
@@ -385,6 +471,12 @@ struct ModernCartItemRow: View {
                 Text("₹\(Int(item.product.price)) each")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
+
+                if item.product.isLowStock {
+                    Text("Only \(item.product.resolvedStockQuantity) left")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(.orange)
+                }
                 
                 HStack {
                     // Quantity Controls
@@ -401,7 +493,7 @@ struct ModernCartItemRow: View {
                                 .frame(width: 28, height: 28)
                                 .background(.ultraThinMaterial, in: Circle())
                         }
-                        .disabled(item.quantity <= 1)
+                        .disabled(item.quantity <= 1 || isRefreshing)
                         
                         Text("\(item.quantity)")
                             .font(.subheadline)
@@ -409,7 +501,7 @@ struct ModernCartItemRow: View {
                             .frame(minWidth: 20)
                         
                         Button(action: {
-                            if item.quantity < 99 {
+                            if item.quantity < maxAvailableQuantity {
                                 onQuantityChange(item.quantity + 1)
                             }
                         }) {
@@ -420,7 +512,7 @@ struct ModernCartItemRow: View {
                                 .frame(width: 28, height: 28)
                                 .background(.ultraThinMaterial, in: Circle())
                         }
-                        .disabled(item.quantity >= 99)
+                        .disabled(item.quantity >= maxAvailableQuantity || isRefreshing)
                     }
                     
                     Spacer()

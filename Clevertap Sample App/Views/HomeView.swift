@@ -8,12 +8,18 @@ struct HomeView: View {
     @StateObject private var productService = ProductService()
     @StateObject private var productExperienceService = CleverTapProductExperiencesService.shared
     @StateObject private var profileService = ProfileService()
+    @StateObject private var heroBannerService = HeroBannerService()
     @EnvironmentObject private var themeManager: ThemeManager
     @Namespace private var productTransitionNamespace
 
     @State private var selectedCategory = "All"
     @State private var searchText = ""
     @State private var showingCart = false
+    @State private var currentHeroBannerIndex = 0
+    @State private var selectedHeroProduct: Product?
+    @State private var isSearchExpanded = false
+    @FocusState private var isSearchFieldFocused: Bool
+    private let heroAutoScrollIntervalNanoseconds: UInt64 = 4_500_000_000
 
     private var categories: [String] {
         ["All"] + ProductCategory.allCases.map { $0.rawValue.capitalized }
@@ -24,20 +30,46 @@ struct HomeView: View {
             ? productService.products
             : productService.products.filter { $0.category.capitalized == selectedCategory }
 
-        guard !searchText.isEmpty else { return baseProducts }
+        let searchedProducts: [Product]
+        if searchText.isEmpty {
+            searchedProducts = baseProducts
+        } else {
+            searchedProducts = baseProducts.filter { product in
+                product.name.localizedCaseInsensitiveContains(searchText) ||
+                product.category.localizedCaseInsensitiveContains(searchText)
+            }
+        }
 
-        return baseProducts.filter { product in
-            product.name.localizedCaseInsensitiveContains(searchText) ||
-            product.category.localizedCaseInsensitiveContains(searchText)
+        return searchedProducts.sorted { lhs, rhs in
+            let lhsHomeSlot = lhs.resolvedHomePlacementSlot ?? Int.max
+            let rhsHomeSlot = rhs.resolvedHomePlacementSlot ?? Int.max
+            if lhsHomeSlot != rhsHomeSlot {
+                return lhsHomeSlot < rhsHomeSlot
+            }
+            if lhs.resolvedCategoryPinned != rhs.resolvedCategoryPinned {
+                return lhs.resolvedCategoryPinned && !rhs.resolvedCategoryPinned
+            }
+            if lhs.resolvedCategorySortPriority != rhs.resolvedCategorySortPriority {
+                return lhs.resolvedCategorySortPriority > rhs.resolvedCategorySortPriority
+            }
+            if lhs.resolvedMerchandisingPriority != rhs.resolvedMerchandisingPriority {
+                return lhs.resolvedMerchandisingPriority > rhs.resolvedMerchandisingPriority
+            }
+            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
         }
     }
 
     private var featuredProducts: [Product] {
         Array(
             filteredProducts
-                .filter { $0.isFeatured }
+                .filter { $0.isFeaturedActive }
+                .sorted(by: featuredSortOrder)
                 .prefix(productExperienceService.maxFeaturedProducts)
         )
+    }
+
+    private var activeHeroBanners: [HeroBanner] {
+        heroBannerService.activeBanners
     }
 
     private var isInitialLoading: Bool {
@@ -71,6 +103,9 @@ struct HomeView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: themeManager.sectionSpacing) {
                     headerSection
+                    if !activeHeroBanners.isEmpty {
+                        heroBannerSection
+                    }
                     searchSection
                     categorySection
                     HomeNativeDisplayView()
@@ -102,16 +137,91 @@ struct HomeView: View {
             CartView()
                 .presentationDetents([.medium, .large])
         }
+        .sheet(item: $selectedHeroProduct) { product in
+            NavigationStack {
+                ProductDetailView(product: product)
+            }
+        }
         .onAppear {
             productService.fetchProducts()
             productExperienceService.fetchVariables()
+            heroBannerService.fetchBanners()
             profileService.fetchUserProfile { _ in }
             CleverTapService.shared.trackScreenViewed(screenName: "Home")
+        }
+        .onChange(of: activeHeroBanners.count) { _, newCount in
+            if newCount == 0 {
+                currentHeroBannerIndex = 0
+            } else if currentHeroBannerIndex >= newCount {
+                currentHeroBannerIndex = 0
+            }
+        }
+        .task(id: activeHeroBanners.map { $0.id ?? $0.title }.joined(separator: "|")) {
+            guard activeHeroBanners.count > 1 else { return }
+
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: heroAutoScrollIntervalNanoseconds)
+                guard !Task.isCancelled else { break }
+                guard activeHeroBanners.count > 1 else { break }
+
+                await MainActor.run {
+                    withAnimation(.easeInOut(duration: 0.35)) {
+                        currentHeroBannerIndex = (currentHeroBannerIndex + 1) % activeHeroBanners.count
+                    }
+                }
+            }
         }
     }
 }
 
 private extension HomeView {
+    func featuredSortOrder(_ lhs: Product, _ rhs: Product) -> Bool {
+        let lhsHomeSlot = lhs.resolvedHomePlacementSlot ?? Int.max
+        let rhsHomeSlot = rhs.resolvedHomePlacementSlot ?? Int.max
+        if lhsHomeSlot != rhsHomeSlot {
+            return lhsHomeSlot < rhsHomeSlot
+        }
+        if lhs.resolvedMerchandisingPriority != rhs.resolvedMerchandisingPriority {
+            return lhs.resolvedMerchandisingPriority > rhs.resolvedMerchandisingPriority
+        }
+        return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+    }
+}
+
+private extension HomeView {
+    var heroBannerSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            TabView(selection: $currentHeroBannerIndex) {
+                ForEach(Array(activeHeroBanners.enumerated()), id: \.element.id) { index, banner in
+                    HeroBannerCard(
+                        banner: banner,
+                        isDarkMode: isDarkMode,
+                        titleFontName: themeManager.titleFontName,
+                        bodyFontName: themeManager.bodyFontName,
+                        onPrimaryAction: {
+                            handleHeroBannerTap(banner)
+                        }
+                    )
+                    .tag(index)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(height: 250)
+
+            if activeHeroBanners.count > 1 {
+                HStack(spacing: 8) {
+                    ForEach(Array(activeHeroBanners.indices), id: \.self) { index in
+                        Capsule()
+                            .fill(index == currentHeroBannerIndex ? accentStart : surfaceBorder.opacity(0.8))
+                            .frame(width: index == currentHeroBannerIndex ? 22 : 8, height: 8)
+                            .animation(.easeInOut(duration: 0.22), value: currentHeroBannerIndex)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+            }
+        }
+    }
+
     var backgroundView: some View {
         LinearGradient(
             colors: homeBackgroundGradientColors,
@@ -140,11 +250,11 @@ private extension HomeView {
     }
 
     var headerSection: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: activeHeroBanners.isEmpty ? 18 : 14) {
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: activeHeroBanners.isEmpty ? 8 : 6) {
                     HStack(spacing: 8) {
-                        Text(currentDateLabel.uppercased())
+                        Text(activeHeroBanners.isEmpty ? currentDateLabel.uppercased() : "TODAY • \(currentDateLabel.uppercased())")
                             .font(.caption2.weight(.bold))
                             .foregroundStyle(secondaryText)
 
@@ -159,45 +269,84 @@ private extension HomeView {
                         }
                     }
 
-                    Text("Good to see you, \(firstName)")
-                        .font(.custom(themeManager.bodyFontName, size: 14))
-                        .foregroundStyle(secondaryText)
+                    if activeHeroBanners.isEmpty {
+                        Text("Good to see you, \(firstName)")
+                            .font(.custom(themeManager.bodyFontName, size: 14))
+                            .foregroundStyle(secondaryText)
 
-                    Text(productExperienceService.homeHeaderTitle)
-                        .font(.custom(themeManager.titleFontName, size: 34))
-                        .foregroundStyle(headlineText)
-                        .lineLimit(2)
+                        Text(productExperienceService.homeHeaderTitle)
+                            .font(.custom(themeManager.titleFontName, size: 34))
+                            .foregroundStyle(headlineText)
+                            .lineLimit(2)
 
-                    Text(productExperienceService.homeHeaderSubtitle)
-                        .font(.custom(themeManager.bodyFontName, size: 15))
-                        .foregroundStyle(secondaryText)
-                        .lineLimit(2)
+                        Text(productExperienceService.homeHeaderSubtitle)
+                            .font(.custom(themeManager.bodyFontName, size: 15))
+                            .foregroundStyle(secondaryText)
+                            .lineLimit(2)
+                    } else {
+                        Text("Good to see you, \(firstName)")
+                            .font(.custom(themeManager.titleFontName, size: 24))
+                            .foregroundStyle(headlineText)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text("Fresh picks, active offers, and your cart snapshot are ready below.")
+                            .font(.custom(themeManager.bodyFontName, size: 13))
+                            .foregroundStyle(secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
 
                 Spacer(minLength: 12)
 
-                Button {
-                    showingCart = true
-                } label: {
-                    ZStack(alignment: .topTrailing) {
-                        Image(systemName: "cart.fill")
+                HStack(spacing: 8) {
+                    Button {
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                            isSearchExpanded.toggle()
+                        }
+                        if isSearchExpanded {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                isSearchFieldFocused = true
+                            }
+                        } else {
+                            isSearchFieldFocused = false
+                        }
+                    } label: {
+                        Image(systemName: "magnifyingglass")
                             .font(.title3.weight(.semibold))
                             .foregroundStyle(headlineText)
-                            .frame(width: 52, height: 52)
+                            .frame(width: activeHeroBanners.isEmpty ? 48 : 44, height: activeHeroBanners.isEmpty ? 48 : 44)
                             .background(surfaceFill, in: Circle())
                             .overlay(
                                 Circle()
-                                    .stroke(surfaceBorder, lineWidth: 1)
+                                    .stroke(isSearchExpanded ? accentStart.opacity(0.8) : surfaceBorder, lineWidth: 1)
                             )
+                    }
+                    .buttonStyle(.plain)
 
-                        if cartManager.itemCount > 0 {
-                            Text("\(cartManager.itemCount)")
-                                .font(.caption2.bold())
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 3)
-                                .background(Color.red, in: Capsule())
-                                .offset(x: 8, y: -6)
+                    Button {
+                        showingCart = true
+                    } label: {
+                        ZStack(alignment: .topTrailing) {
+                            Image(systemName: "cart.fill")
+                                .font(.title3.weight(.semibold))
+                                .foregroundStyle(headlineText)
+                                .frame(width: activeHeroBanners.isEmpty ? 48 : 44, height: activeHeroBanners.isEmpty ? 48 : 44)
+                                .background(surfaceFill, in: Circle())
+                                .overlay(
+                                    Circle()
+                                        .stroke(surfaceBorder, lineWidth: 1)
+                                )
+
+                            if cartManager.itemCount > 0 {
+                                Text("\(cartManager.itemCount)")
+                                    .font(.caption2.bold())
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 3)
+                                    .background(Color.red, in: Capsule())
+                                    .offset(x: 8, y: -6)
+                            }
                         }
                     }
                 }
@@ -209,27 +358,34 @@ private extension HomeView {
                 summaryPill(icon: "bag.fill", text: cartManager.itemCount == 0 ? "Cart empty" : "\(cartManager.itemCount) in cart")
             }
         }
-        .padding(20)
+        .padding(activeHeroBanners.isEmpty ? 20 : 18)
         .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
+            RoundedRectangle(cornerRadius: activeHeroBanners.isEmpty ? 28 : 24, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [
-                            accentStart.opacity(isDarkMode ? 0.18 : 0.12),
-                            accentEnd.opacity(isDarkMode ? 0.14 : 0.08),
-                            surfaceFill
-                        ],
+                        colors: activeHeroBanners.isEmpty
+                            ? [
+                                accentStart.opacity(isDarkMode ? 0.18 : 0.12),
+                                accentEnd.opacity(isDarkMode ? 0.14 : 0.08),
+                                surfaceFill
+                            ]
+                            : [
+                                accentStart.opacity(isDarkMode ? 0.12 : 0.10),
+                                surfaceFill,
+                                accentEnd.opacity(isDarkMode ? 0.08 : 0.06)
+                            ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
+            RoundedRectangle(cornerRadius: activeHeroBanners.isEmpty ? 28 : 24, style: .continuous)
                 .stroke(surfaceBorder, lineWidth: 1)
         )
-        .shadow(color: shadowColor, radius: 24, y: 14)
+        .shadow(color: shadowColor, radius: activeHeroBanners.isEmpty ? 24 : 18, y: activeHeroBanners.isEmpty ? 14 : 10)
     }
+
 
     func summaryPill(icon: String, text: String) -> some View {
         HStack(spacing: 6) {
@@ -249,62 +405,194 @@ private extension HomeView {
     }
 
     var searchSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Find your next piece")
-                .font(.custom(themeManager.bodyFontName, size: 13))
-                .foregroundStyle(secondaryText)
+        Group {
+            if isSearchExpanded || !searchText.isEmpty {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Search The Collection")
+                                .font(.custom(themeManager.titleFontName, size: 18))
+                                .foregroundStyle(headlineText)
 
-            HStack(spacing: 10) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(secondaryText)
+                            Text(searchText.isEmpty ? "Find products, categories, and campaign picks faster." : "Showing results for \"\(searchText)\".")
+                                .font(.custom(themeManager.bodyFontName, size: 12))
+                                .foregroundStyle(secondaryText)
+                                .lineLimit(2)
+                        }
 
-                TextField("Search products or categories", text: $searchText)
-                    .textFieldStyle(.plain)
-                    .submitLabel(.search)
-                    .foregroundStyle(primaryText)
+                        Spacer(minLength: 10)
 
-                if !searchText.isEmpty {
-                    Button {
-                        searchText = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(secondaryText)
+                        HStack(spacing: 8) {
+                            if selectedCategory != "All" {
+                                Text(selectedCategory)
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(selectedChipText)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [accentStart, accentEnd],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        ),
+                                        in: Capsule()
+                                    )
+                            }
+
+                            Button {
+                                withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                                    isSearchExpanded = false
+                                    if searchText.isEmpty {
+                                        isSearchFieldFocused = false
+                                    }
+                                }
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(headlineText)
+                                    .frame(width: 32, height: 32)
+                                    .background(Color.white.opacity(isDarkMode ? 0.10 : 0.72), in: Circle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+
+                    HStack(spacing: 12) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(headlineText)
+                            .frame(width: 38, height: 38)
+                            .background(Color.white.opacity(isDarkMode ? 0.10 : 0.75), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                        TextField("Search products or categories", text: $searchText)
+                            .textFieldStyle(.plain)
+                            .submitLabel(.search)
+                            .foregroundStyle(primaryText)
+                            .focused($isSearchFieldFocused)
+
+                        if !searchText.isEmpty {
+                            Button {
+                                searchText = ""
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(headlineText)
+                                    .frame(width: 30, height: 30)
+                                    .background(Color.white.opacity(isDarkMode ? 0.10 : 0.72), in: Circle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(Color.white.opacity(isDarkMode ? 0.08 : 0.58))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(Color.white.opacity(isDarkMode ? 0.08 : 0.36), lineWidth: 1)
+                    )
+                }
+                .padding(.horizontal, 18)
+                .padding(.vertical, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    accentStart.opacity(isDarkMode ? 0.10 : 0.08),
+                                    surfaceFill,
+                                    accentEnd.opacity(isDarkMode ? 0.08 : 0.06)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .stroke(surfaceBorder, lineWidth: 1)
+                )
+                .shadow(color: shadowColor.opacity(0.7), radius: 16, y: 8)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .onAppear {
+                    if isSearchExpanded {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            isSearchFieldFocused = true
+                        }
                     }
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(surfaceFill)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(surfaceBorder, lineWidth: 1)
-        )
+        .animation(.spring(response: 0.34, dampingFraction: 0.84), value: isSearchExpanded)
     }
 
     var categorySection: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                ForEach(categories, id: \.self) { category in
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Browse By Category")
+                        .font(.custom(themeManager.titleFontName, size: 18))
+                        .foregroundStyle(headlineText)
+
+                    Text("Switch between all products and focused category views.")
+                        .font(.custom(themeManager.bodyFontName, size: 12))
+                        .foregroundStyle(secondaryText)
+                }
+
+                Spacer(minLength: 10)
+
+                if selectedCategory != "All" {
                     Button {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                            selectedCategory = category
+                            selectedCategory = "All"
                         }
                     } label: {
-                        Text(category)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(selectedCategory == category ? selectedChipText : secondaryText)
-                            .padding(.horizontal, 18)
-                            .padding(.vertical, 10)
-                            .background(categoryChipBackground(for: category), in: Capsule())
+                        Text("Reset")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(headlineText)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(surfaceFill, in: Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(surfaceBorder, lineWidth: 1)
+                            )
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 2)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(categories, id: \.self) { category in
+                        Button {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                selectedCategory = category
+                            }
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: categoryIcon(for: category))
+                                    .font(.caption.weight(.bold))
+
+                                Text(categoryLabel(for: category))
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .foregroundStyle(selectedCategory == category ? selectedChipText : headlineText)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(categoryChipBackground(for: category), in: Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(categoryChipBorder(for: category), lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 2)
+            }
         }
     }
 
@@ -318,7 +606,40 @@ private extension HomeView {
                 )
             )
         } else {
-            AnyShapeStyle(surfaceFill)
+            AnyShapeStyle(
+                LinearGradient(
+                    colors: [surfaceFill, Color.white.opacity(isDarkMode ? 0.04 : 0.38)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+        }
+    }
+
+    func categoryChipBorder(for category: String) -> Color {
+        selectedCategory == category ? .clear : surfaceBorder
+    }
+
+    func categoryLabel(for category: String) -> String {
+        category == "All" ? "All Items" : category
+    }
+
+    func categoryIcon(for category: String) -> String {
+        switch category.lowercased() {
+        case "all":
+            return "square.grid.2x2.fill"
+        case "ring", "rings":
+            return "sparkle"
+        case "necklace", "necklaces":
+            return "circle.hexagongrid.fill"
+        case "bracelet", "bracelets":
+            return "link"
+        case "earring", "earrings":
+            return "seal.fill"
+        case "pendant", "pendants":
+            return "drop.fill"
+        default:
+            return "tag.fill"
         }
     }
 
@@ -502,6 +823,196 @@ private extension HomeView {
 
     var selectedChipText: Color {
         isDarkMode ? Color.black.opacity(0.88) : .white
+    }
+
+    func handleHeroBannerTap(_ banner: HeroBanner) {
+        CleverTapService.shared.trackEvent(
+            "Hero Banner Tapped",
+            withProps: [
+                "title": banner.title,
+                "banner_id": banner.id ?? "",
+                "offer_label": banner.offerLabel ?? "",
+                "campaign_tag": banner.campaignTag ?? ""
+            ]
+        )
+
+        if let linkedProductID = banner.linkedProductID?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !linkedProductID.isEmpty,
+           let matchedProduct = productService.products.first(where: { $0.id == linkedProductID }) {
+            selectedHeroProduct = matchedProduct
+            return
+        }
+
+        if let campaignTag = banner.campaignTag?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !campaignTag.isEmpty {
+            selectedCategory = "All"
+            searchText = campaignTag
+            return
+        }
+
+        let deepLinkValue = banner.ctaDeepLink?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+        guard !deepLinkValue.isEmpty else { return }
+
+        if deepLinkValue == "cart" {
+            showingCart = true
+            return
+        }
+
+        if deepLinkValue == "products" || deepLinkValue == "all" || deepLinkValue == "catalog" {
+            selectedCategory = "All"
+            searchText = ""
+            return
+        }
+
+        if deepLinkValue.hasPrefix("category:") {
+            let rawCategory = String(deepLinkValue.dropFirst("category:".count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            if let matchedCategory = categories.first(where: { $0.lowercased() == rawCategory.lowercased() }) {
+                selectedCategory = matchedCategory
+                searchText = ""
+            }
+            return
+        }
+
+        if deepLinkValue.hasPrefix("search:") {
+            let query = String(deepLinkValue.dropFirst("search:".count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            selectedCategory = "All"
+            searchText = query
+        }
+    }
+}
+
+private struct HeroBannerCard: View {
+    let banner: HeroBanner
+    let isDarkMode: Bool
+    let titleFontName: String
+    let bodyFontName: String
+    let onPrimaryAction: () -> Void
+
+    private var hasDestination: Bool {
+        let linkedProductID = banner.linkedProductID?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let campaignTag = banner.campaignTag?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let deepLink = banner.ctaDeepLink?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return !linkedProductID.isEmpty || !campaignTag.isEmpty || !deepLink.isEmpty
+    }
+
+    private var backgroundStart: Color {
+        colorFromHex(banner.backgroundHex) ?? Color("CleverTapPrimary")
+    }
+
+    private var backgroundEnd: Color {
+        colorFromHex(banner.accentHex) ?? Color("CleverTapSecondary")
+    }
+
+    private var cardTitleColor: Color {
+        .white
+    }
+
+    private var cardBodyColor: Color {
+        Color.white.opacity(0.82)
+    }
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            LinearGradient(
+                colors: [backgroundStart, backgroundEnd],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .overlay {
+                AppAsyncImage(urlString: banner.resolvedMobileImageURL) { phase in
+                    if let image = phase.image {
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } else {
+                        Rectangle()
+                            .fill(.clear)
+                    }
+                }
+                .overlay {
+                    LinearGradient(
+                        colors: [
+                            Color.black.opacity(isDarkMode ? 0.18 : 0.10),
+                            Color.black.opacity(0.50)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    if let offerLabel = banner.offerLabel, !offerLabel.isEmpty {
+                        heroChip(title: offerLabel)
+                    }
+
+                    if let offerCode = banner.offerCode, !offerCode.isEmpty {
+                        heroChip(title: offerCode)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(banner.title)
+                        .font(.custom(titleFontName, size: 28))
+                        .foregroundStyle(cardTitleColor)
+                        .lineLimit(2)
+
+                    Text(banner.subtitle)
+                        .font(.custom(bodyFontName, size: 14))
+                        .foregroundStyle(cardBodyColor)
+                        .lineLimit(3)
+                }
+
+                if let ctaText = banner.ctaText, !ctaText.isEmpty {
+                    HStack(spacing: 8) {
+                        Text(ctaText)
+                        Image(systemName: "arrow.right")
+                    }
+                    .font(.subheadline.weight(.bold))
+                    .foregroundColor(backgroundStart)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color.white, in: Capsule())
+                }
+            }
+            .padding(22)
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .stroke(Color.white.opacity(isDarkMode ? 0.10 : 0.16), lineWidth: 1)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .onTapGesture {
+            guard hasDestination else { return }
+            onPrimaryAction()
+        }
+        .shadow(color: Color.black.opacity(isDarkMode ? 0.24 : 0.12), radius: 22, y: 12)
+    }
+
+    private func heroChip(title: String) -> some View {
+        Text(title)
+            .font(.caption2.weight(.bold))
+            .foregroundColor(.white)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.white.opacity(0.16), in: Capsule())
+    }
+
+    private func colorFromHex(_ hex: String?) -> Color? {
+        guard let hex else { return nil }
+        let trimmed = hex.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let normalized = trimmed.hasPrefix("#") ? String(trimmed.dropFirst()) : trimmed
+        guard normalized.count == 6, let value = Int(normalized, radix: 16) else { return nil }
+
+        let red = Double((value >> 16) & 0xFF) / 255.0
+        let green = Double((value >> 8) & 0xFF) / 255.0
+        let blue = Double(value & 0xFF) / 255.0
+        return Color(red: red, green: green, blue: blue)
     }
 }
 

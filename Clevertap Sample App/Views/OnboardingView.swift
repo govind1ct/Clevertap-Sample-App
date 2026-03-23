@@ -5,6 +5,7 @@ struct OnboardingView: View {
     @State private var hasAnimatedIn = false
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
     @Environment(\.colorScheme) private var colorScheme
+    let markAsSeenOnCompletion: Bool
     var onFinish: (() -> Void)? = nil
 
     let pages: [OnboardingPage] = [
@@ -191,7 +192,9 @@ struct OnboardingView: View {
     }
 
     private func completeOnboarding() {
-        hasSeenOnboarding = true
+        if markAsSeenOnCompletion {
+            hasSeenOnboarding = true
+        }
         onFinish?()
     }
 }

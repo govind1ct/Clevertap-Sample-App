@@ -18,6 +18,15 @@ struct Product: Identifiable, Codable {
     let careInstructions: String
     let isNewLaunch: Bool
     let isFeatured: Bool
+    let merchandisingPriority: Int?
+    let isCategoryPinned: Bool?
+    let categorySortPriority: Int?
+    let homePlacementSlot: Int?
+    let campaignTags: [String]?
+    let featuredStartAt: Date?
+    let featuredEndAt: Date?
+    let newLaunchStartAt: Date?
+    let newLaunchEndAt: Date?
     let specifications: [String: String]?
     let searchKeywords: [String]
     let createdAt: Date?
@@ -43,6 +52,15 @@ struct Product: Identifiable, Codable {
         case careInstructions
         case isNewLaunch
         case isFeatured
+        case merchandisingPriority
+        case isCategoryPinned
+        case categorySortPriority
+        case homePlacementSlot
+        case campaignTags
+        case featuredStartAt
+        case featuredEndAt
+        case newLaunchStartAt
+        case newLaunchEndAt
         case specifications
         case searchKeywords
         case createdAt
@@ -52,9 +70,8 @@ struct Product: Identifiable, Codable {
         case availabilityMessage
     }
     
-    // Computed property to get the main image URL
     var mainImageURL: String {
-        return imageURL ?? images.first ?? ""
+        imageURL ?? images.first ?? ""
     }
 
     var effectiveStatus: String {
@@ -70,12 +87,41 @@ struct Product: Identifiable, Codable {
         max(lowStockThreshold ?? 3, 1)
     }
 
+    var resolvedMerchandisingPriority: Int {
+        merchandisingPriority ?? 0
+    }
+
+    var resolvedCategoryPinned: Bool {
+        isCategoryPinned ?? false
+    }
+
+    var resolvedCategorySortPriority: Int {
+        categorySortPriority ?? 0
+    }
+
+    var resolvedHomePlacementSlot: Int? {
+        guard let homePlacementSlot, homePlacementSlot > 0 else { return nil }
+        return homePlacementSlot
+    }
+
+    var resolvedCampaignTags: [String] {
+        campaignTags ?? []
+    }
+
     var isPurchasable: Bool {
         effectiveStatus == "active" && resolvedStockQuantity > 0
     }
 
     var isLowStock: Bool {
         isPurchasable && resolvedStockQuantity <= resolvedLowStockThreshold
+    }
+
+    var isFeaturedActive: Bool {
+        isFeatured && isWithinSchedule(start: featuredStartAt, end: featuredEndAt)
+    }
+
+    var isNewLaunchActive: Bool {
+        isNewLaunch && isWithinSchedule(start: newLaunchStartAt, end: newLaunchEndAt)
     }
 
     var stockLabel: String {
@@ -85,16 +131,27 @@ struct Product: Identifiable, Codable {
         if isLowStock { return "Low Stock" }
         return "In Stock"
     }
-    
-    // CleverTap Event Properties
+
     var properties: [String: Any] {
-        return [
-            "product_id": id,
+        [
+            "product_id": id ?? NSNull(),
             "product_name": name,
             "price": price,
             "category": category,
             "status": effectiveStatus,
-            "stock_quantity": resolvedStockQuantity
+            "stock_quantity": resolvedStockQuantity,
+            "merchandising_priority": resolvedMerchandisingPriority,
+            "is_category_pinned": resolvedCategoryPinned,
+            "category_sort_priority": resolvedCategorySortPriority,
+            "home_placement_slot": resolvedHomePlacementSlot ?? NSNull(),
+            "campaign_tags": resolvedCampaignTags
         ]
+    }
+
+    private func isWithinSchedule(start: Date?, end: Date?) -> Bool {
+        let now = Date()
+        if let start, now < start { return false }
+        if let end, now > end { return false }
+        return true
     }
 }

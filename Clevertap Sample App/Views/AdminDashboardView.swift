@@ -1,9 +1,12 @@
 import SwiftUI
+import PhotosUI
+import UIKit
 
 struct AdminDashboardView: View {
     private enum Workspace: String, CaseIterable, Identifiable {
         case overview = "Overview"
         case products = "Products"
+        case banners = "Hero Banners"
 
         var id: String { rawValue }
     }
@@ -11,6 +14,7 @@ struct AdminDashboardView: View {
     @StateObject private var productService = ProductService(includeInactiveProducts: true)
     @StateObject private var adminProductService = AdminProductService()
     @StateObject private var orderService = AdminOrderService()
+    @StateObject private var heroBannerService = HeroBannerService(includeInactiveBanners: true)
     @Environment(\.colorScheme) private var colorScheme
 
     @State private var searchText = ""
@@ -57,6 +61,9 @@ struct AdminDashboardView: View {
         .task {
             if productService.products.isEmpty {
                 productService.fetchProducts()
+            }
+            if heroBannerService.banners.isEmpty {
+                heroBannerService.fetchBanners()
             }
             scheduleOrderPrefetchIfNeeded()
         }
@@ -202,6 +209,10 @@ private extension AdminDashboardView {
         orderService.orders.count
     }
 
+    var bannerCount: Int {
+        heroBannerService.banners.count
+    }
+
     var processingOrderCount: Int {
         orderService.orders.filter { $0.status.caseInsensitiveCompare("processing") == .orderedSame }.count
     }
@@ -345,6 +356,8 @@ private extension AdminDashboardView {
             overviewWorkspace
         case .products:
             productsWorkspace
+        case .banners:
+            bannersWorkspace
         }
     }
 
@@ -372,6 +385,10 @@ private extension AdminDashboardView {
                 productList
             }
         }
+    }
+
+    var bannersWorkspace: some View {
+        AdminHeroBannersView()
     }
 
     var sectionSurfaceFill: Color {
@@ -1311,7 +1328,12 @@ struct AdminProductEditorView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @StateObject private var imageUploadService = AdminProductImageUploadService()
     @State private var showValidationAlert = false
+    @State private var selectedPrimaryImageItem: PhotosPickerItem?
+    @State private var selectedGalleryImageItems: [PhotosPickerItem] = []
+    @State private var mediaAlertMessage = ""
+    @State private var showMediaAlert = false
 
     private var isValid: Bool {
         !form.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
@@ -1323,18 +1345,20 @@ struct AdminProductEditorView: View {
         colorScheme == .dark
     }
 
+    private var galleryImageURLs: [String] {
+        form.imagesText
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
     private var previewImageURL: String {
         let primary = form.imageURL.trimmingCharacters(in: .whitespacesAndNewlines)
         if !primary.isEmpty {
             return primary
         }
 
-        let galleryImage = form.imagesText
-            .split(separator: ",")
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .first(where: { !$0.isEmpty })
-
-        return galleryImage ?? ""
+        return galleryImageURLs.first ?? ""
     }
 
     private var validationMessages: [EditorValidationMessage] {
@@ -1358,6 +1382,22 @@ struct AdminProductEditorView: View {
 
         if form.searchKeywordsText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             messages.append(EditorValidationMessage(text: "Search keywords are empty, which hurts discoverability.", kind: .warning))
+        }
+
+        if form.homePlacementSlot < 0 {
+            messages.append(EditorValidationMessage(text: "Home placement slot should be 0 or greater.", kind: .error))
+        }
+
+        if form.categorySortPriority < 0 {
+            messages.append(EditorValidationMessage(text: "Category sort priority should be 0 or greater.", kind: .error))
+        }
+
+        if form.hasFeaturedSchedule, form.featuredEndAt < form.featuredStartAt {
+            messages.append(EditorValidationMessage(text: "Featured schedule ends before it starts.", kind: .error))
+        }
+
+        if form.hasNewLaunchSchedule, form.newLaunchEndAt < form.newLaunchStartAt {
+            messages.append(EditorValidationMessage(text: "New launch schedule ends before it starts.", kind: .error))
         }
 
         return messages
@@ -1403,6 +1443,7 @@ struct AdminProductEditorView: View {
                         validationSection
                         basicsSection
                         pricingSection
+                        merchandisingSection
                         tagsSection
                         mediaSection
                         detailsSection
@@ -1422,19 +1463,35 @@ struct AdminProductEditorView: View {
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button(imageUploadService.isUploading ? "Uploading..." : "Save") {
                         if isValid {
                             onSave(form)
                         } else {
                             showValidationAlert = true
                         }
                     }
+                    .disabled(imageUploadService.isUploading)
+                }
+            }
+            .onChange(of: selectedPrimaryImageItem?.itemIdentifier) { _, _ in
+                Task {
+                    await handlePrimaryImageSelection()
+                }
+            }
+            .onChange(of: selectedGalleryImageItems.count) { _, _ in
+                Task {
+                    await handleGalleryImageSelection()
                 }
             }
             .alert("Missing required fields", isPresented: $showValidationAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text("Name, category, and description are required.")
+            }
+            .alert("Media Upload", isPresented: $showMediaAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(mediaAlertMessage)
             }
         }
     }
@@ -1511,24 +1568,32 @@ private extension AdminProductEditorView {
                         HStack(spacing: 6) {
                             editorPill(title: stockPreviewLabel, tint: stockPreviewColor)
 
-                            if form.isFeatured {
+                            if isFeaturedPreviewActive {
                                 editorPill(title: "Featured", tint: .orange)
                             }
 
-                            if form.isNewLaunch {
+                            if isNewLaunchPreviewActive {
                                 editorPill(title: "New", tint: .green)
+                            }
+
+                            if form.isCategoryPinned {
+                                editorPill(title: "Pinned", tint: .blue)
                             }
                         }
 
                         VStack(alignment: .leading, spacing: 6) {
                             editorPill(title: stockPreviewLabel, tint: stockPreviewColor)
 
-                            if form.isFeatured {
+                            if isFeaturedPreviewActive {
                                 editorPill(title: "Featured", tint: .orange)
                             }
 
-                            if form.isNewLaunch {
+                            if isNewLaunchPreviewActive {
                                 editorPill(title: "New", tint: .green)
+                            }
+
+                            if form.isCategoryPinned {
+                                editorPill(title: "Pinned", tint: .blue)
                             }
                         }
                     }
@@ -1595,6 +1660,44 @@ private extension AdminProductEditorView {
         }
     }
 
+    var merchandisingSection: some View {
+        AdminEditorSection(title: "Merchandising", subtitle: "Controls for ranking, campaigns, and scheduled storefront visibility.") {
+            VStack(spacing: 12) {
+                AdminEditorIntegerField(title: "Merchandising Priority", value: $form.merchandisingPriority)
+                Toggle(isOn: $form.isCategoryPinned) {
+                    AdminToggleLabel(title: "Pin In Category", subtitle: "Keep this product at the top of its category listing.")
+                }
+                .padding(14)
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                AdminEditorIntegerField(title: "Category Sort Priority", value: $form.categorySortPriority)
+                AdminEditorIntegerField(title: "Home Placement Slot", value: $form.homePlacementSlot)
+                AdminEditorTextField(
+                    title: "Campaign Tags",
+                    text: $form.campaignTagsText,
+                    axis: .vertical,
+                    lineLimit: 2...4
+                )
+
+                scheduleCard(
+                    title: "Featured Schedule",
+                    subtitle: "Restrict featured placements to a specific time window.",
+                    isEnabled: $form.hasFeaturedSchedule,
+                    startDate: $form.featuredStartAt,
+                    endDate: $form.featuredEndAt
+                )
+
+                scheduleCard(
+                    title: "New Launch Schedule",
+                    subtitle: "Keep the new-launch badge active only during launch windows.",
+                    isEnabled: $form.hasNewLaunchSchedule,
+                    startDate: $form.newLaunchStartAt,
+                    endDate: $form.newLaunchEndAt
+                )
+            }
+        }
+    }
+
     var tagsSection: some View {
         AdminEditorSection(title: "Tags", subtitle: "Comma-separated values for discovery and targeting.") {
             VStack(spacing: 12) {
@@ -1608,10 +1711,75 @@ private extension AdminProductEditorView {
 
     var mediaSection: some View {
         AdminEditorSection(title: "Media", subtitle: "Image URLs used in cards and detail pages.") {
-            VStack(spacing: 12) {
+            VStack(spacing: 14) {
+                HStack(spacing: 10) {
+                    PhotosPicker(selection: $selectedPrimaryImageItem, matching: .images) {
+                        AdminMediaButton(
+                            title: "Upload Primary",
+                            systemImage: "photo.badge.plus",
+                            tint: Color("CleverTapPrimary")
+                        )
+                    }
+
+                    PhotosPicker(selection: $selectedGalleryImageItems, maxSelectionCount: 6, matching: .images) {
+                        AdminMediaButton(
+                            title: "Add Gallery",
+                            systemImage: "square.stack.3d.up",
+                            tint: Color("CleverTapSecondary")
+                        )
+                    }
+                }
+                .disabled(imageUploadService.isUploading)
+                .opacity(imageUploadService.isUploading ? 0.65 : 1)
+
+                if imageUploadService.isUploading {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                        Text("Uploading selected image...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                if !galleryImageURLs.isEmpty {
+                    galleryManagerSection
+                }
+
                 AdminEditorTextField(title: "Images", text: $form.imagesText, axis: .vertical, lineLimit: 3...5)
                 AdminEditorTextField(title: "Primary Image URL", text: $form.imageURL, axis: .vertical, lineLimit: 2...4)
             }
+        }
+    }
+
+    var galleryManagerSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Gallery")
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.primary)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(Array(galleryImageURLs.enumerated()), id: \.offset) { index, url in
+                        AdminGalleryImageCard(
+                            urlString: url,
+                            isPrimaryFallback: form.imageURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && index == 0,
+                            canMoveLeft: index > 0,
+                            canMoveRight: index < galleryImageURLs.count - 1,
+                            onMoveLeft: { moveGalleryImage(from: index, direction: -1) },
+                            onMoveRight: { moveGalleryImage(from: index, direction: 1) },
+                            onSetPrimary: { setPrimaryImage(from: index) },
+                            onRemove: { removeGalleryImage(at: index) }
+                        )
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+
+            Text("Reorder gallery images, remove unwanted uploads, or promote a gallery image to the primary slot.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -1664,6 +1832,85 @@ private extension AdminProductEditorView {
         }
     }
 
+    private func handlePrimaryImageSelection() async {
+        guard let selectedPrimaryImageItem else { return }
+        defer { self.selectedPrimaryImageItem = nil }
+
+        do {
+            guard let data = try await selectedPrimaryImageItem.loadTransferable(type: Data.self),
+                  let image = UIImage(data: data) else {
+                throw AdminProductImageUploadError.processingFailed
+            }
+
+            let uploadedURL = try await imageUploadService.uploadProductImage(image, kind: "primary")
+            await MainActor.run {
+                form.imageURL = uploadedURL
+            }
+        } catch {
+            await MainActor.run {
+                mediaAlertMessage = error.localizedDescription
+                showMediaAlert = true
+            }
+        }
+    }
+
+    private func handleGalleryImageSelection() async {
+        guard !selectedGalleryImageItems.isEmpty else { return }
+        let selectedItems = selectedGalleryImageItems
+        defer { self.selectedGalleryImageItems = [] }
+
+        do {
+            var uploadedURLs: [String] = []
+            for item in selectedItems {
+                guard let data = try await item.loadTransferable(type: Data.self),
+                      let image = UIImage(data: data) else {
+                    throw AdminProductImageUploadError.processingFailed
+                }
+                let uploadedURL = try await imageUploadService.uploadProductImage(image, kind: "gallery")
+                uploadedURLs.append(uploadedURL)
+            }
+
+            await MainActor.run {
+                let existingURLs = galleryImageURLs
+                let updatedGalleryURLs = existingURLs + uploadedURLs
+                form.imagesText = updatedGalleryURLs.joined(separator: ", ")
+                if form.imageURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                   let firstUploadedURL = uploadedURLs.first {
+                    form.imageURL = firstUploadedURL
+                }
+            }
+        } catch {
+            await MainActor.run {
+                mediaAlertMessage = error.localizedDescription
+                showMediaAlert = true
+            }
+        }
+    }
+
+    private func moveGalleryImage(from index: Int, direction: Int) {
+        var urls = galleryImageURLs
+        let targetIndex = index + direction
+        guard urls.indices.contains(index), urls.indices.contains(targetIndex) else { return }
+        urls.swapAt(index, targetIndex)
+        form.imagesText = urls.joined(separator: ", ")
+    }
+
+    private func removeGalleryImage(at index: Int) {
+        var urls = galleryImageURLs
+        guard urls.indices.contains(index) else { return }
+        let removedURL = urls.remove(at: index)
+        form.imagesText = urls.joined(separator: ", ")
+
+        if form.imageURL.trimmingCharacters(in: .whitespacesAndNewlines) == removedURL {
+            form.imageURL = urls.first ?? ""
+        }
+    }
+
+    private func setPrimaryImage(from index: Int) {
+        guard galleryImageURLs.indices.contains(index) else { return }
+        form.imageURL = galleryImageURLs[index]
+    }
+
     var stockPreviewLabel: String {
         if form.status == "draft" { return "Draft" }
         if form.status == "archived" { return "Archived" }
@@ -1678,6 +1925,54 @@ private extension AdminProductEditorView {
         if form.stockQuantity <= 0 { return .red }
         if form.stockQuantity <= max(form.lowStockThreshold, 1) { return .orange }
         return .green
+    }
+
+    var isFeaturedPreviewActive: Bool {
+        form.isFeatured && isScheduleActive(
+            isEnabled: form.hasFeaturedSchedule,
+            startDate: form.featuredStartAt,
+            endDate: form.featuredEndAt
+        )
+    }
+
+    var isNewLaunchPreviewActive: Bool {
+        form.isNewLaunch && isScheduleActive(
+            isEnabled: form.hasNewLaunchSchedule,
+            startDate: form.newLaunchStartAt,
+            endDate: form.newLaunchEndAt
+        )
+    }
+
+    @ViewBuilder
+    func scheduleCard(
+        title: String,
+        subtitle: String,
+        isEnabled: Binding<Bool>,
+        startDate: Binding<Date>,
+        endDate: Binding<Date>
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Toggle(isOn: isEnabled) {
+                AdminToggleLabel(title: title, subtitle: subtitle)
+            }
+
+            if isEnabled.wrappedValue {
+                VStack(spacing: 10) {
+                    DatePicker("Starts", selection: startDate, displayedComponents: [.date, .hourAndMinute])
+                    DatePicker("Ends", selection: endDate, displayedComponents: [.date, .hourAndMinute])
+                }
+                .datePickerStyle(.compact)
+                .font(.subheadline)
+            }
+        }
+        .padding(14)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    func isScheduleActive(isEnabled: Bool, startDate: Date, endDate: Date) -> Bool {
+        guard isEnabled else { return true }
+        let now = Date()
+        return startDate <= now && endDate >= now
     }
 
     func editorPill(title: String, tint: Color) -> some View {
@@ -1896,6 +2191,90 @@ private struct AdminToggleLabel: View {
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+}
+
+private struct AdminGalleryImageCard: View {
+    let urlString: String
+    let isPrimaryFallback: Bool
+    let canMoveLeft: Bool
+    let canMoveRight: Bool
+    let onMoveLeft: () -> Void
+    let onMoveRight: () -> Void
+    let onSetPrimary: () -> Void
+    let onRemove: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ZStack(alignment: .topTrailing) {
+                AdminEditorImagePreview(urlString: urlString)
+                    .frame(width: 110, height: 126)
+
+                if isPrimaryFallback {
+                    Text("Preview")
+                        .font(.caption2.weight(.bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(Color("CleverTapPrimary"), in: Capsule())
+                        .padding(8)
+                }
+            }
+
+            HStack(spacing: 8) {
+                Button(action: onMoveLeft) {
+                    Image(systemName: "arrow.left")
+                }
+                .disabled(!canMoveLeft)
+
+                Button(action: onMoveRight) {
+                    Image(systemName: "arrow.right")
+                }
+                .disabled(!canMoveRight)
+
+                Spacer(minLength: 0)
+
+                Button(action: onRemove) {
+                    Image(systemName: "trash")
+                        .foregroundColor(.red)
+                }
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundColor(.secondary)
+
+            Button(action: onSetPrimary) {
+                Text("Set Primary")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(Color("CleverTapPrimary"))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(Color("CleverTapPrimary").opacity(0.10), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(12)
+        .frame(width: 138)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+private struct AdminMediaButton: View {
+    let title: String
+    let systemImage: String
+    let tint: Color
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemImage)
+                .font(.subheadline.weight(.semibold))
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+        }
+        .foregroundColor(tint)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 

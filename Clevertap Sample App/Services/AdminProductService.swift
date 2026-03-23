@@ -211,6 +211,17 @@ struct AdminProductFormData {
     var careInstructions: String = ""
     var isNewLaunch: Bool = false
     var isFeatured: Bool = false
+    var merchandisingPriority: Int = 0
+    var isCategoryPinned: Bool = false
+    var categorySortPriority: Int = 0
+    var homePlacementSlot: Int = 0
+    var campaignTagsText: String = ""
+    var hasFeaturedSchedule: Bool = false
+    var featuredStartAt: Date = Date()
+    var featuredEndAt: Date = Calendar.current.date(byAdding: .day, value: 14, to: Date()) ?? Date()
+    var hasNewLaunchSchedule: Bool = false
+    var newLaunchStartAt: Date = Date()
+    var newLaunchEndAt: Date = Calendar.current.date(byAdding: .day, value: 14, to: Date()) ?? Date()
     var specificationsText: String = ""
     var searchKeywordsText: String = ""
     var status: String = "active"
@@ -236,6 +247,17 @@ struct AdminProductFormData {
         careInstructions = product.careInstructions
         isNewLaunch = product.isNewLaunch
         isFeatured = product.isFeatured
+        merchandisingPriority = product.resolvedMerchandisingPriority
+        isCategoryPinned = product.resolvedCategoryPinned
+        categorySortPriority = product.resolvedCategorySortPriority
+        homePlacementSlot = product.resolvedHomePlacementSlot ?? 0
+        campaignTagsText = product.resolvedCampaignTags.joined(separator: ", ")
+        hasFeaturedSchedule = product.featuredStartAt != nil || product.featuredEndAt != nil
+        featuredStartAt = product.featuredStartAt ?? Date()
+        featuredEndAt = product.featuredEndAt ?? (Calendar.current.date(byAdding: .day, value: 14, to: Date()) ?? Date())
+        hasNewLaunchSchedule = product.newLaunchStartAt != nil || product.newLaunchEndAt != nil
+        newLaunchStartAt = product.newLaunchStartAt ?? Date()
+        newLaunchEndAt = product.newLaunchEndAt ?? (Calendar.current.date(byAdding: .day, value: 14, to: Date()) ?? Date())
         specificationsText = product.specifications?.map { "\($0.key):\($0.value)" }.joined(separator: ", ") ?? ""
         searchKeywordsText = product.searchKeywords.joined(separator: ", ")
         status = product.effectiveStatus
@@ -259,6 +281,10 @@ struct AdminProductFormData {
             "careInstructions": careInstructions.trimmingCharacters(in: .whitespacesAndNewlines),
             "isNewLaunch": isNewLaunch,
             "isFeatured": isFeatured,
+            "merchandisingPriority": merchandisingPriority,
+            "isCategoryPinned": isCategoryPinned,
+            "categorySortPriority": categorySortPriority,
+            "campaignTags": parseList(campaignTagsText),
             "searchKeywords": parseList(searchKeywordsText),
             "status": normalizedStatus,
             "stockQuantity": max(stockQuantity, 0),
@@ -283,6 +309,28 @@ struct AdminProductFormData {
         let availabilityValue = availabilityMessage.trimmingCharacters(in: .whitespacesAndNewlines)
         if !availabilityValue.isEmpty {
             data["availabilityMessage"] = availabilityValue
+        }
+
+        if homePlacementSlot > 0 {
+            data["homePlacementSlot"] = homePlacementSlot
+        } else {
+            data["homePlacementSlot"] = FieldValue.delete()
+        }
+
+        if hasFeaturedSchedule {
+            data["featuredStartAt"] = featuredStartAt
+            data["featuredEndAt"] = featuredEndAt
+        } else {
+            data["featuredStartAt"] = FieldValue.delete()
+            data["featuredEndAt"] = FieldValue.delete()
+        }
+
+        if hasNewLaunchSchedule {
+            data["newLaunchStartAt"] = newLaunchStartAt
+            data["newLaunchEndAt"] = newLaunchEndAt
+        } else {
+            data["newLaunchStartAt"] = FieldValue.delete()
+            data["newLaunchEndAt"] = FieldValue.delete()
         }
 
         if includeCreatedAt {

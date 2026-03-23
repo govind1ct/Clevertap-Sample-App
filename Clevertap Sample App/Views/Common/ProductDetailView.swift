@@ -77,42 +77,66 @@ private extension ProductDetailView {
         colorScheme == .dark
     }
 
+    var accentStart: Color {
+        Color("CleverTapPrimary")
+    }
+
+    var accentEnd: Color {
+        Color("CleverTapSecondary")
+    }
+
     var cardBackgroundStyle: AnyShapeStyle {
         if isDarkMode {
-            return AnyShapeStyle(Color.white.opacity(0.07))
+            return AnyShapeStyle(Color.white.opacity(0.08))
         }
-        return AnyShapeStyle(Color.white.opacity(0.75))
+        return AnyShapeStyle(Color.white.opacity(0.84))
     }
 
     var cardBorderColor: Color {
-        isDarkMode ? Color.white.opacity(0.14) : Color.white.opacity(0.9)
+        isDarkMode ? Color.white.opacity(0.12) : Color.black.opacity(0.08)
+    }
+
+    var primaryText: Color {
+        isDarkMode ? .white : Color.black.opacity(0.94)
+    }
+
+    var secondaryText: Color {
+        isDarkMode ? Color.white.opacity(0.72) : Color.black.opacity(0.58)
     }
 
     var backgroundLayer: some View {
         LinearGradient(
             colors: isDarkMode
                 ? [
-                    Color(.systemBackground),
-                    Color(red: 0.06, green: 0.08, blue: 0.12),
-                    Color(.systemBackground)
+                    Color(red: 0.07, green: 0.09, blue: 0.13),
+                    Color(red: 0.10, green: 0.12, blue: 0.17),
+                    Color(red: 0.08, green: 0.09, blue: 0.12)
                 ]
                 : [
                     Color(red: 0.97, green: 0.98, blue: 1.0),
-                    Color(red: 0.95, green: 0.97, blue: 0.99),
-                    Color(.systemBackground)
+                    Color(red: 0.94, green: 0.96, blue: 0.99),
+                    Color(red: 0.99, green: 0.98, blue: 0.96)
                 ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
+        .overlay {
+            Rectangle()
+                .fill(isDarkMode ? Color.black.opacity(0.18) : Color.white.opacity(0.12))
+        }
         .overlay(alignment: .topTrailing) {
             Circle()
-                .fill(
-                    Color(red: 0.32, green: 0.56, blue: 0.94)
-                        .opacity(isDarkMode ? 0.22 : 0.16)
-                )
+                .fill(accentStart.opacity(isDarkMode ? 0.24 : 0.18))
+                .frame(width: 240, height: 240)
+                .blur(radius: 34)
+                .offset(x: 90, y: -90)
+        }
+        .overlay(alignment: .topLeading) {
+            Circle()
+                .fill(accentEnd.opacity(isDarkMode ? 0.18 : 0.12))
                 .frame(width: 220, height: 220)
-                .blur(radius: 30)
-                .offset(x: 80, y: -80)
+                .blur(radius: 40)
+                .offset(x: -80, y: -120)
         }
         .ignoresSafeArea()
     }
@@ -144,7 +168,7 @@ private extension ProductDetailView {
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 420)
-                        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                         .tag(index)
                     }
                 }
@@ -152,13 +176,14 @@ private extension ProductDetailView {
             .tabViewStyle(.page(indexDisplayMode: .automatic))
             .frame(height: 420)
             .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
                     .fill(cardBackgroundStyle)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
                     .stroke(cardBorderColor, lineWidth: 1)
             )
+            .shadow(color: Color.black.opacity(isDarkMode ? 0.22 : 0.08), radius: 16, y: 10)
 
             VStack(spacing: 10) {
                 if hasDiscount {
@@ -177,7 +202,7 @@ private extension ProductDetailView {
                 } label: {
                     Image(systemName: isAddedToWishlist ? "heart.fill" : "heart")
                         .font(.headline.weight(.bold))
-                        .foregroundColor(isAddedToWishlist ? .red : .primary)
+                        .foregroundColor(isAddedToWishlist ? .red : primaryText)
                         .frame(width: 40, height: 40)
                         .background(.ultraThinMaterial, in: Circle())
                 }
@@ -191,12 +216,12 @@ private extension ProductDetailView {
             HStack(spacing: 8) {
                 Text(product.category.capitalized)
                     .font(.caption.weight(.semibold))
-                    .foregroundColor(Color(red: 0.10, green: 0.37, blue: 0.86))
+                    .foregroundColor(accentStart)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(Color.blue.opacity(0.12), in: Capsule())
+                    .background(accentStart.opacity(0.12), in: Capsule())
 
-                if product.isFeatured {
+                if product.isFeaturedActive {
                     Text("Featured")
                         .font(.caption.weight(.semibold))
                         .foregroundColor(Color.orange)
@@ -205,7 +230,7 @@ private extension ProductDetailView {
                         .background(Color.orange.opacity(0.14), in: Capsule())
                 }
 
-                if product.isNewLaunch {
+                if product.isNewLaunchActive {
                     Text("New")
                         .font(.caption.weight(.semibold))
                         .foregroundColor(Color.green)
@@ -224,31 +249,44 @@ private extension ProductDetailView {
 
             Text(product.name)
                 .font(.system(size: 32, weight: .bold, design: .rounded))
-                .foregroundColor(.primary)
+                .foregroundColor(primaryText)
 
             if let shortDescription = product.shortDescription, !shortDescription.isEmpty {
                 Text(shortDescription)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(secondaryText)
             }
 
-            HStack(alignment: .bottom, spacing: 8) {
-                Text("₹\(Int(product.price))")
-                    .font(.title.weight(.bold))
-                    .foregroundColor(Color(red: 0.12, green: 0.39, blue: 0.87))
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("₹\(Int(product.price))")
+                        .font(.title.weight(.bold))
+                        .foregroundColor(accentStart)
 
-                if hasDiscount {
-                    Text("₹\(Int(product.originalPrice))")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundColor(.secondary)
-                        .strikethrough()
+                    if hasDiscount {
+                        Text("₹\(Int(product.originalPrice))")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(secondaryText)
+                            .strikethrough()
+                    }
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(product.stockLabel)
+                        .font(.caption.weight(.bold))
+                        .foregroundColor(stockBadgeColor)
+                    Text(product.availabilityMessage?.isEmpty == false ? product.availabilityMessage! : "Ready to ship")
+                        .font(.caption)
+                        .foregroundColor(secondaryText)
                 }
             }
         }
-        .padding(16)
-        .background(cardBackgroundStyle, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(18)
+        .background(cardBackgroundStyle, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .stroke(cardBorderColor, lineWidth: 1)
         )
     }
@@ -281,7 +319,7 @@ private extension ProductDetailView {
                 .foregroundColor(color)
             Text(text)
                 .font(.caption.weight(.semibold))
-                .foregroundColor(.secondary)
+                .foregroundColor(secondaryText)
                 .lineLimit(1)
         }
         .padding(.horizontal, 10)
@@ -295,12 +333,11 @@ private extension ProductDetailView {
 
     var descriptionSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("About this product")
-                .font(.headline)
+            detailSectionHeader("About this piece")
 
             Text(product.description)
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(secondaryText)
                 .lineLimit(showFullDescription ? nil : 4)
 
             Button(showFullDescription ? "Show less" : "Read more") {
@@ -309,7 +346,7 @@ private extension ProductDetailView {
                 }
             }
             .font(.subheadline.weight(.semibold))
-            .foregroundColor(Color(red: 0.12, green: 0.39, blue: 0.87))
+            .foregroundColor(accentStart)
         }
         .padding(16)
         .background(cardBackgroundStyle, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -327,14 +364,13 @@ private extension ProductDetailView {
 
     func chipSection(title: String, items: [String], style: ChipStyle) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.headline)
+            detailSectionHeader(title)
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 8)], spacing: 8) {
                 ForEach(items, id: \.self) { item in
                     Text(item)
                         .font(.caption.weight(.semibold))
-                        .foregroundColor(style == .filled ? .white : .primary)
+                        .foregroundColor(style == .filled ? .white : primaryText)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 8)
                         .frame(maxWidth: .infinity, alignment: .center)
@@ -369,8 +405,7 @@ private extension ProductDetailView {
 
     var specificationsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Specifications")
-                .font(.headline)
+            detailSectionHeader("Specifications")
 
             if let specifications = product.specifications, !specifications.isEmpty {
                 ForEach(specifications.sorted(by: { $0.key < $1.key }), id: \.key) { key, value in
@@ -396,11 +431,11 @@ private extension ProductDetailView {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
                 .font(.subheadline.weight(.semibold))
-                .foregroundColor(.primary)
+                .foregroundColor(primaryText)
             Spacer(minLength: 12)
             Text(value)
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(secondaryText)
                 .multilineTextAlignment(.trailing)
         }
         .padding(.vertical, 5)
@@ -408,15 +443,14 @@ private extension ProductDetailView {
 
     var careSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Care Instructions")
-                .font(.headline)
+            detailSectionHeader("Care Instructions")
 
             Text(product.careInstructions)
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(secondaryText)
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.blue.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(accentStart.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .padding(16)
         .background(cardBackgroundStyle, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -431,10 +465,11 @@ private extension ProductDetailView {
             HStack {
                 Text("Total")
                     .font(.caption.weight(.semibold))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(secondaryText)
                 Spacer()
                 Text("₹\(Int(totalPrice))")
                     .font(.title3.weight(.bold))
+                    .foregroundColor(primaryText)
             }
 
             HStack(spacing: 14) {
@@ -462,7 +497,7 @@ private extension ProductDetailView {
                     .padding(.vertical, 13)
                     .background(
                         LinearGradient(
-                            colors: [Color(red: 0.12, green: 0.39, blue: 0.87), Color(red: 0.31, green: 0.57, blue: 0.95)],
+                            colors: [accentStart, accentEnd],
                             startPoint: .leading,
                             endPoint: .trailing
                         ),
@@ -486,9 +521,9 @@ private extension ProductDetailView {
             } label: {
                 Image(systemName: "minus")
                     .font(.subheadline.weight(.bold))
-                    .foregroundColor(.primary)
+                    .foregroundColor(primaryText)
                     .frame(width: 30, height: 30)
-                    .background(Color.white.opacity(0.85), in: Circle())
+                    .background((isDarkMode ? Color.white.opacity(0.10) : Color.white.opacity(0.90)), in: Circle())
             }
 
             Text("\(selectedQuantity)")
@@ -500,9 +535,9 @@ private extension ProductDetailView {
             } label: {
                 Image(systemName: "plus")
                     .font(.subheadline.weight(.bold))
-                    .foregroundColor(.primary)
+                    .foregroundColor(primaryText)
                     .frame(width: 30, height: 30)
-                    .background(Color.white.opacity(0.85), in: Circle())
+                    .background((isDarkMode ? Color.white.opacity(0.10) : Color.white.opacity(0.90)), in: Circle())
             }
         }
         .padding(.horizontal, 10)
@@ -511,6 +546,12 @@ private extension ProductDetailView {
             isDarkMode ? Color.white.opacity(0.08) : Color.white.opacity(0.7),
             in: RoundedRectangle(cornerRadius: 14, style: .continuous)
         )
+    }
+
+    func detailSectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.headline.weight(.bold))
+            .foregroundColor(primaryText)
     }
 }
 
@@ -533,6 +574,15 @@ private extension ProductDetailView {
                 careInstructions: "Clean with soft cloth and keep away from harsh chemicals.",
                 isNewLaunch: true,
                 isFeatured: true,
+                merchandisingPriority: 10,
+                isCategoryPinned: true,
+                categorySortPriority: 8,
+                homePlacementSlot: 1,
+                campaignTags: ["gifting", "editor-pick"],
+                featuredStartAt: nil,
+                featuredEndAt: nil,
+                newLaunchStartAt: nil,
+                newLaunchEndAt: nil,
                 specifications: ["Material": "Natural Quartz", "Weight": "30g"],
                 searchKeywords: ["rose quartz", "bracelet"],
                 createdAt: Date(),

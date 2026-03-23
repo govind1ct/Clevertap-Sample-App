@@ -44,21 +44,25 @@ struct AdminAuditLogView: View {
         colorScheme == .dark
     }
 
+    private var surfaceFill: Color {
+        isDarkMode ? Color.white.opacity(0.06) : Color.white.opacity(0.84)
+    }
+
+    private var surfaceBorder: Color {
+        isDarkMode ? Color.white.opacity(0.10) : Color.black.opacity(0.08)
+    }
+
+    private var primaryText: Color {
+        isDarkMode ? .white : Color.black.opacity(0.94)
+    }
+
+    private var secondaryText: Color {
+        isDarkMode ? Color.white.opacity(0.70) : Color.black.opacity(0.56)
+    }
+
     var body: some View {
         ZStack {
             backgroundLayer
-
-            Circle()
-                .fill(Color("CleverTapPrimary").opacity(isDarkMode ? 0.20 : 0.12))
-                .frame(width: 260, height: 260)
-                .blur(radius: 36)
-                .offset(x: -140, y: -320)
-
-            Circle()
-                .fill(Color("CleverTapSecondary").opacity(isDarkMode ? 0.18 : 0.10))
-                .frame(width: 300, height: 300)
-                .blur(radius: 48)
-                .offset(x: 160, y: -260)
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 18) {
@@ -98,38 +102,52 @@ private extension AdminAuditLogView {
         LinearGradient(
             colors: isDarkMode
                 ? [
-                    Color(.systemBackground),
+                    Color(red: 0.05, green: 0.06, blue: 0.09),
                     Color(red: 0.08, green: 0.10, blue: 0.14),
-                    Color(.systemGroupedBackground)
+                    Color(red: 0.10, green: 0.10, blue: 0.13)
                 ]
                 : [
-                    Color("CleverTapPrimary").opacity(0.16),
-                    Color("CleverTapSecondary").opacity(0.10),
-                    Color(.systemBackground),
-                    Color(.systemBackground)
+                    Color(red: 0.96, green: 0.97, blue: 0.99),
+                    Color(red: 0.92, green: 0.95, blue: 0.98),
+                    Color(red: 0.98, green: 0.97, blue: 0.95)
                 ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
+        .overlay {
+            Rectangle()
+                .fill(isDarkMode ? Color.black.opacity(0.18) : Color.white.opacity(0.14))
+        }
+        .overlay(alignment: .topLeading) {
+            Circle()
+                .fill(Color("CleverTapPrimary").opacity(isDarkMode ? 0.24 : 0.16))
+                .frame(width: 260, height: 260)
+                .blur(radius: 42)
+                .offset(x: -120, y: -260)
+        }
+        .overlay(alignment: .topTrailing) {
+            Circle()
+                .fill(Color("CleverTapSecondary").opacity(isDarkMode ? 0.18 : 0.10))
+                .frame(width: 280, height: 280)
+                .blur(radius: 50)
+                .offset(x: 130, y: -210)
+        }
         .ignoresSafeArea()
     }
 
     var headerSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("AUDIT")
-                .font(.caption.weight(.semibold))
-                .foregroundColor(Color("CleverTapPrimary"))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Color("CleverTapPrimary").opacity(0.14), in: Capsule())
+            Text("ACTIVITY")
+                .font(.caption2.weight(.bold))
+                .foregroundColor(secondaryText)
 
             Text("Admin Activity Trail")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundColor(.primary)
+                .font(.title2.weight(.bold))
+                .foregroundColor(primaryText)
 
             Text("Review who changed what, when it changed, and which entities were touched.")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+                .font(.footnote)
+                .foregroundColor(secondaryText)
 
             HStack(spacing: 10) {
                 AdminAuditStatBadge(title: "Events", value: "\(auditLogService.logs.count)")
@@ -137,41 +155,49 @@ private extension AdminAuditLogView {
                 AdminAuditStatBadge(title: "Users", value: "\(Set(filteredLogs.map(\.userEmail)).filter { !$0.isEmpty }.count)")
             }
         }
-        .padding(18)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(surfaceFill, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(isDarkMode ? Color.white.opacity(0.16) : Color.white.opacity(0.24), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(surfaceBorder, lineWidth: 1)
         )
+        .shadow(color: Color.black.opacity(isDarkMode ? 0.16 : 0.05), radius: 10, y: 6)
     }
 
     var searchSection: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .foregroundColor(.secondary)
+                .foregroundColor(secondaryText)
             TextField("Search by action, entity, email, or metadata", text: $searchText)
                 .textFieldStyle(.plain)
+                .foregroundColor(primaryText)
             if !searchText.isEmpty {
                 Button {
                     searchText = ""
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(secondaryText)
                 }
             }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(surfaceFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(isDarkMode ? Color.white.opacity(0.16) : Color.white.opacity(0.24), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(surfaceBorder, lineWidth: 1)
         )
     }
 
     var filterSection: some View {
-        VStack(spacing: 12) {
+        LazyVGrid(
+            columns: [
+                GridItem(.flexible(), spacing: 10),
+                GridItem(.flexible(), spacing: 10)
+            ],
+            spacing: 10
+        ) {
             filterMenu(title: "Action", value: normalizedFilterValue(selectedAction), options: availableActions) { option in
                 selectedAction = option
             }
@@ -198,22 +224,22 @@ private extension AdminAuditLogView {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(secondaryText)
                     Text(value)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.primary)
+                        .foregroundColor(primaryText)
                         .lineLimit(1)
                 }
                 Spacer()
                 Image(systemName: "chevron.down")
                     .font(.caption.weight(.semibold))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(secondaryText)
             }
             .padding(14)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(surfaceFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(isDarkMode ? Color.white.opacity(0.16) : Color.white.opacity(0.24), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(surfaceBorder, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -301,13 +327,25 @@ private struct AdminAuditLogCard: View {
         colorScheme == .dark
     }
 
+    private var surfaceBorder: Color {
+        isDarkMode ? Color.white.opacity(0.10) : Color.black.opacity(0.08)
+    }
+
+    private var primaryText: Color {
+        isDarkMode ? .white : Color.black.opacity(0.94)
+    }
+
+    private var secondaryText: Color {
+        isDarkMode ? Color.white.opacity(0.70) : Color.black.opacity(0.56)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(log.normalizedAction)
                         .font(.headline)
-                        .foregroundColor(.primary)
+                        .foregroundColor(primaryText)
 
                     Text(log.normalizedEntityType)
                         .font(.caption.weight(.semibold))
@@ -321,7 +359,7 @@ private struct AdminAuditLogCard: View {
 
                 Text(log.timestamp.formatted(date: .abbreviated, time: .shortened))
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(secondaryText)
                     .multilineTextAlignment(.trailing)
             }
 
@@ -352,23 +390,24 @@ private struct AdminAuditLogCard: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            isDarkMode ? Color.white.opacity(0.08) : Color.white.opacity(0.76),
-            in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+            isDarkMode ? Color.white.opacity(0.08) : Color.white.opacity(0.82),
+            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(isDarkMode ? Color.white.opacity(0.16) : Color.white.opacity(0.24), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(surfaceBorder, lineWidth: 1)
         )
+        .shadow(color: Color.black.opacity(isDarkMode ? 0.14 : 0.04), radius: 8, y: 4)
     }
 
     func auditDetailRow(title: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(secondaryText)
             Text(value)
                 .font(.subheadline)
-                .foregroundColor(.primary)
+                .foregroundColor(primaryText)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -377,19 +416,23 @@ private struct AdminAuditLogCard: View {
 private struct AdminAuditStatBadge: View {
     let title: String
     let value: String
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.66) : Color.black.opacity(0.54))
             Text(value)
                 .font(.headline.weight(.semibold))
-                .foregroundColor(.primary)
+                .foregroundColor(colorScheme == .dark ? .white : Color.black.opacity(0.92))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(
+            colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.035),
+            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+        )
     }
 }
 

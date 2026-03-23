@@ -17,20 +17,40 @@ struct SettingsView: View {
         colorScheme == .dark
     }
 
+    private var surfaceFill: Color {
+        isDarkMode ? Color.white.opacity(0.08) : Color.white.opacity(0.82)
+    }
+
+    private var secondarySurfaceFill: Color {
+        isDarkMode ? Color.white.opacity(0.06) : Color.black.opacity(0.035)
+    }
+
+    private var surfaceBorder: Color {
+        isDarkMode ? Color.white.opacity(0.12) : Color.black.opacity(0.07)
+    }
+
+    private var primaryText: Color {
+        isDarkMode ? .white : Color.black.opacity(0.88)
+    }
+
+    private var secondaryText: Color {
+        isDarkMode ? Color.white.opacity(0.72) : Color.black.opacity(0.6)
+    }
+
     private var backgroundGradientColors: [Color] {
         if isDarkMode {
             return [
-                Color(red: 0.10, green: 0.12, blue: 0.16),
-                Color("CleverTapPrimary").opacity(0.22),
-                Color(.systemBackground),
-                Color(.systemBackground)
+                Color(red: 0.08, green: 0.09, blue: 0.14),
+                Color("CleverTapPrimary").opacity(0.20),
+                Color(red: 0.05, green: 0.06, blue: 0.10),
+                Color.black
             ]
         }
         return [
-            Color("CleverTapPrimary").opacity(0.18),
-            Color("CleverTapSecondary").opacity(0.10),
-            Color(.systemBackground),
-            Color(.systemBackground)
+            Color("CleverTapPrimary").opacity(0.12),
+            Color("CleverTapSecondary").opacity(0.08),
+            Color.white,
+            Color(.systemGroupedBackground)
         ]
     }
 
@@ -79,28 +99,27 @@ struct SettingsView: View {
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("SETTINGS")
-                .font(.caption.weight(.semibold))
+                .font(.caption.weight(.bold))
                 .foregroundColor(Color("CleverTapPrimary"))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Color("CleverTapPrimary").opacity(isDarkMode ? 0.20 : 0.14), in: Capsule())
+                .tracking(1.2)
 
-            Text("Preferences")
-                .font(.system(size: 32, weight: .heavy, design: .rounded))
-                .foregroundColor(.primary)
+            Text("App Settings")
+                .font(.system(size: 30, weight: .bold))
+                .foregroundColor(primaryText)
 
             Text("Manage demo behavior, walkthrough controls, and release information in one place.")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(surfaceFill, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(isDarkMode ? Color.white.opacity(0.16) : Color.white.opacity(0.24), lineWidth: 1)
+                .stroke(surfaceBorder, lineWidth: 1)
         )
+        .shadow(color: Color.black.opacity(isDarkMode ? 0.22 : 0.08), radius: 18, y: 8)
     }
 
     private var generalSection: some View {
@@ -111,8 +130,9 @@ struct SettingsView: View {
                 get: { productExperiencesService.isFeatureEnabled },
                 set: { productExperiencesService.setFeatureEnabled($0) }
             ))
+            .foregroundColor(primaryText)
             .padding(14)
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(secondarySurfaceFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             HStack(spacing: 10) {
                 Image(systemName: productExperiencesService.isFeatureEnabled ? "checkmark.seal.fill" : "pause.circle.fill")
@@ -121,10 +141,11 @@ struct SettingsView: View {
                      ? "Remote variables can be fetched and applied."
                      : "Product Experiences are disabled and app defaults are used.")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+
         }
         .settingsCardStyle(isDarkMode: isDarkMode)
     }
@@ -164,7 +185,7 @@ struct SettingsView: View {
 
             Text("Shows first-time tab nudges again for Home, Experiences, Cart, and Profile.")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .settingsCardStyle(isDarkMode: isDarkMode)
@@ -177,23 +198,26 @@ struct SettingsView: View {
             HStack {
                 Text("App Version")
                     .font(.subheadline.weight(.semibold))
+                    .foregroundColor(primaryText)
                 Spacer()
                 Text(appVersionDisplay)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundColor(secondaryText)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(secondarySurfaceFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             Text("What's New in 3.0")
                 .font(.headline)
+                .foregroundColor(primaryText)
 
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(releaseHighlights, id: \.self) { highlight in
                     Label {
                         Text(highlight)
                             .font(.subheadline)
+                            .foregroundColor(primaryText)
                             .fixedSize(horizontal: false, vertical: true)
                     } icon: {
                         Image(systemName: "checkmark.circle.fill")
@@ -209,9 +233,10 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.headline)
+                .foregroundColor(primaryText)
             Text(subtitle)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -228,11 +253,15 @@ private extension View {
         self
             .padding(18)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(
+                isDarkMode ? Color.white.opacity(0.08) : Color.white.opacity(0.82),
+                in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+            )
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(isDarkMode ? Color.white.opacity(0.16) : Color.white.opacity(0.24), lineWidth: 1)
+                    .stroke(isDarkMode ? Color.white.opacity(0.12) : Color.black.opacity(0.07), lineWidth: 1)
             )
+            .shadow(color: Color.black.opacity(isDarkMode ? 0.18 : 0.06), radius: 14, y: 6)
     }
 }
 

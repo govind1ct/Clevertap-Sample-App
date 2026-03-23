@@ -28,7 +28,7 @@ struct Clevertap_Sample_AppApp: App {
                     .transition(.opacity)
                 } else {
                     if !hasSeenOnboarding {
-                        OnboardingView {
+                        OnboardingView(markAsSeenOnCompletion: true) {
                             withAnimation(.spring(response: 0.50, dampingFraction: 0.88)) {
                                 hasSeenOnboarding = true
                             }
