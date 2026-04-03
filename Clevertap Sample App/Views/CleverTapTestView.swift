@@ -25,18 +25,34 @@ struct CleverTapTestView: View {
         isDarkMode ? Color.white.opacity(0.74) : Color.black.opacity(0.62)
     }
 
+    private var studioAccent: Color {
+        isDarkMode ? Color(red: 0.90, green: 0.66, blue: 0.28) : Color(red: 0.73, green: 0.42, blue: 0.12)
+    }
+
+    private var studioAccentSecondary: Color {
+        isDarkMode ? Color(red: 0.76, green: 0.47, blue: 0.20) : Color(red: 0.51, green: 0.29, blue: 0.10)
+    }
+
+    private var sectionSurface: Color {
+        isDarkMode ? Color.white.opacity(0.06) : Color.white.opacity(0.82)
+    }
+
+    private var sectionStroke: Color {
+        isDarkMode ? Color.white.opacity(0.10) : Color.black.opacity(0.07)
+    }
+
     private var backgroundGradientColors: [Color] {
         if isDarkMode {
             return [
-                Color(red: 0.10, green: 0.12, blue: 0.16),
-                Color("CleverTapPrimary").opacity(0.22),
+                Color(red: 0.08, green: 0.07, blue: 0.06),
+                Color(red: 0.11, green: 0.10, blue: 0.09),
                 Color(.systemBackground),
                 Color(.systemBackground)
             ]
         }
         return [
-            Color("CleverTapPrimary").opacity(0.20),
-            Color("CleverTapSecondary").opacity(0.10),
+            Color(red: 0.98, green: 0.96, blue: 0.92),
+            Color(red: 0.95, green: 0.93, blue: 0.88),
             Color(.systemBackground),
             Color(.systemBackground)
         ]
@@ -219,7 +235,7 @@ struct CleverTapTestView: View {
             .ignoresSafeArea()
 
             Circle()
-                .fill(Color("CleverTapPrimary").opacity(isDarkMode ? 0.20 : 0.14))
+                .fill(studioAccent.opacity(isDarkMode ? 0.16 : 0.10))
                 .frame(width: 280, height: 280)
                 .blur(radius: 36)
                 .offset(
@@ -228,7 +244,7 @@ struct CleverTapTestView: View {
                 )
 
             Circle()
-                .fill(Color("CleverTapSecondary").opacity(isDarkMode ? 0.18 : 0.12))
+                .fill(studioAccentSecondary.opacity(isDarkMode ? 0.14 : 0.08))
                 .frame(width: 320, height: 320)
                 .blur(radius: 44)
                 .offset(
@@ -300,86 +316,113 @@ struct CleverTapTestView: View {
     
     // MARK: - Header Section
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top) {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 14) {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [studioAccent.opacity(0.20), studioAccentSecondary.opacity(0.12)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 72, height: 84)
+                    .overlay {
+                        Image(systemName: "brain.head.profile")
+                            .font(.system(size: 30, weight: .semibold))
+                            .foregroundStyle(studioAccent)
+                    }
+
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("CLEVERTAP TEST STUDIO")
+                    Text("DEMO WORKSPACE")
                         .font(.caption.weight(.semibold))
-                        .foregroundColor(Color("CleverTapPrimary"))
+                        .foregroundColor(studioAccent)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
-                        .background(Color("CleverTapPrimary").opacity(isDarkMode ? 0.20 : 0.14), in: Capsule())
+                        .background(studioAccent.opacity(isDarkMode ? 0.20 : 0.10), in: Capsule())
 
                     Text("CleverTap Test Lab")
                         .font(.system(size: 32, weight: .heavy, design: .rounded))
                         .foregroundColor(stablePrimaryText)
 
-                    Text("Validate push, in-app, inbox, profile and native display journeys from one premium console.")
+                    Text("Trigger showcase campaigns, inspect delivery state, and validate demo journeys from one console.")
                         .font(.subheadline)
                         .foregroundColor(stableSecondaryText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-
-                Spacer(minLength: 12)
-
-                ZStack {
-                    Circle()
-                        .fill(Color("CleverTapPrimary").opacity(isDarkMode ? 0.28 : 0.18))
-                        .frame(width: 64, height: 64)
-
-                    Image(systemName: "brain.head.profile")
-                        .font(.system(size: 30, weight: .semibold))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                }
             }
 
-            HStack(spacing: 8) {
-                StudioPill(title: "In-App", value: "\(inAppService.inAppNotificationCount)", icon: "bell.badge")
-                StudioPill(title: "Push", value: "\(inAppService.pushNotificationCount)", icon: "paperplane.fill")
-                StudioPill(title: "Inbox", value: "\(inAppService.appInboxCount)", icon: "tray.fill")
+            HStack(spacing: 10) {
+                studioInfoStrip(title: "Connection", value: inAppService.connectionStatus, icon: "dot.radiowaves.left.and.right")
+                studioInfoStrip(title: "Last Refresh", value: lastDiagnosticsRefreshText, icon: "clock")
             }
         }
         .padding(20)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(sectionSurface, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(isDarkMode ? Color.white.opacity(0.16) : Color.white.opacity(0.24), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(sectionStroke, lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(isDarkMode ? 0.22 : 0.08), radius: 14, x: 0, y: 10)
+        .shadow(color: Color.black.opacity(isDarkMode ? 0.18 : 0.06), radius: 14, x: 0, y: 10)
     }
 
     // MARK: - Behavior Guide
     private var testingModelSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("How Test Lab Works")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Operator Notes")
+                .font(.headline.weight(.semibold))
+                .foregroundColor(stablePrimaryText)
 
-            Text("Most buttons emit CleverTap trigger events. They do not directly render push or in-app by themselves.")
-                .font(.subheadline)
-                .foregroundColor(stableSecondaryText)
-                .fixedSize(horizontal: false, vertical: true)
+            operatorNoteRow(icon: "paperplane.fill", text: "Buttons trigger CleverTap events. They do not force campaign UI to render on their own.")
+            operatorNoteRow(icon: "person.crop.circle.badge.checkmark", text: "Campaign UI appears only when targeting and dashboard conditions are satisfied.")
+            operatorNoteRow(icon: "gearshape.2.fill", text: "Permission prompts, inbox refresh, and diagnostics refresh are local app actions.")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .testLabSectionCard(cornerRadius: 20)
+    }
+    
+    private func operatorNoteRow(icon: String, text: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: icon)
+                .font(.caption.weight(.bold))
+                .foregroundColor(studioAccent)
+                .frame(width: 22, height: 22)
+                .background(studioAccent.opacity(isDarkMode ? 0.18 : 0.10), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
 
-            Text("Campaign UI appears only when dashboard campaign conditions and user targeting are satisfied.")
-                .font(.subheadline)
-                .foregroundColor(stableSecondaryText)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text("Local-only actions: Push permission, Inbox refresh, diagnostics refresh.")
+            Text(text)
                 .font(.subheadline)
                 .foregroundColor(stableSecondaryText)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .testLabSectionCard(cornerRadius: 18)
     }
-    
+
+    private func studioInfoStrip(title: String, value: String, icon: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.caption.weight(.bold))
+                .foregroundColor(studioAccent)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(stableSecondaryText)
+                Text(value)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(stablePrimaryText)
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color.primary.opacity(isDarkMode ? 0.06 : 0.04), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.primary.opacity(isDarkMode ? 0.08 : 0.05), lineWidth: 1)
+        )
+    }
+
     // MARK: - Stats Section
     private var statsSection: some View {
         HStack(spacing: 12) {
@@ -387,27 +430,27 @@ struct CleverTapTestView: View {
                 title: "In-App",
                 value: "\(inAppService.inAppNotificationCount)",
                 icon: "bell.badge",
-                color: .blue
+                color: studioAccent
             )
-            
+
             StatCard(
                 title: "Push",
                 value: "\(inAppService.pushNotificationCount)",
                 icon: "paperplane.fill",
-                color: .green
+                color: studioAccentSecondary
             )
-            
+
             StatCard(
                 title: "Inbox",
                 value: "\(inAppService.appInboxCount)",
                 icon: "tray.fill",
                 color: .orange
             )
-            
+
             StatCard(
-                title: "Status",
-                value: inAppService.isSDKInitialized ? "✓" : "✗",
-                icon: "wifi",
+                title: "SDK",
+                value: inAppService.isSDKInitialized ? "Ready" : "Off",
+                icon: "dot.radiowaves.left.and.right",
                 color: inAppService.isSDKInitialized ? .green : .red
             )
         }
@@ -800,8 +843,12 @@ struct CleverTapTestView: View {
                 .foregroundColor(stableSecondaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 12))
+        .padding(14)
+        .background(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.04), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.primary.opacity(colorScheme == .dark ? 0.08 : 0.05), lineWidth: 1)
+        )
     }
     
     // MARK: - Debug Section
@@ -1196,8 +1243,12 @@ struct CleverTapTestView: View {
 
             content()
         }
-        .padding(12)
-        .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 12))
+        .padding(14)
+        .background(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.04), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.primary.opacity(colorScheme == .dark ? 0.08 : 0.05), lineWidth: 1)
+        )
     }
 }
 
@@ -1216,15 +1267,23 @@ struct SectionHeader: View {
         colorScheme == .dark ? Color.white.opacity(0.74) : Color.black.opacity(0.62)
     }
 
+    private var accent: Color {
+        colorScheme == .dark ? Color(red: 0.90, green: 0.66, blue: 0.28) : Color(red: 0.73, green: 0.42, blue: 0.12)
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(.headline.weight(.semibold))
+                .font(.title3.weight(.bold))
                 .foregroundColor(primaryText)
 
             Text(subtitle)
-                .font(.caption)
+                .font(.footnote)
                 .foregroundColor(secondaryText)
+
+            Rectangle()
+                .fill(accent.opacity(0.18))
+                .frame(height: 1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -1251,7 +1310,7 @@ struct StudioPill: View {
         .foregroundColor(secondaryText)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(.regularMaterial, in: Capsule())
+        .background(Color.primary.opacity(colorScheme == .dark ? 0.08 : 0.05), in: Capsule())
     }
 }
 
@@ -1271,29 +1330,30 @@ struct StatCard: View {
     }
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             Image(systemName: icon)
-                .font(.title3.weight(.semibold))
+                .font(.subheadline.weight(.semibold))
                 .foregroundColor(color)
-                .frame(width: 38, height: 38)
-                .background(color.opacity(0.16), in: RoundedRectangle(cornerRadius: 11))
+                .frame(width: 34, height: 34)
+                .background(color.opacity(0.14), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
 
             Text(value)
                 .font(.headline.weight(.bold))
                 .foregroundColor(primaryText)
+                .lineLimit(1)
 
             Text(title)
-                .font(.caption2)
+                .font(.caption2.weight(.semibold))
                 .foregroundColor(secondaryText)
                 .lineLimit(1)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
-        .padding(.horizontal, 8)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 12)
+        .background(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.04), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.primary.opacity(colorScheme == .dark ? 0.08 : 0.05), lineWidth: 1)
         )
     }
 }
@@ -1317,7 +1377,7 @@ struct TestActionCard: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(
@@ -1327,33 +1387,33 @@ struct TestActionCard: View {
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 54, height: 54)
+                        .frame(width: 48, height: 48)
 
                     Image(systemName: icon)
-                        .font(.title3.weight(.semibold))
+                        .font(.subheadline.weight(.semibold))
                         .foregroundColor(.white)
                 }
 
-                VStack(spacing: 4) {
+                VStack(alignment: .leading, spacing: 5) {
                     Text(title)
                         .font(.subheadline.weight(.semibold))
                         .foregroundColor(primaryText)
-                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                     Text(subtitle)
                         .font(.caption)
                         .foregroundColor(secondaryText)
-                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .lineLimit(2)
                 }
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 18)
-            .padding(.horizontal, 10)
-            .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 16)
+            .padding(.horizontal, 14)
+            .background(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.04), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.primary.opacity(colorScheme == .dark ? 0.08 : 0.05), lineWidth: 1)
             )
         }
         .buttonStyle(ScalePressButtonStyle())
@@ -1427,9 +1487,13 @@ struct DebugInfoRow: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 10))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .background(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.04), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.primary.opacity(colorScheme == .dark ? 0.08 : 0.05), lineWidth: 1)
+        )
     }
 }
 

@@ -6,30 +6,23 @@ struct AppInboxView: View {
     @State private var selectedMessage: SelectedInboxMessage?
     @State private var selectedFilter: InboxFilter = .all
     @State private var isPerformingBulkAction = false
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    Color("CleverTapPrimary").opacity(0.12),
-                    Color("CleverTapSecondary").opacity(0.06),
-                    Color(.systemBackground)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            backgroundLayer
+                .ignoresSafeArea()
 
-            ScrollView {
-                VStack(spacing: 16) {
-                    heroCard
-                    filterBar
-                    actionBar
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 20) {
+                    mastheadSection
+                    summaryRail
+                    commandDeck
 
                     if filteredMessages.isEmpty {
-                        emptyStateCard
+                        emptyCanvas
                     } else {
-                        messageList
+                        inboxFeed
                     }
                 }
                 .padding(.horizontal, 16)
@@ -65,181 +58,272 @@ struct AppInboxView: View {
         inAppService.appInboxMessages.filter { !$0.isRead }.count
     }
 
-    private var heroCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("CleverTap Inbox Center")
-                        .font(.headline)
-                        .foregroundStyle(.secondary)
+    private var readCount: Int {
+        inAppService.appInboxMessages.count - unreadCount
+    }
 
-                    Text("Manage Campaign Messages")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.primary)
+    private var isDarkMode: Bool {
+        colorScheme == .dark
+    }
+
+    private var backgroundLayer: some View {
+        ZStack {
+            LinearGradient(
+                colors: isDarkMode
+                    ? [
+                        Color(red: 0.06, green: 0.07, blue: 0.08),
+                        Color(red: 0.09, green: 0.10, blue: 0.12),
+                        Color(red: 0.12, green: 0.11, blue: 0.10)
+                    ]
+                    : [
+                        Color(red: 0.95, green: 0.94, blue: 0.91),
+                        Color(red: 0.98, green: 0.97, blue: 0.95),
+                        Color(red: 0.92, green: 0.93, blue: 0.95)
+                    ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            Circle()
+                .fill(Color(red: 0.74, green: 0.46, blue: 0.21).opacity(isDarkMode ? 0.18 : 0.10))
+                .frame(width: 300, height: 300)
+                .blur(radius: 90)
+                .offset(x: -140, y: -280)
+
+            Circle()
+                .fill(Color(red: 0.28, green: 0.48, blue: 0.44).opacity(isDarkMode ? 0.18 : 0.08))
+                .frame(width: 320, height: 320)
+                .blur(radius: 100)
+                .offset(x: 150, y: -180)
+        }
+    }
+
+    private var mastheadSection: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 14) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("APP INBOX")
+                        .font(.caption2.weight(.bold))
+                        .tracking(1.3)
+                        .foregroundStyle(secondaryText)
+
+                    Text("Campaign Dispatch")
+                        .font(.system(size: 30, weight: .black, design: .rounded))
+                        .foregroundStyle(primaryText)
+
+                    Text("Inspect message inventory, trigger inbox samples, and manage read state from one dispatch surface.")
+                        .font(.subheadline)
+                        .foregroundStyle(secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
-                Spacer()
+                Spacer(minLength: 0)
 
                 Button {
                     Task {
                         await refreshInbox()
                     }
                 } label: {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.headline)
-                        .foregroundStyle(Color("CleverTapPrimary"))
-                        .rotationEffect(.degrees(inAppService.isRefreshingInbox ? 360 : 0))
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(accentSoft)
+                            .frame(width: 62, height: 62)
+
+                        Image(systemName: "paperplane.fill")
+                            .font(.title3.weight(.bold))
+                            .foregroundStyle(accent)
+                    }
                 }
-                .disabled(inAppService.isRefreshingInbox)
+                .buttonStyle(.plain)
+                .rotationEffect(.degrees(inAppService.isRefreshingInbox ? 360 : 0))
                 .animation(.linear(duration: 0.9), value: inAppService.isRefreshingInbox)
+                .disabled(inAppService.isRefreshingInbox)
             }
 
             HStack(spacing: 10) {
-                InboxStatPill(title: "Total", value: inAppService.appInboxMessages.count, tint: Color("CleverTapPrimary"))
-                InboxStatPill(title: "Unread", value: unreadCount, tint: .orange)
-                InboxStatPill(title: "Read", value: inAppService.appInboxMessages.count - unreadCount, tint: .green)
+                statusLozenge(title: selectedFilter.title.uppercased())
+                statusLozenge(title: unreadCount > 0 ? "UNREAD LIVE" : "ALL CLEAR")
+                statusLozenge(title: inAppService.isRefreshingInbox ? "SYNCING" : "READY")
             }
         }
         .padding(18)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(shellFill, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(shellBorder, lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(isDarkMode ? 0.18 : 0.06), radius: 14, y: 10)
+    }
+
+    private var summaryRail: some View {
+        HStack(spacing: 10) {
+            InboxSummaryCard(title: "Inventory", value: "\(inAppService.appInboxMessages.count)", caption: "messages", tint: accent, isDarkMode: isDarkMode)
+            InboxSummaryCard(title: "Unread", value: "\(unreadCount)", caption: "pending", tint: .orange, isDarkMode: isDarkMode)
+            InboxSummaryCard(title: "Read", value: "\(readCount)", caption: "reviewed", tint: .green, isDarkMode: isDarkMode)
+        }
+    }
+
+    private var commandDeck: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Command Deck")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(primaryText)
+
+                    Text("Switch views and fire sample campaigns.")
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            filterSelector
+            actionMatrix
+        }
+        .padding(16)
+        .background(shellFill, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(shellBorder, lineWidth: 1)
         )
     }
 
-    private var filterBar: some View {
+    private var filterSelector: some View {
         HStack(spacing: 10) {
             ForEach(InboxFilter.allCases, id: \.self) { filter in
                 Button {
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+                    withAnimation(.spring(response: 0.30, dampingFraction: 0.85)) {
                         selectedFilter = filter
                     }
                 } label: {
-                    Text(filter.title)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(
-                            selectedFilter == filter
-                                ? AnyShapeStyle(
-                                    LinearGradient(
-                                        colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                : AnyShapeStyle(Color(.secondarySystemBackground)),
-                            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        )
-                        .foregroundStyle(selectedFilter == filter ? .white : .primary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(filter.title)
+                            .font(.subheadline.weight(.bold))
+                        Text(filterSubtitle(for: filter))
+                            .font(.caption2)
+                            .opacity(0.72)
+                    }
+                    .foregroundStyle(selectedFilter == filter ? selectedText : primaryText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(filterBackground(for: filter), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(selectedFilter == filter ? Color.clear : shellBorder, lineWidth: 1)
+                    )
                 }
                 .buttonStyle(.plain)
             }
         }
     }
 
-    private var actionBar: some View {
+    private var actionMatrix: some View {
         VStack(spacing: 10) {
             HStack(spacing: 10) {
-                Button {
+                commandButton(title: "Trigger", subtitle: "single", icon: "plus.bubble.fill", tint: accent) {
                     inAppService.triggerAppInboxMessage()
-                } label: {
-                    actionLabel(title: "Trigger", icon: "plus.message.fill", tint: Color("CleverTapPrimary"))
                 }
 
-                Button {
-                    markAllAsRead()
-                } label: {
-                    actionLabel(title: "Mark Read", icon: "checkmark.circle.fill", tint: .green)
+                commandButton(title: "Carousel", subtitle: "multi-card", icon: "square.stack.3d.forward.dottedline", tint: .orange) {
+                    inAppService.triggerCarouselAppInboxMessage()
                 }
-                .disabled(isPerformingBulkAction || inAppService.appInboxMessages.isEmpty)
-
-                Button(role: .destructive) {
-                    clearAllMessages()
-                } label: {
-                    actionLabel(title: "Clear", icon: "trash.fill", tint: .red)
-                }
-                .disabled(isPerformingBulkAction || inAppService.appInboxMessages.isEmpty)
             }
-
-            Button {
-                inAppService.triggerCarouselAppInboxMessage()
-            } label: {
-                actionLabel(title: "Trigger Carousel", icon: "square.stack.3d.forward.dottedline", tint: .orange)
-            }
-        }
-    }
-
-    private var emptyStateCard: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "tray")
-                .font(.system(size: 40, weight: .light))
-                .foregroundStyle(.secondary)
-
-            Text("No messages in this view")
-                .font(.headline)
-
-            Text("Trigger a campaign message or switch the filter to view existing inbox content.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
 
             HStack(spacing: 10) {
-                Button {
-                    inAppService.triggerAppInboxMessage()
-                } label: {
-                    Text("Send Test Message")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .background(Color("CleverTapPrimary"), in: Capsule())
-                        .foregroundStyle(.white)
+                commandButton(title: "Mark Read", subtitle: "all items", icon: "checkmark.circle.fill", tint: .green, isDisabled: isPerformingBulkAction || inAppService.appInboxMessages.isEmpty) {
+                    markAllAsRead()
                 }
 
-                Button {
-                    inAppService.triggerCarouselAppInboxMessage()
-                } label: {
-                    Text("Send Carousel")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .background(Color.orange, in: Capsule())
-                        .foregroundStyle(.white)
+                commandButton(title: "Clear", subtitle: "delete all", icon: "trash.fill", tint: .red, isDisabled: isPerformingBulkAction || inAppService.appInboxMessages.isEmpty) {
+                    clearAllMessages()
                 }
             }
-            .padding(.top, 4)
         }
-        .padding(22)
-        .frame(maxWidth: .infinity)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
-    private var messageList: some View {
-        LazyVStack(spacing: 10) {
-            ForEach(messageItems) { item in
-                MessageRow(
-                    message: item.message,
-                    onTap: {
-                        selectedMessage = SelectedInboxMessage(message: item.message)
-                    },
-                    onMarkAsRead: {
-                        if let messageId = item.message.messageId {
-                            inAppService.markInboxMessageAsRead(messageId: messageId)
+    private var inboxFeed: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Message Ledger")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(primaryText)
+
+                    Text("\(filteredMessages.count) entries in the current view")
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                }
+
+                Spacer()
+            }
+
+            LazyVStack(spacing: 12) {
+                ForEach(messageItems) { item in
+                    MessageRow(
+                        message: item.message,
+                        isDarkMode: isDarkMode,
+                        accent: accent,
+                        onTap: {
+                            selectedMessage = SelectedInboxMessage(message: item.message)
+                        },
+                        onMarkAsRead: {
+                            if let messageId = item.message.messageId {
+                                inAppService.markInboxMessageAsRead(messageId: messageId)
+                            }
+                        },
+                        onDelete: {
+                            if let messageId = item.message.messageId {
+                                inAppService.deleteInboxMessage(messageId: messageId)
+                            }
                         }
-                    },
-                    onDelete: {
-                        if let messageId = item.message.messageId {
-                            inAppService.deleteInboxMessage(messageId: messageId)
-                        }
-                    }
-                )
+                    )
+                }
             }
         }
+    }
+
+    private var emptyCanvas: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(accentSoft)
+                .frame(width: 64, height: 64)
+                .overlay {
+                    Image(systemName: "tray.full.fill")
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(accent)
+                }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("No campaigns in this lane")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(primaryText)
+
+                Text("Trigger a sample inbox message, or change the filter to inspect another delivery state.")
+                    .font(.subheadline)
+                    .foregroundStyle(secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            HStack(spacing: 10) {
+                commandButton(title: "Trigger", subtitle: "single", icon: "plus.bubble.fill", tint: accent) {
+                    inAppService.triggerAppInboxMessage()
+                }
+
+                commandButton(title: "Carousel", subtitle: "multi-card", icon: "square.stack.3d.forward.dottedline", tint: .orange) {
+                    inAppService.triggerCarouselAppInboxMessage()
+                }
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(shellFill, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(shellBorder, lineWidth: 1)
+        )
     }
 
     private var messageItems: [InboxMessageListItem] {
@@ -250,18 +334,105 @@ struct AppInboxView: View {
         }
     }
 
-    private func actionLabel(title: String, icon: String, tint: Color) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.caption)
-            Text(title)
-                .font(.caption)
-                .fontWeight(.semibold)
+    private var shellFill: Color {
+        isDarkMode ? Color(red: 0.12, green: 0.13, blue: 0.15) : Color.white.opacity(0.93)
+    }
+
+    private var shellBorder: Color {
+        isDarkMode ? Color.white.opacity(0.08) : Color.black.opacity(0.07)
+    }
+
+    private var primaryText: Color {
+        isDarkMode ? Color.white.opacity(0.96) : Color.black.opacity(0.90)
+    }
+
+    private var secondaryText: Color {
+        isDarkMode ? Color.white.opacity(0.62) : Color.black.opacity(0.56)
+    }
+
+    private var accent: Color {
+        isDarkMode ? Color(red: 0.92, green: 0.70, blue: 0.36) : Color(red: 0.66, green: 0.43, blue: 0.14)
+    }
+
+    private var accentSoft: Color {
+        accent.opacity(isDarkMode ? 0.18 : 0.10)
+    }
+
+    private var selectedText: Color {
+        isDarkMode ? Color.black.opacity(0.88) : .white
+    }
+
+    private func filterBackground(for filter: InboxFilter) -> Color {
+        selectedFilter == filter ? accent : (isDarkMode ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
+    }
+
+    private func filterSubtitle(for filter: InboxFilter) -> String {
+        switch filter {
+        case .all:
+            return "full inbox"
+        case .unread:
+            return "needs review"
+        case .read:
+            return "completed"
         }
-        .foregroundStyle(tint)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 9)
-        .background(tint.opacity(0.13), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private func statusLozenge(title: String) -> some View {
+        Text(title)
+            .font(.caption2.weight(.bold))
+            .foregroundStyle(primaryText)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(isDarkMode ? Color.white.opacity(0.05) : Color.black.opacity(0.03), in: Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(shellBorder, lineWidth: 1)
+            )
+    }
+
+    private func commandButton(
+        title: String,
+        subtitle: String,
+        icon: String,
+        tint: Color,
+        isDisabled: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(tint.opacity(0.16))
+                        .frame(width: 34, height: 34)
+
+                    Image(systemName: icon)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(tint)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline.weight(.bold))
+                    Text(subtitle)
+                        .font(.caption2)
+                        .opacity(0.72)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(primaryText)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(isDarkMode ? Color.white.opacity(0.05) : Color.black.opacity(0.03), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(shellBorder, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .opacity(isDisabled ? 0.45 : 1)
     }
 
     private func refreshInbox() async {
@@ -272,9 +443,7 @@ struct AppInboxView: View {
     private func markAllAsRead() {
         guard !isPerformingBulkAction else { return }
         isPerformingBulkAction = true
-
         inAppService.markAllInboxMessagesAsRead()
-
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
             isPerformingBulkAction = false
         }
@@ -283,9 +452,7 @@ struct AppInboxView: View {
     private func clearAllMessages() {
         guard !isPerformingBulkAction else { return }
         isPerformingBulkAction = true
-
         inAppService.deleteAllInboxMessages()
-
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
             isPerformingBulkAction = false
         }
@@ -319,30 +486,41 @@ private enum InboxFilter: CaseIterable {
     }
 }
 
-private struct InboxStatPill: View {
+private struct InboxSummaryCard: View {
     let title: String
-    let value: Int
+    let value: String
+    let caption: String
     let tint: Color
+    let isDarkMode: Bool
 
     var body: some View {
-        VStack(spacing: 4) {
-            Text("\(value)")
-                .font(.headline)
-                .fontWeight(.bold)
-                .foregroundStyle(.primary)
+        VStack(alignment: .leading, spacing: 6) {
             Text(title)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(isDarkMode ? Color.white.opacity(0.62) : Color.black.opacity(0.56))
+
+            Text(value)
+                .font(.system(size: 24, weight: .black, design: .rounded))
+                .foregroundStyle(isDarkMode ? Color.white.opacity(0.96) : Color.black.opacity(0.90))
+
+            Text(caption)
                 .font(.caption2)
                 .foregroundStyle(tint)
-                .fontWeight(.semibold)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(isDarkMode ? Color(red: 0.12, green: 0.13, blue: 0.15) : Color.white.opacity(0.93), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(isDarkMode ? Color.white.opacity(0.08) : Color.black.opacity(0.07), lineWidth: 1)
+        )
     }
 }
 
 struct MessageRow: View {
     let message: CleverTapInboxMessage
+    let isDarkMode: Bool
+    let accent: Color
     let onTap: () -> Void
     let onMarkAsRead: () -> Void
     let onDelete: () -> Void
@@ -350,58 +528,67 @@ struct MessageRow: View {
     @State private var showActions = false
 
     var body: some View {
-        HStack(spacing: 12) {
-            messageThumb
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                messageThumb
 
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .top) {
-                    Text(message.content?.first?.title ?? "Message")
-                        .font(.subheadline)
-                        .fontWeight(message.isRead ? .semibold : .bold)
-                        .foregroundStyle(.primary)
-                        .lineLimit(2)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .top, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(message.content?.first?.title ?? "Message")
+                                .font(.subheadline.weight(message.isRead ? .semibold : .bold))
+                                .foregroundStyle(primaryText)
+                                .lineLimit(2)
 
-                    Spacer(minLength: 6)
+                            Text(message.campaignId ?? "Campaign")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(secondaryText)
+                                .lineLimit(1)
+                        }
 
-                    if !message.isRead {
-                        Circle()
-                            .fill(Color("CleverTapPrimary"))
-                            .frame(width: 8, height: 8)
+                        Spacer(minLength: 0)
+
+                        if !message.isRead {
+                            Circle()
+                                .fill(accent)
+                                .frame(width: 9, height: 9)
+                        }
                     }
-                }
 
-                if let messageText = message.content?.first?.message {
-                    Text(messageText)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
-
-                HStack {
-                    Text(relativeDate(from: message.date))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-
-                    Spacer()
-
-                    Button {
-                        showActions.toggle()
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
+                    if let messageText = message.content?.first?.message {
+                        Text(messageText)
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(secondaryText)
+                            .lineLimit(3)
                     }
-                    .buttonStyle(.plain)
                 }
             }
+
+            HStack(spacing: 10) {
+                metaTag(relativeDate(from: message.date))
+                metaTag(message.isRead ? "Read" : "Unread")
+
+                Spacer()
+
+                Button {
+                    showActions.toggle()
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(secondaryText)
+                        .frame(width: 28, height: 28)
+                        .background(isDarkMode ? Color.white.opacity(0.05) : Color.black.opacity(0.03), in: Circle())
+                }
+                .buttonStyle(.plain)
+            }
         }
-        .padding(14)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(16)
+        .background(cardFill, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(message.isRead ? Color.clear : Color("CleverTapPrimary").opacity(0.35), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(message.isRead ? cardBorder : accent.opacity(0.45), lineWidth: 1)
         )
-        .contentShape(Rectangle())
+        .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .onTapGesture {
             onTap()
         }
@@ -412,6 +599,22 @@ struct MessageRow: View {
             Button("Delete", role: .destructive) { onDelete() }
             Button("Cancel", role: .cancel) { }
         }
+    }
+
+    private var primaryText: Color {
+        isDarkMode ? Color.white.opacity(0.96) : Color.black.opacity(0.90)
+    }
+
+    private var secondaryText: Color {
+        isDarkMode ? Color.white.opacity(0.62) : Color.black.opacity(0.56)
+    }
+
+    private var cardFill: Color {
+        isDarkMode ? Color(red: 0.12, green: 0.13, blue: 0.15) : Color.white.opacity(0.93)
+    }
+
+    private var cardBorder: Color {
+        isDarkMode ? Color.white.opacity(0.08) : Color.black.opacity(0.07)
     }
 
     private var messageThumb: some View {
@@ -430,14 +633,14 @@ struct MessageRow: View {
                 placeholderThumb
             }
         }
-        .frame(width: 52, height: 52)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .frame(width: 58, height: 58)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private var placeholderThumb: some View {
         ZStack {
             LinearGradient(
-                colors: [Color("CleverTapPrimary").opacity(0.85), Color("CleverTapSecondary").opacity(0.85)],
+                colors: [accent.opacity(0.95), Color(red: 0.28, green: 0.48, blue: 0.44).opacity(0.95)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -445,6 +648,15 @@ struct MessageRow: View {
                 .foregroundStyle(.white)
                 .font(.headline)
         }
+    }
+
+    private func metaTag(_ title: String) -> some View {
+        Text(title)
+            .font(.caption2.weight(.bold))
+            .foregroundStyle(secondaryText)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(isDarkMode ? Color.white.opacity(0.05) : Color.black.opacity(0.03), in: Capsule())
     }
 
     private func relativeDate(from rawSeconds: UInt) -> String {
@@ -458,50 +670,34 @@ struct MessageRow: View {
 struct MessageDetailView: View {
     let message: CleverTapInboxMessage
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @State private var currentPage = 0
 
     private var contents: [CleverTapInboxMessageContent] {
         message.content ?? []
     }
 
+    private var isDarkMode: Bool {
+        colorScheme == .dark
+    }
+
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(message.campaignId ?? "Message")
-                            .font(.title2)
-                            .fontWeight(.bold)
+            ZStack {
+                detailBackground
+                    .ignoresSafeArea()
 
-                        if contents.count > 1 {
-                            TabView(selection: $currentPage) {
-                                ForEach(Array(contents.indices), id: \.self) { index in
-                                    messageContentCard(contents[index])
-                                        .tag(index)
-                                }
-                            }
-                            .frame(height: 330)
-                            .tabViewStyle(.page(indexDisplayMode: .automatic))
-
-                            Text("Slide \(currentPage + 1) of \(contents.count)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        } else if let content = contents.first {
-                            messageContentCard(content)
-                        } else {
-                            Text("No content available for this inbox message.")
-                                .font(.body)
-                                .foregroundStyle(.secondary)
-                        }
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 18) {
+                        detailMasthead
+                        detailContentSurface
                     }
-                    .padding()
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-
-                    Spacer()
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .padding(.bottom, 24)
                 }
-                .padding()
             }
-            .navigationTitle("Message Details")
+            .navigationTitle("Message")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -513,9 +709,99 @@ struct MessageDetailView: View {
         }
     }
 
+    private var detailBackground: some View {
+        LinearGradient(
+            colors: isDarkMode
+                ? [
+                    Color(red: 0.06, green: 0.07, blue: 0.08),
+                    Color(red: 0.10, green: 0.10, blue: 0.12)
+                ]
+                : [
+                    Color(red: 0.96, green: 0.95, blue: 0.93),
+                    Color(red: 0.92, green: 0.93, blue: 0.95)
+                ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    private var detailMasthead: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(accentSoft)
+                    .frame(width: 58, height: 58)
+                    .overlay {
+                        Image(systemName: "envelope.open.fill")
+                            .font(.title3.weight(.bold))
+                            .foregroundStyle(accent)
+                    }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("MESSAGE DOSSIER")
+                        .font(.caption2.weight(.bold))
+                        .tracking(1.2)
+                        .foregroundStyle(secondaryText)
+
+                    Text(message.campaignId ?? (contents.first?.title ?? "Inbox Message"))
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(primaryText)
+
+                    Text(contents.count > 1 ? "Carousel campaign with \(contents.count) slides" : "Single campaign message")
+                        .font(.subheadline)
+                        .foregroundStyle(secondaryText)
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            HStack(spacing: 10) {
+                detailMetaPill(message.isRead ? "Read" : "Unread")
+                if contents.count > 1 {
+                    detailMetaPill("Slide \(currentPage + 1) of \(contents.count)")
+                }
+            }
+        }
+        .padding(18)
+        .background(shellFill, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(shellBorder, lineWidth: 1)
+        )
+    }
+
+    @ViewBuilder
+    private var detailContentSurface: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if contents.count > 1 {
+                TabView(selection: $currentPage) {
+                    ForEach(Array(contents.indices), id: \.self) { index in
+                        messageContentCard(contents[index])
+                            .tag(index)
+                    }
+                }
+                .frame(height: 420)
+                .tabViewStyle(.page(indexDisplayMode: .automatic))
+            } else if let content = contents.first {
+                messageContentCard(content)
+            } else {
+                Text("No content available for this inbox message.")
+                    .font(.body)
+                    .foregroundStyle(secondaryText)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(shellFill, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(shellBorder, lineWidth: 1)
+        )
+    }
+
     @ViewBuilder
     private func messageContentCard(_ content: CleverTapInboxMessageContent) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             if let mediaUrl = content.mediaUrl {
                 AppAsyncImage(urlString: mediaUrl) { phase in
                     if let image = phase.image {
@@ -523,28 +809,65 @@ struct MessageDetailView: View {
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                     } else {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.gray.opacity(0.3))
-                            .frame(height: 200)
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(isDarkMode ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
+                            .frame(height: 240)
                             .overlay(ProgressView())
                     }
                 }
-                .frame(maxHeight: 250)
-                .cornerRadius(12)
+                .frame(maxHeight: 280)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             }
 
-            if let title = content.title {
-                Text(title)
-                    .font(.headline)
-                    .fontWeight(.semibold)
-            }
+            VStack(alignment: .leading, spacing: 10) {
+                if let title = content.title {
+                    Text(title)
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(primaryText)
+                }
 
-            if let messageText = content.message {
-                Text(messageText)
-                    .font(.body)
-                    .foregroundColor(.secondary)
+                if let messageText = content.message {
+                    Text(messageText)
+                        .font(.body)
+                        .foregroundColor(secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
+            .padding(.horizontal, 2)
         }
+    }
+
+    private var shellFill: Color {
+        isDarkMode ? Color(red: 0.12, green: 0.13, blue: 0.15) : Color.white.opacity(0.93)
+    }
+
+    private var shellBorder: Color {
+        isDarkMode ? Color.white.opacity(0.08) : Color.black.opacity(0.07)
+    }
+
+    private var primaryText: Color {
+        isDarkMode ? Color.white.opacity(0.96) : Color.black.opacity(0.90)
+    }
+
+    private var secondaryText: Color {
+        isDarkMode ? Color.white.opacity(0.62) : Color.black.opacity(0.56)
+    }
+
+    private var accent: Color {
+        isDarkMode ? Color(red: 0.92, green: 0.70, blue: 0.36) : Color(red: 0.66, green: 0.43, blue: 0.14)
+    }
+
+    private var accentSoft: Color {
+        accent.opacity(isDarkMode ? 0.18 : 0.10)
+    }
+
+    private func detailMetaPill(_ title: String) -> some View {
+        Text(title)
+            .font(.caption2.weight(.bold))
+            .foregroundStyle(primaryText)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(isDarkMode ? Color.white.opacity(0.05) : Color.black.opacity(0.03), in: Capsule())
     }
 }
 

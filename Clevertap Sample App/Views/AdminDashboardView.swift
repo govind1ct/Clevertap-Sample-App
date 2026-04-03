@@ -9,6 +9,17 @@ struct AdminDashboardView: View {
         case banners = "Hero Banners"
 
         var id: String { rawValue }
+
+        var systemImage: String {
+            switch self {
+            case .overview:
+                return "square.grid.2x2.fill"
+            case .products:
+                return "shippingbox.fill"
+            case .banners:
+                return "photo.on.rectangle.angled"
+            }
+        }
     }
 
     @StateObject private var productService = ProductService(includeInactiveProducts: true)
@@ -209,28 +220,12 @@ private extension AdminDashboardView {
         orderService.orders.count
     }
 
-    var bannerCount: Int {
-        heroBannerService.banners.count
-    }
-
     var processingOrderCount: Int {
         orderService.orders.filter { $0.status.caseInsensitiveCompare("processing") == .orderedSame }.count
     }
 
     var selectedCount: Int {
         selectedProductIDs.count
-    }
-
-    var headerSummaryText: String {
-        "Catalog \(catalogCount)  •  Visible \(visibleCount)  •  Low stock \(lowStockCount)  •  Selected \(selectedCount)"
-    }
-
-    var headerPrimaryGradient: LinearGradient {
-        LinearGradient(
-            colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary").opacity(0.88)],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
     }
 
     var availableCategoryOptions: [String] {
@@ -273,13 +268,13 @@ private extension AdminDashboardView {
             LinearGradient(
                 colors: isDarkMode
                     ? [
-                        Color(red: 0.05, green: 0.06, blue: 0.09),
-                        Color(red: 0.08, green: 0.10, blue: 0.14),
-                        Color(red: 0.10, green: 0.10, blue: 0.13)
+                        Color(red: 0.06, green: 0.07, blue: 0.08),
+                        Color(red: 0.10, green: 0.10, blue: 0.11),
+                        Color(red: 0.14, green: 0.13, blue: 0.12)
                     ]
                     : [
-                        Color(red: 0.96, green: 0.97, blue: 0.99),
-                        Color(red: 0.92, green: 0.94, blue: 0.98),
+                        Color(red: 0.95, green: 0.94, blue: 0.92),
+                        Color(red: 0.92, green: 0.91, blue: 0.88),
                         Color(red: 0.98, green: 0.97, blue: 0.95)
                     ],
                 startPoint: .topLeading,
@@ -287,28 +282,24 @@ private extension AdminDashboardView {
             )
             .ignoresSafeArea()
 
-            Rectangle()
-                .fill(isDarkMode ? Color.black.opacity(0.18) : Color.white.opacity(0.14))
-                .ignoresSafeArea()
-
             Circle()
-                .fill(Color("CleverTapPrimary").opacity(isDarkMode ? 0.30 : 0.18))
+                .fill(Color(red: 0.78, green: 0.58, blue: 0.24).opacity(isDarkMode ? 0.20 : 0.14))
                 .frame(width: 320, height: 320)
-                .blur(radius: 60)
-                .offset(x: -150, y: -340)
+                .blur(radius: 80)
+                .offset(x: -150, y: -320)
 
             Circle()
-                .fill(Color("CleverTapSecondary").opacity(isDarkMode ? 0.26 : 0.16))
+                .fill(Color(red: 0.28, green: 0.44, blue: 0.38).opacity(isDarkMode ? 0.16 : 0.10))
                 .frame(width: 340, height: 340)
-                .blur(radius: 70)
-                .offset(x: 180, y: -250)
+                .blur(radius: 90)
+                .offset(x: 170, y: -220)
 
-            RoundedRectangle(cornerRadius: 120, style: .continuous)
-                .fill(Color.white.opacity(isDarkMode ? 0.04 : 0.22))
-                .frame(width: 420, height: 240)
-                .blur(radius: 40)
-                .rotationEffect(.degrees(-18))
-                .offset(x: 90, y: 260)
+            RoundedRectangle(cornerRadius: 96, style: .continuous)
+                .fill(Color.white.opacity(isDarkMode ? 0.03 : 0.18))
+                .frame(width: 420, height: 220)
+                .blur(radius: 48)
+                .rotationEffect(.degrees(-14))
+                .offset(x: 110, y: 260)
         }
     }
 
@@ -328,25 +319,42 @@ private extension AdminDashboardView {
     }
 
     var workspaceSwitcher: some View {
-        HStack(spacing: 8) {
-            ForEach(Workspace.allCases) { workspace in
-                Button {
-                    withAnimation(.easeInOut(duration: 0.20)) {
-                        selectedWorkspace = workspace
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Admin Spaces")
+                .font(.caption.weight(.bold))
+                .foregroundColor(sectionSecondaryText)
+                .textCase(.uppercase)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(Workspace.allCases) { workspace in
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.20)) {
+                                selectedWorkspace = workspace
+                            }
+                        } label: {
+                            AdminWorkspaceChip(
+                                title: workspace.rawValue,
+                                systemImage: workspace.systemImage,
+                                isSelected: selectedWorkspace == workspace,
+                                selectedTextColor: selectedWorkspaceTextColor,
+                                secondaryTextColor: sectionSecondaryText,
+                                surfaceFill: sectionSurfaceFill,
+                                surfaceBorder: sectionSurfaceBorder
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
-                } label: {
-                    AdminWorkspaceChip(
-                        title: workspace.rawValue,
-                        isSelected: selectedWorkspace == workspace,
-                        selectedTextColor: selectedWorkspaceTextColor,
-                        secondaryTextColor: sectionSecondaryText,
-                        surfaceFill: sectionSurfaceFill,
-                        surfaceBorder: sectionSurfaceBorder
-                    )
                 }
-                .buttonStyle(.plain)
+                .padding(.horizontal, 2)
             }
         }
+        .padding(14)
+        .background(sectionSurfaceFill, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(sectionSurfaceBorder, lineWidth: 1)
+        )
     }
 
     @ViewBuilder
@@ -392,94 +400,37 @@ private extension AdminDashboardView {
     }
 
     var sectionSurfaceFill: Color {
-        isDarkMode ? Color.white.opacity(0.06) : Color.white.opacity(0.82)
+        isDarkMode ? Color(red: 0.12, green: 0.13, blue: 0.15) : Color.white.opacity(0.92)
     }
 
     var sectionSurfaceBorder: Color {
-        isDarkMode ? Color.white.opacity(0.10) : Color.black.opacity(0.08)
+        isDarkMode ? Color.white.opacity(0.08) : Color.black.opacity(0.07)
     }
 
     var sectionPrimaryText: Color {
-        isDarkMode ? .white : Color.black.opacity(0.94)
+        isDarkMode ? Color.white.opacity(0.96) : Color.black.opacity(0.90)
     }
 
     var sectionSecondaryText: Color {
-        isDarkMode ? Color.white.opacity(0.68) : Color.black.opacity(0.56)
+        isDarkMode ? Color.white.opacity(0.62) : Color.black.opacity(0.56)
     }
 
     var selectedWorkspaceTextColor: Color {
-        isDarkMode ? Color.black.opacity(0.90) : .white
-    }
-
-    var headerButtonRow: some View {
-        HStack(spacing: 10) {
-            Button {
-                showAddSheet = true
-            } label: {
-                Text("New Product")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .background(headerPrimaryGradient, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                toggleSelectionMode()
-            } label: {
-                Text(isSelectionMode ? "Exit Select" : "Select Mode")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(isDarkMode ? .white : Color("CleverTapPrimary"))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .background(Color.white.opacity(isDarkMode ? 0.08 : 0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-    var headerAuditButton: some View {
-        HStack(spacing: 10) {
-            NavigationLink {
-                AdminAuditLogView()
-            } label: {
-                Text("Open Audit Trail")
-                    .font(.subheadline.weight(.bold))
-                    .foregroundColor(.white)
-                    .padding(14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(headerPrimaryGradient, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            }
-            .buttonStyle(.plain)
-
-            NavigationLink {
-                AdminOrdersView()
-            } label: {
-                Text("Manage Orders")
-                    .font(.subheadline.weight(.bold))
-                    .foregroundColor(.white)
-                    .padding(14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(
-                        LinearGradient(
-                            colors: [Color("CleverTapSecondary"), Color("CleverTapPrimary")],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        in: RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    )
-            }
-            .buttonStyle(.plain)
-        }
+        isDarkMode ? Color.black.opacity(0.88) : .white
     }
 
     var selectionToolbar: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("\(selectedProductIDs.count) selected")
-                    .font(.subheadline.weight(.bold))
-                    .foregroundColor(isDarkMode ? .white : .primary)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Bulk Edit")
+                        .font(.headline.weight(.bold))
+                        .foregroundColor(sectionPrimaryText)
+
+                    Text("\(selectedProductIDs.count) products selected")
+                        .font(.caption)
+                        .foregroundColor(sectionSecondaryText)
+                }
 
                 Spacer()
 
@@ -487,9 +438,8 @@ private extension AdminDashboardView {
                     toggleVisibleSelection()
                 }
                 .font(.caption.weight(.bold))
-                .foregroundColor(isDarkMode ? .white.opacity(0.88) : Color("CleverTapPrimary"))
+                .foregroundColor(Color(red: 0.72, green: 0.50, blue: 0.18))
             }
-            .padding(.horizontal, 2)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
@@ -514,16 +464,17 @@ private extension AdminDashboardView {
             }
         }
         .padding(16)
-        .background(sectionSurfaceFill, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(sectionSurfaceFill, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(sectionSurfaceBorder, lineWidth: 1)
         )
+        .shadow(color: Color.black.opacity(isDarkMode ? 0.12 : 0.04), radius: 10, y: 6)
     }
 
     var attentionSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("At a glance")
+            Text("Priority Lane")
                 .font(.headline.weight(.bold))
                 .foregroundColor(sectionPrimaryText)
 
@@ -579,7 +530,7 @@ private extension AdminDashboardView {
 
     var operationsPanel: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Quick Actions")
+            Text("Launchpad")
                 .font(.headline.weight(.bold))
                 .foregroundColor(sectionPrimaryText)
 
@@ -634,22 +585,36 @@ private extension AdminDashboardView {
     }
 
     func overviewActionCard(title: String, subtitle: String, tint: Color, systemImage: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: systemImage)
-                .font(.headline.weight(.bold))
-                .foregroundColor(tint)
+        VStack(alignment: .leading, spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(tint.opacity(isDarkMode ? 0.18 : 0.10))
+                    .frame(width: 38, height: 38)
 
-            Text(title)
-                .font(.subheadline.weight(.bold))
-                .foregroundColor(sectionPrimaryText)
+                Image(systemName: systemImage)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundColor(tint)
+            }
 
-            Text(subtitle)
-                .font(.caption)
-                .foregroundColor(sectionSecondaryText)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundColor(sectionPrimaryText)
+                    .lineLimit(1)
+
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundColor(sectionSecondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 108, alignment: .leading)
         .padding(14)
-        .background(tint.opacity(isDarkMode ? 0.16 : 0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(sectionSurfaceFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(sectionSurfaceBorder, lineWidth: 1)
+        )
     }
 
     func attentionCard<Destination: View>(
@@ -684,11 +649,17 @@ private extension AdminDashboardView {
         systemImage: String,
         isInteractive: Bool
     ) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Image(systemName: systemImage)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundColor(tint)
+                ZStack {
+                    Circle()
+                        .fill(tint.opacity(isDarkMode ? 0.18 : 0.12))
+                        .frame(width: 30, height: 30)
+
+                    Image(systemName: systemImage)
+                        .font(.caption.weight(.bold))
+                        .foregroundColor(tint)
+                }
 
                 Spacer(minLength: 0)
 
@@ -703,18 +674,24 @@ private extension AdminDashboardView {
                 .font(.system(size: 22, weight: .black, design: .rounded))
                 .foregroundColor(sectionPrimaryText)
 
-            Text(title)
-                .font(.caption.weight(.bold))
-                .foregroundColor(sectionPrimaryText)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.caption.weight(.bold))
+                    .foregroundColor(sectionPrimaryText)
 
-            Text(subtitle)
-                .font(.caption)
-                .foregroundColor(sectionSecondaryText)
-                .fixedSize(horizontal: false, vertical: true)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundColor(sectionSecondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(14)
-        .frame(width: 132, alignment: .leading)
-        .background(tint.opacity(isDarkMode ? 0.16 : 0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .frame(width: 146, alignment: .leading)
+        .background(sectionSurfaceFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(sectionSurfaceBorder, lineWidth: 1)
+        )
     }
 
     func bulkActionButton(title: String, systemImage: String, tint: Color, action: @escaping () -> Void) -> some View {
@@ -747,7 +724,21 @@ private extension AdminDashboardView {
     }
 
     var searchSection: some View {
-        VStack(spacing: 14) {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Catalog Console")
+                        .font(.headline.weight(.bold))
+                        .foregroundColor(sectionPrimaryText)
+
+                    Text("Search, filter mentally, and act fast.")
+                        .font(.caption)
+                        .foregroundColor(sectionSecondaryText)
+                }
+
+                Spacer()
+            }
+
             HStack(spacing: 12) {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(sectionSecondaryText)
@@ -766,12 +757,12 @@ private extension AdminDashboardView {
                 }
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(isDarkMode ? Color.white.opacity(0.05) : Color.black.opacity(0.035), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .padding(.vertical, 13)
+            .background(isDarkMode ? Color.white.opacity(0.05) : Color.black.opacity(0.03), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
-                    dashboardTag(title: isSelectionMode ? "Bulk mode on" : "Single edit mode", tint: isSelectionMode ? .orange : Color("CleverTapPrimary"))
+                    dashboardTag(title: isSelectionMode ? "Bulk mode" : "Single edit", tint: isSelectionMode ? .orange : Color(red: 0.72, green: 0.50, blue: 0.18))
                     dashboardTag(title: productService.isLoading ? "Syncing" : "Live catalog", tint: productService.isLoading ? .blue : .green)
                     dashboardTag(title: "\(filteredProducts.count) results", tint: .secondary, isNeutral: true)
                     dashboardTag(title: "\(outOfStockCount) unavailable", tint: .red)
@@ -779,13 +770,13 @@ private extension AdminDashboardView {
             }
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.vertical, 14)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(sectionSurfaceFill)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .stroke(sectionSurfaceBorder, lineWidth: 1)
         )
     }
@@ -855,27 +846,35 @@ private extension AdminDashboardView {
 
     var loadingState: some View {
         VStack(spacing: 12) {
-            ProgressView("Loading products...")
+            ProgressView()
+                .tint(Color(red: 0.72, green: 0.50, blue: 0.18))
+            Text("Loading catalog")
+                .font(.headline.weight(.bold))
+                .foregroundColor(sectionPrimaryText)
+            Text("Fetching the latest products for admin review.")
+                .font(.caption)
+                .foregroundColor(sectionSecondaryText)
         }
         .frame(maxWidth: .infinity)
-        .padding(24)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .padding(28)
+        .background(sectionSurfaceFill, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(isDarkMode ? Color.white.opacity(0.16) : Color.white.opacity(0.24), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(sectionSurfaceBorder, lineWidth: 1)
         )
     }
 
     func errorState(_ message: String) -> some View {
         VStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 44))
+                .font(.system(size: 38))
                 .foregroundColor(.orange)
-            Text("Unable to load products")
-                .font(.headline)
+            Text("Catalog unavailable")
+                .font(.headline.weight(.bold))
+                .foregroundColor(sectionPrimaryText)
             Text(message)
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(sectionSecondaryText)
                 .multilineTextAlignment(.center)
             Button("Retry") {
                 productService.fetchProducts()
@@ -883,31 +882,32 @@ private extension AdminDashboardView {
             .buttonStyle(.borderedProminent)
         }
         .frame(maxWidth: .infinity)
-        .padding(24)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .padding(28)
+        .background(sectionSurfaceFill, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(isDarkMode ? Color.white.opacity(0.16) : Color.white.opacity(0.24), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(sectionSurfaceBorder, lineWidth: 1)
         )
     }
 
     var emptyState: some View {
         VStack(spacing: 12) {
             Image(systemName: "shippingbox")
-                .font(.system(size: 44))
-                .foregroundColor(.secondary)
-            Text("No products available")
-                .font(.headline)
-            Text("Add your first product to populate the catalog.")
+                .font(.system(size: 40))
+                .foregroundColor(sectionSecondaryText)
+            Text("No products yet")
+                .font(.headline.weight(.bold))
+                .foregroundColor(sectionPrimaryText)
+            Text("Add the first product to start managing the catalog.")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(sectionSecondaryText)
         }
         .frame(maxWidth: .infinity)
-        .padding(24)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .padding(28)
+        .background(sectionSurfaceFill, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(isDarkMode ? Color.white.opacity(0.16) : Color.white.opacity(0.24), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(sectionSurfaceBorder, lineWidth: 1)
         )
     }
 
@@ -1079,6 +1079,10 @@ private struct AdminProductCard: View {
         colorScheme == .dark
     }
 
+    private var accent: Color {
+        Color(red: 0.72, green: 0.50, blue: 0.18)
+    }
+
     private var stockColor: Color {
         switch product.effectiveStatus {
         case "draft":
@@ -1093,21 +1097,21 @@ private struct AdminProductCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top, spacing: 14) {
                 productImage
 
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 12) {
                     HStack(alignment: .top, spacing: 10) {
                         VStack(alignment: .leading, spacing: 6) {
                             Text(product.name)
                                 .font(.headline.weight(.bold))
-                                .foregroundColor(.primary)
+                                .foregroundColor(primaryText)
                                 .lineLimit(2)
 
                             Text(product.category.capitalized)
-                                .font(.caption.weight(.bold))
-                                .foregroundColor(.secondary)
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(secondaryText)
                                 .lineLimit(1)
                         }
 
@@ -1128,13 +1132,13 @@ private struct AdminProductCard: View {
 
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text("₹\(Int(product.price))")
-                            .font(.headline.weight(.bold))
-                            .foregroundColor(Color("CleverTapPrimary"))
+                            .font(.title3.weight(.black))
+                            .foregroundColor(accent)
 
                         if hasDiscount {
                             Text("₹\(Int(product.originalPrice))")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(secondaryText)
                                 .strikethrough()
                         }
                     }
@@ -1145,14 +1149,14 @@ private struct AdminProductCard: View {
                 summaryMetric(title: "Status", value: product.effectiveStatus.capitalized, tint: stockColor)
                 summaryMetric(title: "Stock", value: "\(product.resolvedStockQuantity)", tint: stockColor)
                 if !isSelectionMode {
-                    summaryMetric(title: "Keywords", value: "\(product.searchKeywords.count)", tint: Color("CleverTapPrimary"))
+                    summaryMetric(title: "Keywords", value: "\(product.searchKeywords.count)", tint: accent)
                 }
             }
 
             if !isSelectionMode {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
-                        quickActionButton(label: "Edit", systemName: "square.and.pencil", tint: Color("CleverTapPrimary"), action: onEdit)
+                        quickActionButton(label: "Edit", systemName: "square.and.pencil", tint: accent, action: onEdit)
                         quickActionButton(label: product.isFeatured ? "Featured" : "Feature", systemName: product.isFeatured ? "star.fill" : "star", tint: .orange, action: onToggleFeatured)
                         quickActionButton(label: product.isNewLaunch ? "Launch" : "Mark Launch", systemName: "sparkles", tint: .green, action: onToggleNewLaunch)
                         quickActionButton(label: "Status", systemName: "arrow.triangle.2.circlepath", tint: stockColor, action: onCycleStatus)
@@ -1162,27 +1166,30 @@ private struct AdminProductCard: View {
             }
         }
         .padding(16)
-        .background(
-            LinearGradient(
-                colors: isDarkMode
-                    ? [Color.white.opacity(0.09), Color.white.opacity(0.04)]
-                    : [Color.white.opacity(0.90), Color.white.opacity(0.80)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
-            in: RoundedRectangle(cornerRadius: 22, style: .continuous)
-        )
+        .background(cardFill, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(cardBorder, lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(isDarkMode ? 0.14 : 0.04), radius: 10, y: 6)
-        .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .shadow(color: Color.black.opacity(isDarkMode ? 0.16 : 0.05), radius: 12, y: 8)
+        .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .onTapGesture {
             if isSelectionMode {
                 onToggleSelection()
             }
         }
+    }
+
+    private var primaryText: Color {
+        isDarkMode ? Color.white.opacity(0.96) : Color.black.opacity(0.90)
+    }
+
+    private var secondaryText: Color {
+        isDarkMode ? Color.white.opacity(0.62) : Color.black.opacity(0.56)
+    }
+
+    private var cardFill: Color {
+        isDarkMode ? Color(red: 0.12, green: 0.13, blue: 0.15) : Color.white.opacity(0.94)
     }
 
     var productImage: some View {
@@ -1193,23 +1200,23 @@ private struct AdminProductCard: View {
                     .aspectRatio(contentMode: .fill)
             } else {
                 LinearGradient(
-                    colors: [Color("CleverTapPrimary").opacity(0.22), Color("CleverTapSecondary").opacity(0.18)],
+                    colors: [accent.opacity(0.34), Color(red: 0.31, green: 0.46, blue: 0.40).opacity(0.24)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
                 .overlay(
                     Image(systemName: "shippingbox.fill")
                         .font(.title2)
-                        .foregroundColor(.white.opacity(0.88))
+                        .foregroundColor(.white.opacity(0.92))
                 )
             }
         }
-        .frame(width: 86, height: 102)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .frame(width: 92, height: 108)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
     private var cardBorder: Color {
-        isDarkMode ? Color.white.opacity(0.10) : Color.black.opacity(0.08)
+        isDarkMode ? Color.white.opacity(0.08) : Color.black.opacity(0.07)
     }
 
     func quickActionButton(label: String, systemName: String, tint: Color, action: @escaping () -> Void) -> some View {
@@ -1249,16 +1256,16 @@ private struct AdminProductCard: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title.uppercased())
                 .font(.caption2.weight(.bold))
-                .foregroundColor(.secondary)
+                .foregroundColor(secondaryText)
             Text(value)
                 .font(.caption.weight(.bold))
-                .foregroundColor(tint == Color("CleverTapPrimary") ? .primary : tint)
+                .foregroundColor(tint == accent ? primaryText : tint)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 10)
+        .padding(.vertical, 11)
         .padding(.horizontal, 12)
-        .background(isDarkMode ? Color.white.opacity(0.05) : Color.black.opacity(0.035), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(isDarkMode ? Color.white.opacity(0.05) : Color.black.opacity(0.03), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     func statusPill(title: String, tint: Color) -> some View {
@@ -1266,7 +1273,7 @@ private struct AdminProductCard: View {
             .font(.caption2.weight(.bold))
             .foregroundColor(tint)
             .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.vertical, 5)
             .background(tint.opacity(0.14), in: Capsule())
     }
 
@@ -1275,41 +1282,58 @@ private struct AdminProductCard: View {
             .font(.caption2.weight(.bold))
             .foregroundColor(.white)
             .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.vertical, 5)
             .background(Color.red, in: Capsule())
     }
 }
 
 private struct AdminWorkspaceChip: View {
     let title: String
+    let systemImage: String
     let isSelected: Bool
     let selectedTextColor: Color
     let secondaryTextColor: Color
     let surfaceFill: Color
     let surfaceBorder: Color
 
+    private var accent: Color {
+        Color(red: 0.72, green: 0.50, blue: 0.18)
+    }
+
     var body: some View {
-        Text(title)
-            .font(.subheadline.weight(.semibold))
-            .foregroundColor(isSelected ? selectedTextColor : secondaryTextColor)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 11)
-            .background(backgroundStyle, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(isSelected ? Color.clear : surfaceBorder, lineWidth: 1)
-            )
+        HStack(spacing: 10) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(isSelected ? Color.white.opacity(0.16) : accent.opacity(0.12))
+                    .frame(width: 32, height: 32)
+
+                Image(systemName: systemImage)
+                    .font(.caption.weight(.bold))
+                    .foregroundColor(isSelected ? selectedTextColor : accent)
+            }
+
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+
+            if isSelected {
+                Image(systemName: "checkmark")
+                    .font(.caption2.weight(.bold))
+            }
+        }
+        .foregroundColor(isSelected ? selectedTextColor : secondaryTextColor)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(backgroundStyle, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(isSelected ? Color.clear : surfaceBorder, lineWidth: 1)
+        )
     }
 
     private var backgroundStyle: AnyShapeStyle {
         if isSelected {
-            return AnyShapeStyle(
-                LinearGradient(
-                    colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
+            return AnyShapeStyle(accent)
         } else {
             return AnyShapeStyle(surfaceFill)
         }
@@ -1318,6 +1342,28 @@ private struct AdminWorkspaceChip: View {
 
 
 struct AdminProductEditorView: View {
+    private enum EditorStep: String, CaseIterable, Identifiable {
+        case basics = "Basics"
+        case media = "Media"
+        case commerce = "Commerce"
+        case launch = "Launch"
+
+        var id: String { rawValue }
+
+        var subtitle: String {
+            switch self {
+            case .basics:
+                return "Identity and copy"
+            case .media:
+                return "Images and gallery"
+            case .commerce:
+                return "Price, stock, and details"
+            case .launch:
+                return "Merchandising and visibility"
+            }
+        }
+    }
+
     let title: String
     @State var form: AdminProductFormData
     let categoryOptions: [String]
@@ -1330,10 +1376,23 @@ struct AdminProductEditorView: View {
     @Environment(\.colorScheme) private var colorScheme
     @StateObject private var imageUploadService = AdminProductImageUploadService()
     @State private var showValidationAlert = false
+    @State private var validationAlertMessage = "Name, category, and description are required."
     @State private var selectedPrimaryImageItem: PhotosPickerItem?
     @State private var selectedGalleryImageItems: [PhotosPickerItem] = []
     @State private var mediaAlertMessage = ""
     @State private var showMediaAlert = false
+    @State private var selectedStep: EditorStep = .basics
+    @State private var customCategoryOptions: [String] = []
+
+    private enum DraftStorage {
+        static let formKey = "admin_product_editor_draft_form_v1"
+        static let stepKey = "admin_product_editor_draft_step_v1"
+        static let categoriesKey = "admin_product_editor_draft_categories_v1"
+    }
+
+    private var isAddMode: Bool {
+        title.localizedCaseInsensitiveContains("add")
+    }
 
     private var isValid: Bool {
         !form.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
@@ -1343,6 +1402,11 @@ struct AdminProductEditorView: View {
 
     private var isDarkMode: Bool {
         colorScheme == .dark
+    }
+
+    private var mergedCategoryOptions: [String] {
+        Array(Set(categoryOptions + customCategoryOptions))
+            .sorted()
     }
 
     private var galleryImageURLs: [String] {
@@ -1403,6 +1467,33 @@ struct AdminProductEditorView: View {
         return messages
     }
 
+    private var requiredFieldCompletionCount: Int {
+        var count = 0
+        if !form.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { count += 1 }
+        if !form.category.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { count += 1 }
+        if !form.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { count += 1 }
+        if form.price > 0 { count += 1 }
+        return count
+    }
+
+    private var saveButtonTitle: String {
+        isAddMode ? "Create Product" : "Save Changes"
+    }
+
+    private var isBasicsStepValid: Bool {
+        !form.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !form.category.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !form.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var currentStepIndex: Int {
+        EditorStep.allCases.firstIndex(of: selectedStep) ?? 0
+    }
+
+    private var isLastStep: Bool {
+        currentStepIndex == EditorStep.allCases.count - 1
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -1438,21 +1529,21 @@ struct AdminProductEditorView: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 18) {
-                        editorHeader
-                        previewSection
-                        validationSection
-                        basicsSection
-                        pricingSection
-                        merchandisingSection
-                        tagsSection
-                        mediaSection
-                        detailsSection
-                        flagsSection
+                        stepFlowHeader
+                        stepStrip
+                        currentStepContent
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 16)
-                    .padding(.bottom, 28)
+                    .padding(.bottom, 120)
                 }
+            }
+            .safeAreaInset(edge: .bottom) {
+                stepFooter
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 10)
+                    .background(.ultraThinMaterial)
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
@@ -1462,16 +1553,20 @@ struct AdminProductEditorView: View {
                         dismiss()
                     }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(imageUploadService.isUploading ? "Uploading..." : "Save") {
-                        if isValid {
-                            onSave(form)
-                        } else {
-                            showValidationAlert = true
-                        }
-                    }
-                    .disabled(imageUploadService.isUploading)
+            }
+            .onAppear {
+                if isAddMode {
+                    restoreDraftIfAvailable()
                 }
+            }
+            .onChange(of: form) { _, _ in
+                persistDraftIfNeeded()
+            }
+            .onChange(of: selectedStep) { _, _ in
+                persistDraftIfNeeded()
+            }
+            .onChange(of: customCategoryOptions) { _, _ in
+                persistDraftIfNeeded()
             }
             .onChange(of: selectedPrimaryImageItem?.itemIdentifier) { _, _ in
                 Task {
@@ -1486,7 +1581,7 @@ struct AdminProductEditorView: View {
             .alert("Missing required fields", isPresented: $showValidationAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("Name, category, and description are required.")
+                Text(validationAlertMessage)
             }
             .alert("Media Upload", isPresented: $showMediaAlert) {
                 Button("OK", role: .cancel) {}
@@ -1498,108 +1593,343 @@ struct AdminProductEditorView: View {
 }
 
 private extension AdminProductEditorView {
-    var editorHeader: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title.uppercased())
-                .font(.caption.weight(.semibold))
-                .foregroundColor(Color("CleverTapPrimary"))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Color("CleverTapPrimary").opacity(0.14), in: Capsule())
+    func persistDraftIfNeeded() {
+        guard isAddMode else { return }
+        let defaults = UserDefaults.standard
 
-            Text("Catalog Editor")
-                .font(.system(size: 28, weight: .bold))
+        if let data = try? JSONEncoder().encode(form) {
+            defaults.set(data, forKey: DraftStorage.formKey)
+        }
+
+        defaults.set(selectedStep.rawValue, forKey: DraftStorage.stepKey)
+        defaults.set(customCategoryOptions, forKey: DraftStorage.categoriesKey)
+    }
+
+    func restoreDraftIfAvailable() {
+        let defaults = UserDefaults.standard
+
+        if let data = defaults.data(forKey: DraftStorage.formKey),
+           let draft = try? JSONDecoder().decode(AdminProductFormData.self, from: data) {
+            form = draft
+        }
+
+        if let rawStep = defaults.string(forKey: DraftStorage.stepKey),
+           let draftStep = EditorStep(rawValue: rawStep) {
+            selectedStep = draftStep
+        }
+
+        customCategoryOptions = defaults.stringArray(forKey: DraftStorage.categoriesKey) ?? []
+    }
+
+    func clearDraftIfNeeded() {
+        guard isAddMode else { return }
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: DraftStorage.formKey)
+        defaults.removeObject(forKey: DraftStorage.stepKey)
+        defaults.removeObject(forKey: DraftStorage.categoriesKey)
+    }
+
+    func addCategoryFromEditor(_ value: String) {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        if !mergedCategoryOptions.contains(where: { $0.caseInsensitiveCompare(trimmed) == .orderedSame }) {
+            customCategoryOptions.append(trimmed.capitalized)
+        }
+        form.category = trimmed.capitalized
+    }
+
+    private func attemptStepSelection(_ step: EditorStep) {
+        if step != .basics && !isBasicsStepValid {
+            validationAlertMessage = "Complete Basics first: name, category, and description are required before moving ahead."
+            showValidationAlert = true
+            return
+        }
+
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+            selectedStep = step
+        }
+    }
+
+    private func goToNextStep() {
+        guard !isLastStep else {
+            submitForm()
+            return
+        }
+
+        if selectedStep == .basics && !isBasicsStepValid {
+            validationAlertMessage = "Complete Basics first: name, category, and description are required before moving ahead."
+            showValidationAlert = true
+            return
+        }
+
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+            selectedStep = EditorStep.allCases[min(currentStepIndex + 1, EditorStep.allCases.count - 1)]
+        }
+    }
+
+    @ViewBuilder
+    var currentStepContent: some View {
+        switch selectedStep {
+        case .basics:
+            previewSection
+            basicsSection
+        case .media:
+            mediaSection
+        case .commerce:
+            pricingSection
+            tagsSection
+            detailsSection
+        case .launch:
+            validationSection
+            merchandisingSection
+            flagsSection
+            finalReviewSection
+        }
+    }
+
+    func submitForm() {
+        if isValid {
+            clearDraftIfNeeded()
+            onSave(form)
+        } else {
+            validationAlertMessage = "Name, category, and description are required."
+            showValidationAlert = true
+        }
+    }
+
+    var stepFlowHeader: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                editorChip(title: isAddMode ? "QUICK ADD" : "EDITOR", tint: Color("CleverTapPrimary"))
+                editorChip(title: "STEP \(currentStepIndex + 1) / \(EditorStep.allCases.count)", tint: Color("CleverTapSecondary"))
+            }
+
+            Text(isAddMode ? "Add Product" : "Edit Product")
+                .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundColor(.primary)
 
-            Text("Update product content, pricing, and merchandising fields in one place.")
+            Text(selectedStep.subtitle)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(selectedStep.rawValue)
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text("\(currentStepIndex + 1) of \(EditorStep.allCases.count)")
+                        .font(.caption.weight(.bold))
+                        .foregroundColor(Color("CleverTapPrimary"))
+                }
+
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color.primary.opacity(0.08))
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(width: proxy.size.width * CGFloat(currentStepIndex + 1) / CGFloat(EditorStep.allCases.count))
+                    }
+                }
+                .frame(height: 8)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .padding(20)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(isDarkMode ? Color.white.opacity(0.16) : Color.white.opacity(0.24), lineWidth: 1)
         )
     }
 
-    var basicsSection: some View {
-        AdminEditorSection(title: "Basics", subtitle: "Primary product identity and messaging.") {
+    var stepStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(EditorStep.allCases) { step in
+                    Button {
+                        attemptStepSelection(step)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(step.rawValue)
+                                .font(.caption.weight(.bold))
+                            Text(step.subtitle)
+                                .font(.caption2)
+                                .lineLimit(1)
+                        }
+                        .foregroundColor(selectedStep == step ? .white : .primary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .frame(width: 118, alignment: .leading)
+                        .background(
+                            selectedStep == step
+                            ? AnyShapeStyle(
+                                LinearGradient(
+                                    colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            : AnyShapeStyle(.thinMaterial),
+                            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    var stepFooter: some View {
+        HStack(spacing: 10) {
+            if currentStepIndex > 0 {
+                Button("Back") {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+                        selectedStep = EditorStep.allCases[max(currentStepIndex - 1, 0)]
+                    }
+                }
+                .buttonStyle(AdminEditorGhostButtonStyle())
+            }
+
+            Spacer(minLength: 0)
+
+            if isLastStep {
+                Button(imageUploadService.isUploading ? "Uploading..." : saveButtonTitle) {
+                    submitForm()
+                }
+                .buttonStyle(AdminEditorPrimaryButtonStyle())
+                .disabled(imageUploadService.isUploading)
+            } else {
+                Button("Next") {
+                    goToNextStep()
+                }
+                .buttonStyle(AdminEditorPrimaryButtonStyle())
+            }
+        }
+    }
+
+    var finalReviewSection: some View {
+        AdminEditorSection(title: "Review", subtitle: "Final confirmation before saving the product.") {
             VStack(spacing: 12) {
-                AdminEditorTextField(title: "Name", text: $form.name)
-                AdminCategoryField(text: $form.category, options: categoryOptions)
+                HStack(spacing: 12) {
+                    mediaSummaryCard(title: "Required", value: "\(requiredFieldCompletionCount)/4")
+                    mediaSummaryCard(title: "Warnings", value: "\(validationMessages.count)")
+                }
+
+                HStack(spacing: 12) {
+                    mediaSummaryCard(title: "Status", value: form.status.capitalized)
+                    mediaSummaryCard(title: "Media", value: "\(galleryImageURLs.count + (previewImageURL.isEmpty ? 0 : 1))")
+                }
+            }
+        }
+    }
+
+    func editorChip(title: String, tint: Color) -> some View {
+        Text(title)
+            .font(.caption2.weight(.bold))
+            .foregroundColor(tint)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(tint.opacity(0.14), in: Capsule())
+    }
+
+    func mediaSummaryCard(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title.uppercased())
+                .font(.caption2.weight(.bold))
+                .foregroundColor(.secondary)
+            Text(value)
+                .font(.subheadline.weight(.bold))
+                .foregroundColor(.primary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    var basicsSection: some View {
+        AdminEditorSection(title: "Essentials", subtitle: "Core product identity and storefront copy.") {
+            VStack(spacing: 14) {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                    AdminEditorTextField(title: "Product Name", text: $form.name)
+                    AdminCategoryField(
+                        text: $form.category,
+                        options: mergedCategoryOptions,
+                        onAddCategory: addCategoryFromEditor
+                    )
+                }
+
                 AdminEditorTextField(title: "Short Description", text: $form.shortDescription)
-                AdminEditorTextField(title: "Description", text: $form.description, axis: .vertical, lineLimit: 4...7)
+                AdminEditorTextField(title: "Description", text: $form.description, axis: .vertical, lineLimit: 5...8)
             }
         }
     }
 
     var previewSection: some View {
-        AdminEditorSection(title: "Preview", subtitle: "Quick storefront snapshot before saving.") {
-            HStack(alignment: .top, spacing: 14) {
-                AdminEditorImagePreview(urlString: previewImageURL)
+        AdminEditorSection(title: "Storefront Preview", subtitle: "Live card preview while you fill the form.") {
+            VStack(spacing: 14) {
+                HStack(alignment: .top, spacing: 14) {
+                    AdminEditorImagePreview(urlString: previewImageURL)
+                        .frame(width: 116, height: 140)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(form.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Untitled Product" : form.name)
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                        .lineLimit(2)
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(form.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Untitled Product" : form.name)
+                            .font(.title3.weight(.bold))
+                            .foregroundColor(.primary)
+                            .lineLimit(3)
 
-                    Text(form.category.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "No category" : form.category.capitalized)
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(.secondary)
+                        Text(form.category.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "No category selected" : form.category.capitalized)
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(.secondary)
 
-                    HStack(spacing: 6) {
-                        Text("₹\(Int(form.price))")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundColor(Color("CleverTapPrimary"))
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text("₹\(Int(form.price))")
+                                .font(.headline.weight(.bold))
+                                .foregroundColor(Color("CleverTapPrimary"))
 
-                        if form.originalPrice > form.price, form.originalPrice > 0 {
-                            Text("₹\(Int(form.originalPrice))")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .strikethrough()
+                            if form.originalPrice > form.price, form.originalPrice > 0 {
+                                Text("₹\(Int(form.originalPrice))")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .strikethrough()
+                            }
                         }
+
+                        Text(form.shortDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Add a short description to improve product cards." : form.shortDescription)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(3)
                     }
 
-                    ViewThatFits(in: .horizontal) {
-                        HStack(spacing: 6) {
-                            editorPill(title: stockPreviewLabel, tint: stockPreviewColor)
-
-                            if isFeaturedPreviewActive {
-                                editorPill(title: "Featured", tint: .orange)
-                            }
-
-                            if isNewLaunchPreviewActive {
-                                editorPill(title: "New", tint: .green)
-                            }
-
-                            if form.isCategoryPinned {
-                                editorPill(title: "Pinned", tint: .blue)
-                            }
-                        }
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            editorPill(title: stockPreviewLabel, tint: stockPreviewColor)
-
-                            if isFeaturedPreviewActive {
-                                editorPill(title: "Featured", tint: .orange)
-                            }
-
-                            if isNewLaunchPreviewActive {
-                                editorPill(title: "New", tint: .green)
-                            }
-
-                            if form.isCategoryPinned {
-                                editorPill(title: "Pinned", tint: .blue)
-                            }
-                        }
-                    }
+                    Spacer(minLength: 0)
                 }
 
-                Spacer(minLength: 0)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        editorPill(title: stockPreviewLabel, tint: stockPreviewColor)
+
+                        if isFeaturedPreviewActive {
+                            editorPill(title: "Featured", tint: .orange)
+                        }
+
+                        if isNewLaunchPreviewActive {
+                            editorPill(title: "New Launch", tint: .green)
+                        }
+
+                        if form.isCategoryPinned {
+                            editorPill(title: "Pinned", tint: .blue)
+                        }
+
+                        editorPill(title: form.status.capitalized, tint: form.status == "active" ? Color("CleverTapPrimary") : .gray)
+                    }
+                }
             }
         }
     }
@@ -1630,48 +1960,64 @@ private extension AdminProductEditorView {
     }
 
     var pricingSection: some View {
-        AdminEditorSection(title: "Pricing", subtitle: "Commercial values used across the storefront.") {
-            VStack(spacing: 12) {
-                AdminEditorNumberField(title: "Price", value: $form.price)
-                AdminEditorNumberField(title: "Original Price", value: $form.originalPrice)
-                AdminEditorIntegerField(title: "Stock Quantity", value: $form.stockQuantity)
-                AdminEditorIntegerField(title: "Low Stock Threshold", value: $form.lowStockThreshold)
+        AdminEditorSection(title: "Commerce", subtitle: "Price, stock, publishing state, and energy profile.") {
+            VStack(spacing: 14) {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                    AdminEditorNumberField(title: "Price", value: $form.price)
+                    AdminEditorNumberField(title: "Original Price", value: $form.originalPrice)
+                    AdminEditorIntegerField(title: "Stock Quantity", value: $form.stockQuantity)
+                    AdminEditorIntegerField(title: "Low Stock Alert", value: $form.lowStockThreshold)
+                }
 
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("Status")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary)
+                        Spacer()
+                        editorPill(title: form.status.capitalized, tint: form.status == "active" ? Color("CleverTapPrimary") : .gray)
+                    }
+
+                    Picker("Status", selection: $form.status) {
+                        Text("Draft").tag("draft")
+                        Text("Active").tag("active")
+                        Text("Archived").tag("archived")
+                    }
+                    .pickerStyle(.segmented)
+                }
+                .adminFieldSurface()
+
+                VStack(alignment: .leading, spacing: 10) {
                     HStack {
                         Text("Energy Level")
                             .font(.subheadline.weight(.semibold))
                             .foregroundColor(.primary)
                         Spacer()
-                        Text("\(form.energyLevel)")
-                            .font(.caption.weight(.semibold))
-                            .foregroundColor(Color("CleverTapPrimary"))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(Color("CleverTapPrimary").opacity(0.12), in: Capsule())
+                        editorPill(title: "\(form.energyLevel)/10", tint: Color("CleverTapPrimary"))
                     }
 
-                    Stepper("", value: $form.energyLevel, in: 0...10)
+                    Stepper("Energy", value: $form.energyLevel, in: 0...10)
                         .labelsHidden()
                 }
-                .padding(14)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .adminFieldSurface()
             }
         }
     }
 
     var merchandisingSection: some View {
-        AdminEditorSection(title: "Merchandising", subtitle: "Controls for ranking, campaigns, and scheduled storefront visibility.") {
+        AdminEditorSection(title: "Merchandising", subtitle: "Ranking, home placement, and timed visibility controls.") {
             VStack(spacing: 12) {
-                AdminEditorIntegerField(title: "Merchandising Priority", value: $form.merchandisingPriority)
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                    AdminEditorIntegerField(title: "Merchandising Priority", value: $form.merchandisingPriority)
+                    AdminEditorIntegerField(title: "Home Placement Slot", value: $form.homePlacementSlot)
+                    AdminEditorIntegerField(title: "Category Sort Priority", value: $form.categorySortPriority)
+                }
+
                 Toggle(isOn: $form.isCategoryPinned) {
                     AdminToggleLabel(title: "Pin In Category", subtitle: "Keep this product at the top of its category listing.")
                 }
-                .padding(14)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .adminToggleSurface()
 
-                AdminEditorIntegerField(title: "Category Sort Priority", value: $form.categorySortPriority)
-                AdminEditorIntegerField(title: "Home Placement Slot", value: $form.homePlacementSlot)
                 AdminEditorTextField(
                     title: "Campaign Tags",
                     text: $form.campaignTagsText,
@@ -1699,7 +2045,7 @@ private extension AdminProductEditorView {
     }
 
     var tagsSection: some View {
-        AdminEditorSection(title: "Tags", subtitle: "Comma-separated values for discovery and targeting.") {
+        AdminEditorSection(title: "Discovery", subtitle: "Search and recommendation metadata used across the catalog.") {
             VStack(spacing: 12) {
                 AdminSmartListField(title: "Purposes", text: $form.purposesText, options: purposeOptions)
                 AdminSmartListField(title: "Chakras", text: $form.chakrasText, options: chakraOptions)
@@ -1710,7 +2056,7 @@ private extension AdminProductEditorView {
     }
 
     var mediaSection: some View {
-        AdminEditorSection(title: "Media", subtitle: "Image URLs used in cards and detail pages.") {
+        AdminEditorSection(title: "Media Studio", subtitle: "Upload, arrange, and promote product imagery.") {
             VStack(spacing: 14) {
                 HStack(spacing: 10) {
                     PhotosPicker(selection: $selectedPrimaryImageItem, matching: .images) {
@@ -1731,6 +2077,11 @@ private extension AdminProductEditorView {
                 }
                 .disabled(imageUploadService.isUploading)
                 .opacity(imageUploadService.isUploading ? 0.65 : 1)
+
+                HStack(spacing: 12) {
+                    mediaSummaryCard(title: "Primary", value: form.imageURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Not set" : "Ready")
+                    mediaSummaryCard(title: "Gallery", value: "\(galleryImageURLs.count) items")
+                }
 
                 if imageUploadService.isUploading {
                     HStack(spacing: 10) {
@@ -1784,8 +2135,14 @@ private extension AdminProductEditorView {
     }
 
     var detailsSection: some View {
-        AdminEditorSection(title: "Details", subtitle: "Supporting content and specifications.") {
+        AdminEditorSection(title: "Product Details", subtitle: "Long-form information used in product detail screens.") {
             VStack(spacing: 12) {
+                AdminEditorTextField(
+                    title: "Availability Message",
+                    text: $form.availabilityMessage,
+                    axis: .vertical,
+                    lineLimit: 2...4
+                )
                 AdminEditorTextField(title: "Care Instructions", text: $form.careInstructions, axis: .vertical, lineLimit: 3...5)
                 AdminEditorTextField(title: "Specifications", text: $form.specificationsText, axis: .vertical, lineLimit: 3...5)
             }
@@ -1793,41 +2150,17 @@ private extension AdminProductEditorView {
     }
 
     var flagsSection: some View {
-        AdminEditorSection(title: "Flags", subtitle: "Merchandising controls for storefront visibility.") {
+        AdminEditorSection(title: "Visibility", subtitle: "Storefront badges and promotional switches.") {
             VStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Status")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.primary)
-
-                    Picker("Status", selection: $form.status) {
-                        Text("Draft").tag("draft")
-                        Text("Active").tag("active")
-                        Text("Archived").tag("archived")
-                    }
-                    .pickerStyle(.segmented)
-                }
-                .padding(14)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-
-                AdminEditorTextField(
-                    title: "Availability Message",
-                    text: $form.availabilityMessage,
-                    axis: .vertical,
-                    lineLimit: 2...4
-                )
-
                 Toggle(isOn: $form.isNewLaunch) {
                     AdminToggleLabel(title: "New Launch", subtitle: "Highlights the product as recently launched.")
                 }
-                .padding(14)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .adminToggleSurface()
 
                 Toggle(isOn: $form.isFeatured) {
                     AdminToggleLabel(title: "Featured", subtitle: "Promotes the product in featured placements.")
                 }
-                .padding(14)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .adminToggleSurface()
             }
         }
     }
@@ -1991,21 +2324,49 @@ private struct AdminEditorSection<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.headline)
+                Text(title.uppercased())
+                    .font(.caption.weight(.bold))
+                    .foregroundColor(Color("CleverTapPrimary"))
+                    .tracking(0.8)
                 Text(subtitle)
-                    .font(.caption)
+                    .font(.footnote)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             content
         }
-        .padding(18)
+        .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+        )
+    }
+}
+
+private extension View {
+    func adminFieldSurface() -> some View {
+        self
+            .padding(14)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+            )
+    }
+
+    func adminToggleSurface() -> some View {
+        self
+            .padding(14)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+            )
     }
 }
 
@@ -2026,7 +2387,11 @@ private struct AdminEditorTextField: View {
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+                )
         }
     }
 }
@@ -2034,6 +2399,7 @@ private struct AdminEditorTextField: View {
 private struct AdminCategoryField: View {
     @Binding var text: String
     let options: [String]
+    var onAddCategory: ((String) -> Void)? = nil
 
     private var filteredOptions: [String] {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2042,6 +2408,12 @@ private struct AdminCategoryField: View {
         return options.filter { option in
             option.localizedCaseInsensitiveContains(trimmedText)
         }
+    }
+
+    private var canAddTypedCategory: Bool {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty else { return false }
+        return !options.contains { $0.caseInsensitiveCompare(trimmedText) == .orderedSame }
     }
 
     var body: some View {
@@ -2054,7 +2426,11 @@ private struct AdminCategoryField: View {
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+                )
 
             if !filteredOptions.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -2077,6 +2453,23 @@ private struct AdminCategoryField: View {
                     }
                     .padding(.vertical, 2)
                 }
+            }
+
+            if canAddTypedCategory {
+                Button {
+                    onAddCategory?(text)
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Add \"\(text.trimmingCharacters(in: .whitespacesAndNewlines))\"")
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(Color("CleverTapPrimary"))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(Color("CleverTapPrimary").opacity(0.10), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(.plain)
             }
 
             Text("Choose from existing categories or type a new one.")
@@ -2152,7 +2545,11 @@ private struct AdminEditorNumberField: View {
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+                )
         }
     }
 }
@@ -2172,7 +2569,11 @@ private struct AdminEditorIntegerField: View {
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+                )
         }
     }
 }
@@ -2314,6 +2715,43 @@ private struct AdminEditorImagePreview: View {
         }
         .frame(width: 92, height: 112)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+private struct AdminEditorPrimaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.caption.weight(.semibold))
+            .foregroundColor(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                LinearGradient(
+                    colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ),
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+            )
+            .opacity(configuration.isPressed ? 0.88 : 1)
+            .scaleEffect(configuration.isPressed ? 0.99 : 1)
+    }
+}
+
+private struct AdminEditorGhostButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.caption.weight(.semibold))
+            .foregroundColor(.primary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+            )
+            .opacity(configuration.isPressed ? 0.88 : 1)
+            .scaleEffect(configuration.isPressed ? 0.99 : 1)
     }
 }
 

@@ -22,6 +22,7 @@ struct ProductExperiencesView: View {
     }
 
     private enum ExperienceDestination: Identifiable {
+        case testLabSelector
         case testLabDeveloper
         case testLabMarketer
         case appInbox
@@ -29,6 +30,7 @@ struct ProductExperiencesView: View {
 
         var id: String {
             switch self {
+            case .testLabSelector: return "testLabSelector"
             case .testLabDeveloper: return "testLabDeveloper"
             case .testLabMarketer: return "testLabMarketer"
             case .appInbox: return "appInbox"
@@ -44,11 +46,10 @@ struct ProductExperiencesView: View {
     @State private var activeSheet: ActiveSheet?
     @State private var pushedDestination: ExperienceDestination?
     @State private var showStudioIntro = true
-    @State private var introSelectedSection: ExperienceSection = .testLab
-    @State private var showRoleSelectionDialog = false
     @State private var animateContent = false
     @State private var animateAmbientBackground = false
     @State private var revealInteractiveCards = false
+    @AppStorage("clevertap_lab_last_mode") private var lastTestLabMode = "developer"
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -93,9 +94,8 @@ struct ProductExperiencesView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 22) {
-                        headerSection
-
                         if selectedSection != .productExperiences {
+                            headerSection
                             sectionSelector
                         }
 
@@ -160,14 +160,10 @@ struct ProductExperiencesView: View {
                 SettingsView()
             }
         }
-        .sheet(isPresented: $showRoleSelectionDialog) {
-            roleSelectionSheet
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-                .presentationCornerRadius(24)
-        }
         .navigationDestination(item: $pushedDestination) { destination in
             switch destination {
+            case .testLabSelector:
+                testLabSelectorPage
             case .testLabDeveloper:
                 CleverTapTestViewV2()
             case .testLabMarketer:
@@ -189,10 +185,10 @@ private extension ProductExperiencesView {
     var backgroundGradientColors: [Color] {
         if isDarkMode {
             return [
-                Color(red: 0.10, green: 0.12, blue: 0.16),
-                Color("CleverTapPrimary").opacity(0.22),
-                Color(.systemBackground),
-                Color(.systemBackground)
+                Color(red: 0.04, green: 0.05, blue: 0.08),
+                Color(red: 0.07, green: 0.09, blue: 0.14),
+                Color("CleverTapPrimary").opacity(0.18),
+                Color("CleverTapSecondary").opacity(0.10)
             ]
         }
         return [
@@ -204,356 +200,695 @@ private extension ProductExperiencesView {
     }
 
     var sectionBorderColor: Color {
-        isDarkMode ? Color.white.opacity(0.16) : Color.white.opacity(0.24)
+        isDarkMode ? Color.white.opacity(0.10) : Color.white.opacity(0.24)
     }
 
     var rowBackgroundColor: Color {
-        isDarkMode ? Color.white.opacity(0.08) : Color(.secondarySystemBackground).opacity(0.75)
+        isDarkMode ? Color(red: 0.11, green: 0.13, blue: 0.18) : Color(.secondarySystemBackground).opacity(0.75)
     }
 
     var selectorBackgroundColor: Color {
-        isDarkMode ? Color.white.opacity(0.08) : Color(.secondarySystemGroupedBackground)
+        isDarkMode ? Color(red: 0.09, green: 0.10, blue: 0.15) : Color(.secondarySystemGroupedBackground)
     }
 
     var headerIconBackground: Color {
-        isDarkMode ? Color.white.opacity(0.14) : Color.white.opacity(0.20)
+        isDarkMode ? Color(red: 0.14, green: 0.17, blue: 0.24) : Color.white.opacity(0.20)
     }
 
     var headerPillBackground: Color {
-        isDarkMode ? Color("CleverTapPrimary").opacity(0.20) : Color("CleverTapPrimary").opacity(0.14)
+        isDarkMode ? Color("CleverTapPrimary").opacity(0.24) : Color("CleverTapPrimary").opacity(0.14)
     }
 
     var headerBadgeBackground: Color {
-        isDarkMode ? Color.white.opacity(0.10) : rowBackgroundColor
+        isDarkMode ? Color(red: 0.13, green: 0.15, blue: 0.21) : rowBackgroundColor
+    }
+
+    var previewCanvasBase: Color {
+        isDarkMode ? Color(red: 0.12, green: 0.14, blue: 0.20) : Color(.secondarySystemBackground)
+    }
+
+    var previewPanelFill: Color {
+        isDarkMode ? Color.white.opacity(0.08) : Color(.systemBackground).opacity(0.56)
+    }
+
+    var elevatedSurfaceFill: AnyShapeStyle {
+        if isDarkMode {
+            return AnyShapeStyle(Color(red: 0.08, green: 0.09, blue: 0.13).opacity(0.96))
+        }
+        return AnyShapeStyle(.ultraThinMaterial)
+    }
+
+    var heroPanelFill: AnyShapeStyle {
+        if isDarkMode {
+            return AnyShapeStyle(
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.09, green: 0.11, blue: 0.16),
+                        Color(red: 0.07, green: 0.09, blue: 0.14)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+        }
+        return AnyShapeStyle(.ultraThinMaterial)
     }
 
     var useCompactControlsLayout: Bool {
         horizontalSizeClass == .compact || dynamicTypeSize.isAccessibilitySize
     }
 
-    var roleSelectionSheet: some View {
-        ZStack {
-            Color(.systemGroupedBackground)
-                .ignoresSafeArea()
-
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 16) {
-                    VStack(alignment: .leading, spacing: 14) {
-                        HStack(spacing: 10) {
-                            CleverTapLogo(size: 40, showText: false)
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("CLEVERTAP TEST LAB")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundColor(Color("CleverTapPrimary"))
-                                Text("Workspace Selection")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundColor(.primary)
-                            }
-
-                            Spacer()
-
-                            Text("Required")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(Color("CleverTapPrimary"))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(headerPillBackground, in: Capsule())
-                        }
-
-                        Text("Who is using Test Lab today?")
-                            .font(.system(size: 28, weight: .heavy, design: .rounded))
-                            .foregroundStyle(.primary)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        Text("Pick a workspace based on the audience. You can switch any time from the Experiences tab.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(20)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .stroke(sectionBorderColor, lineWidth: 1)
-                    )
-
-                    Button {
-                        showRoleSelectionDialog = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                            pushedDestination = .testLabDeveloper
-                        }
-                    } label: {
-                        roleOptionRow(
-                            title: "Developer Workspace",
-                            subtitle: "Who uses this: Developers, QA, and support teams. Includes diagnostics, event traces, and validation tools.",
-                            imageName: "Clevertap2",
-                            icon: "hammer.fill",
-                            accent: Color("CleverTapSecondary"),
-                            badge: "Recommended"
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        showRoleSelectionDialog = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                            pushedDestination = .testLabMarketer
-                        }
-                    } label: {
-                        roleOptionRow(
-                            title: "Demo Workspace",
-                            subtitle: "Who uses this: Marketing and sales teams. Best for campaign walkthroughs, demos, and stakeholder storytelling.",
-                            imageName: "Clevertap1",
-                            icon: "megaphone.fill",
-                            accent: Color("CleverTapPrimary"),
-                            badge: "Presentation"
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        showRoleSelectionDialog = false
-                    } label: {
-                        Text("Cancel")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(selectorBackgroundColor, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .stroke(sectionBorderColor, lineWidth: 1)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 18)
-                .padding(.bottom, 28)
-            }
+    var introScreen: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            workspaceLandingHeader
+            testLabSpotlightCard
+            workspaceCollection
         }
+        .transition(.opacity)
     }
 
-    func roleOptionRow(title: String, subtitle: String, imageName: String, icon: String, accent: Color, badge: String?) -> some View {
-        HStack(spacing: 14) {
-            Image(imageName)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 96, height: 104)
-                .padding(8)
-                .background(rowBackgroundColor, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.white.opacity(0.22), lineWidth: 1)
-                )
+    private var usesSingleColumnLabHub: Bool {
+        horizontalSizeClass == .compact || dynamicTypeSize >= .xLarge
+    }
 
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: icon)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(accent)
-                        .frame(width: 28, height: 28)
-                        .background(accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    var workspaceLandingHeader: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("CLEVERTAP WORKSPACES")
+                .font(.caption.weight(.bold))
+                .foregroundColor(Color("CleverTapPrimary"))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(headerPillBackground, in: Capsule())
 
-                    Text(title)
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                        .lineLimit(2)
+            Text("Choose a workspace")
+                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .foregroundColor(.primary)
 
-                    Spacer(minLength: 0)
+            Text("Each workspace is focused on one job. Open the one that matches what you need to test or review.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    var testLabSpotlightCard: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 14) {
+                workspaceGlyph(symbol: "brain.head.profile", accent: Color("CleverTapPrimary"))
+
+                VStack(alignment: .leading, spacing: 8) {
+                    workspaceTag("Primary")
+
+                    Text("CleverTap Test Lab")
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
+
+                    Text("Run campaign QA, push flows, in-app checks, and inbox validation from one place.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+            }
 
-                HStack(spacing: 8) {
-                    if let badge {
-                        Text(badge.uppercased())
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(accent)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(accent.opacity(0.14), in: Capsule())
+            HStack(spacing: 10) {
+                workspaceDetailStrip(
+                    title: "Best For",
+                    value: "Daily validation"
+                )
+                workspaceDetailStrip(
+                    title: "Last Used",
+                    value: lastTestLabMode == "demo" ? "Demo Workspace" : "Developer Console"
+                )
+            }
+
+            if usesSingleColumnLabHub {
+                VStack(spacing: 10) {
+                    workspacePrimaryButton(title: preferredTestLabActionTitle, action: openPreferredTestLab)
+                    workspaceSecondaryButton(title: "Choose Workspace") {
+                        pushedDestination = .testLabSelector
                     }
-
-                    Spacer()
-
-                    Image(systemName: "arrow.right.circle.fill")
-                        .font(.headline)
-                        .foregroundStyle(accent)
+                }
+            } else {
+                HStack(spacing: 10) {
+                    workspacePrimaryButton(title: preferredTestLabActionTitle, action: openPreferredTestLab)
+                    workspaceSecondaryButton(title: "Choose Workspace") {
+                        pushedDestination = .testLabSelector
+                    }
                 }
             }
         }
-        .padding(14)
+        .padding(22)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(selectorBackgroundColor)
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .fill(workspacePanelFill(accent: Color("CleverTapPrimary")))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
                 .stroke(sectionBorderColor, lineWidth: 1)
         )
-        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: isDarkMode ? Color.black.opacity(0.22) : Color.clear, radius: 16, y: 8)
+        .opacity(revealInteractiveCards ? 1 : 0)
+        .offset(y: revealInteractiveCards ? 0 : 16)
+        .animation(.spring(response: 0.56, dampingFraction: 0.86), value: revealInteractiveCards)
     }
 
-    var introScreen: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("CLEVERTAP EXPERIENCE STUDIO")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(Color("CleverTapPrimary"))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(headerPillBackground, in: Capsule())
-
-                Text("Design, test, and launch\nengagement journeys")
-                    .font(.system(size: 34, weight: .heavy, design: .rounded))
-                    .foregroundColor(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text("This workspace helps you validate CleverTap capabilities end-to-end: campaign testing, App Inbox previews, Product Experiences control, and Native Display placements.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                introOptionCard(section: .testLab, title: "CleverTap Test Lab", subtitle: "Push, in-app and journey checks", icon: "brain.head.profile") {
-                    withAnimation(.spring(response: 0.34, dampingFraction: 0.82)) {
-                        introSelectedSection = .testLab
-                    }
-                }
-                introOptionCard(section: .appInbox, title: "App Inbox", subtitle: "Review rich inbox campaigns", icon: "tray.full.fill") {
-                    withAnimation(.spring(response: 0.34, dampingFraction: 0.82)) {
-                        introSelectedSection = .appInbox
-                    }
-                }
-                introOptionCard(section: .productExperiences, title: "Product Experiences", subtitle: "Fetch and apply remote variables", icon: "shippingbox.fill") {
-                    withAnimation(.spring(response: 0.34, dampingFraction: 0.82)) {
-                        introSelectedSection = .productExperiences
-                    }
-                }
-                introOptionCard(section: .nativeDisplay, title: "Native Display", subtitle: "Audit display units and slots", icon: "rectangle.3.group.fill") {
-                    withAnimation(.spring(response: 0.34, dampingFraction: 0.82)) {
-                        introSelectedSection = .nativeDisplay
-                    }
-                }
-            }
-
-            Button {
-                openFromIntro(introSelectedSection)
-            } label: {
-                HStack(spacing: 8) {
-                    Text(introCtaTitle)
-                    Image(systemName: "arrow.right")
-                }
+    var workspaceCollection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("More Workspaces")
                 .font(.headline.weight(.semibold))
+                .foregroundColor(.primary)
+
+            if usesSingleColumnLabHub {
+                VStack(spacing: 12) {
+                    workspaceTile(
+                        title: "App Inbox",
+                        subtitle: "Review messages and inbox rendering.",
+                        icon: "tray.full.fill",
+                        accent: Color("CleverTapSecondary"),
+                        actionTitle: "Open Inbox"
+                    ) {
+                        pushedDestination = .appInbox
+                    }
+
+                    workspaceTile(
+                        title: "Native Display",
+                        subtitle: "Inspect placements and presentation surfaces.",
+                        icon: "rectangle.3.group.fill",
+                        accent: .orange,
+                        actionTitle: "Open Native Display"
+                    ) {
+                        pushedDestination = .nativeDisplay
+                    }
+
+                    workspaceTile(
+                        title: "Product Experiences",
+                        subtitle: "Preview storefront looks and remote experience values.",
+                        icon: "shippingbox.circle.fill",
+                        accent: .green,
+                        actionTitle: "Open Product Experiences"
+                    ) {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            showStudioIntro = false
+                            selectedSection = .productExperiences
+                        }
+                    }
+                }
+            } else {
+                VStack(spacing: 12) {
+                    HStack(spacing: 12) {
+                        workspaceTile(
+                            title: "App Inbox",
+                            subtitle: "Review messages and inbox rendering.",
+                            icon: "tray.full.fill",
+                            accent: Color("CleverTapSecondary"),
+                            actionTitle: "Open Inbox"
+                        ) {
+                            pushedDestination = .appInbox
+                        }
+
+                        workspaceTile(
+                            title: "Native Display",
+                            subtitle: "Inspect placements and presentation surfaces.",
+                            icon: "rectangle.3.group.fill",
+                            accent: .orange,
+                            actionTitle: "Open Native Display"
+                        ) {
+                            pushedDestination = .nativeDisplay
+                        }
+                    }
+
+                    workspaceTile(
+                        title: "Product Experiences",
+                        subtitle: "Preview storefront looks and remote experience values.",
+                        icon: "shippingbox.circle.fill",
+                        accent: .green,
+                        actionTitle: "Open Product Experiences"
+                    ) {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            showStudioIntro = false
+                            selectedSection = .productExperiences
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    func workspaceGlyph(symbol: String, accent: Color) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(accent.opacity(isDarkMode ? 0.20 : 0.12))
+                .frame(width: 68, height: 68)
+
+            Image(systemName: symbol)
+                .font(.system(size: 26, weight: .semibold))
+                .foregroundColor(accent)
+        }
+    }
+
+    func workspaceTag(_ title: String) -> some View {
+        Text(title.uppercased())
+            .font(.caption2.weight(.bold))
+            .foregroundColor(.secondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(rowBackgroundColor, in: Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(sectionBorderColor, lineWidth: 1)
+            )
+    }
+
+    func workspaceDetailStrip(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title.uppercased())
+                .font(.caption2.weight(.bold))
+                .foregroundColor(.secondary)
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.primary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(rowBackgroundColor, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(sectionBorderColor, lineWidth: 1)
+        )
+    }
+
+    func workspacePrimaryButton(title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
                 .background(
                     LinearGradient(
-                        colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
+                        colors: [Color("CleverTapPrimary"), Color("CleverTapPrimary").opacity(0.78)],
                         startPoint: .leading,
                         endPoint: .trailing
                     ),
-                    in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    in: RoundedRectangle(cornerRadius: 16, style: .continuous)
                 )
-                .shadow(color: Color("CleverTapPrimary").opacity(0.3), radius: 10, y: 7)
-            }
         }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(sectionBorderColor, lineWidth: 1)
-        )
-        .transition(.opacity)
+        .buttonStyle(.plain)
     }
 
-    var headerSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("REMOTE EXPERIENCE STUDIO")
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(Color("CleverTapPrimary"))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(headerPillBackground, in: Capsule())
+    func workspaceSecondaryButton(title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.primary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(rowBackgroundColor)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(sectionBorderColor, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+    }
 
-                    Text(headerTitle)
-                        .font(.system(size: 31, weight: .heavy, design: .rounded))
+    func workspaceTile(
+        title: String,
+        subtitle: String,
+        icon: String,
+        accent: Color,
+        actionTitle: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 14) {
+                workspaceGlyph(symbol: icon, accent: accent)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(title)
+                        .font(.title3.weight(.bold))
                         .foregroundColor(.primary)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.70)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Text(headerSubtitle)
+                    Text(subtitle)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
+                }
 
-                    if selectedSection == .productExperiences {
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.25)) {
-                                showStudioIntro = true
+                HStack(spacing: 8) {
+                    Text(actionTitle)
+                        .font(.footnote.weight(.bold))
+                        .foregroundColor(accent)
+                    Spacer(minLength: 0)
+                    Image(systemName: "arrow.up.right")
+                        .font(.footnote.weight(.bold))
+                        .foregroundColor(accent)
+                }
+                .padding(.top, 4)
+            }
+            .frame(maxWidth: .infinity, minHeight: 196, alignment: .leading)
+            .padding(18)
+            .background(
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(workspacePanelFill(accent: accent))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .stroke(sectionBorderColor, lineWidth: 1)
+            )
+            .shadow(color: isDarkMode ? Color.black.opacity(0.18) : Color.clear, radius: 12, y: 6)
+        }
+        .buttonStyle(.plain)
+        .opacity(revealInteractiveCards ? 1 : 0)
+        .offset(y: revealInteractiveCards ? 0 : 16)
+        .animation(.spring(response: 0.56, dampingFraction: 0.86), value: revealInteractiveCards)
+    }
+
+    func workspacePanelFill(accent: Color) -> some ShapeStyle {
+        LinearGradient(
+            colors: isDarkMode
+                ? [
+                    Color(.secondarySystemBackground),
+                    accent.opacity(0.10),
+                    Color(.tertiarySystemBackground)
+                ]
+                : [
+                    Color.white,
+                    accent.opacity(0.08),
+                    Color(.systemGray6)
+                ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    private var preferredTestLabActionTitle: String {
+        lastTestLabMode == "demo" ? "Open Demo Workspace" : "Open Developer Console"
+    }
+
+    private enum TestLabMode {
+        case developer
+        case demo
+    }
+
+    private func openPreferredTestLab() {
+        openTestLab(lastTestLabMode == "demo" ? .demo : .developer)
+    }
+
+    private func openTestLab(_ mode: TestLabMode) {
+        switch mode {
+        case .developer:
+            lastTestLabMode = "developer"
+            pushedDestination = .testLabDeveloper
+        case .demo:
+            lastTestLabMode = "demo"
+            pushedDestination = .testLabMarketer
+        }
+    }
+
+    func testLabModeOption(
+        title: String,
+        subtitle: String,
+        detail: String,
+        icon: String,
+        accent: Color,
+        badge: String,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(isSelected ? Color.white.opacity(0.18) : accent.opacity(isDarkMode ? 0.18 : 0.10))
+                        .frame(width: 42, height: 42)
+
+                    Image(systemName: icon)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundColor(isSelected ? .white : accent)
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .top, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(title)
+                                .font(.subheadline.weight(.bold))
+                                .foregroundColor(isSelected ? .white : .primary)
+                            Text(subtitle)
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(isSelected ? .white.opacity(0.86) : accent)
+                        }
+
+                        Spacer(minLength: 0)
+
+                        Text(badge.uppercased())
+                            .font(.caption2.weight(.bold))
+                            .foregroundColor(isSelected ? .white : accent)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                isSelected ? Color.white.opacity(0.18) : accent.opacity(isDarkMode ? 0.20 : 0.12),
+                                in: Capsule()
+                            )
+                    }
+
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundColor(isSelected ? .white.opacity(0.92) : .secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(
+                        isSelected
+                            ? AnyShapeStyle(
+                                LinearGradient(
+                                    colors: [accent, accent.opacity(isDarkMode ? 0.86 : 0.78)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            : AnyShapeStyle(accent.opacity(isDarkMode ? 0.14 : 0.08))
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(isSelected ? Color.clear : accent.opacity(isDarkMode ? 0.30 : 0.18), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    var testLabSelectorPage: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("TEST LAB")
+                        .font(.caption.weight(.bold))
+                        .foregroundColor(Color("CleverTapPrimary"))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(headerPillBackground, in: Capsule())
+
+                    Text("Choose the right workspace")
+                        .font(.system(size: 28, weight: .heavy, design: .rounded))
+                        .foregroundColor(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("Developer Console is for diagnostics and QA. Demo Workspace is for presentation-friendly campaign walkthroughs.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(20)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(elevatedSurfaceFill, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .stroke(sectionBorderColor, lineWidth: 1)
+                )
+
+                VStack(spacing: 12) {
+                    testLabModeOption(
+                        title: "Developer Console",
+                        subtitle: "For developers, QA, and support teams",
+                        detail: "Includes diagnostics, event validation, payload inspection, trigger tooling, and implementation checks.",
+                        icon: "hammer.fill",
+                        accent: Color("CleverTapPrimary"),
+                        badge: lastTestLabMode == "developer" ? "Last Used" : "Recommended",
+                        isSelected: lastTestLabMode == "developer"
+                    ) {
+                        openTestLab(.developer)
+                    }
+
+                    testLabModeOption(
+                        title: "Demo Workspace",
+                        subtitle: "For marketers, sales, and stakeholder walkthroughs",
+                        detail: "Best for showcase flows, presentation-friendly demos, and explaining campaign behavior without debug-heavy controls.",
+                        icon: "megaphone.fill",
+                        accent: Color("CleverTapSecondary"),
+                        badge: lastTestLabMode == "demo" ? "Last Used" : "Showcase",
+                        isSelected: lastTestLabMode == "demo"
+                    ) {
+                        openTestLab(.demo)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 28)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .navigationTitle("Test Lab")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    var headerSection: some View {
+        Group {
+            if selectedSection == .productExperiences {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("PRODUCT EXPERIENCES")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(.secondary)
+
+                            Text("Minimal Experience Lab")
+                                .font(.system(size: 30, weight: .semibold, design: .rounded))
+                                .foregroundColor(.primary)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            Text("A cleaner Apple-style workspace for remote storefront values, presets, and fetch workflows.")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        Spacer(minLength: 16)
+
+                        VStack(alignment: .trailing, spacing: 10) {
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.25)) {
+                                    showStudioIntro = true
+                                }
+                            } label: {
+                                Image(systemName: "arrow.left")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(.primary)
+                                    .frame(width: 36, height: 36)
+                                    .background(Color(.secondarySystemBackground), in: Circle())
                             }
-                        } label: {
-                            Label("Back to Overview", systemImage: "arrow.left.circle.fill")
-                                .font(.subheadline.weight(.semibold))
+                            .buttonStyle(.plain)
+
+                            Button {
+                                activeSheet = .settings
+                            } label: {
+                                Image(systemName: "slider.horizontal.3")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(.primary)
+                                    .frame(width: 36, height: 36)
+                                    .background(Color(.secondarySystemBackground), in: Circle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+
+                    HStack(spacing: 10) {
+                        quickBadge(
+                            title: "Mode",
+                            value: productExperiencesService.isDemoModeLocked ? "Demo Locked" : "Live"
+                        )
+                        quickBadge(
+                            title: "Status",
+                            value: productExperiencesService.hasFetchedVariables ? "Fetched" : "Idle"
+                        )
+                        quickBadge(
+                            title: "Feature",
+                            value: productExperiencesService.isFeatureEnabled ? "Enabled" : "Disabled"
+                        )
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(20)
+                .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .stroke(sectionBorderColor, lineWidth: 1)
+                )
+            } else {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("REMOTE EXPERIENCE STUDIO")
+                                .font(.caption.weight(.semibold))
                                 .foregroundColor(Color("CleverTapPrimary"))
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(Color("CleverTapPrimary").opacity(0.12), in: Capsule())
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(headerPillBackground, in: Capsule())
+
+                            Text(headerTitle)
+                                .font(.system(size: 31, weight: .heavy, design: .rounded))
+                                .foregroundColor(.primary)
+                                .lineLimit(2)
+                                .minimumScaleFactor(0.70)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            Text(headerSubtitle)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        Spacer(minLength: 16)
+
+                        Button {
+                            activeSheet = .settings
+                        } label: {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(headerIconBackground)
+                                    .frame(width: 48, height: 48)
+                                Image(systemName: "slider.horizontal.3")
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundColor(Color("CleverTapPrimary"))
+                            }
                         }
                         .buttonStyle(.plain)
-                        .padding(.top, 2)
+                    }
+
+                    HStack(spacing: 10) {
+                        quickBadge(
+                            title: "Mode",
+                            value: productExperiencesService.isDemoModeLocked ? "Demo Locked" : "Live Fetch"
+                        )
+                        quickBadge(
+                            title: "Status",
+                            value: productExperiencesService.hasFetchedVariables ? "Fetched" : "Idle"
+                        )
                     }
                 }
-
-                Spacer(minLength: 16)
-
-                Button {
-                    activeSheet = .settings
-                } label: {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(headerIconBackground)
-                            .frame(width: 48, height: 48)
-                        Image(systemName: "slider.horizontal.3")
-                            .font(.title3.weight(.semibold))
-                            .foregroundColor(Color("CleverTapPrimary"))
-                    }
-                }
-                .buttonStyle(.plain)
-            }
-
-            HStack(spacing: 10) {
-                quickBadge(
-                    title: "Mode",
-                    value: productExperiencesService.isDemoModeLocked ? "Demo Locked" : "Live Fetch"
-                )
-                quickBadge(
-                    title: "Status",
-                    value: productExperiencesService.hasFetchedVariables ? "Fetched" : "Idle"
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(20)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(sectionBorderColor, lineWidth: 1)
                 )
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(sectionBorderColor, lineWidth: 1)
-        )
     }
 
     var sectionSelector: some View {
@@ -659,6 +994,54 @@ private extension ProductExperiencesView {
         .animation(.easeInOut(duration: 0.25), value: selectedSection)
     }
 
+    private func selectSection(_ section: ExperienceSection) {
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
+            selectedSection = section
+        }
+    }
+
+    func selectorCard(
+        title: String,
+        subtitle: String,
+        icon: String,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 12) {
+                Image(systemName: icon)
+                    .font(.title3.weight(.semibold))
+                    .foregroundColor(isSelected ? .white : .primary)
+                    .frame(width: 42, height: 42)
+                    .background(
+                        (isSelected ? Color("CleverTapPrimary") : Color(.secondarySystemBackground)),
+                        in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.primary)
+                        .lineLimit(2)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, minHeight: 132, alignment: .leading)
+            .padding(16)
+            .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(isSelected ? Color("CleverTapPrimary") : sectionBorderColor, lineWidth: isSelected ? 1.5 : 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
     @ViewBuilder
     var sectionContent: some View {
         switch selectedSection {
@@ -674,172 +1057,15 @@ private extension ProductExperiencesView {
     }
 
     var productExperiencesSection: some View {
-        VStack(spacing: 14) {
-            Toggle("Enable Product Experiences", isOn: Binding(
-                get: { productExperiencesService.isFeatureEnabled },
-                set: { productExperiencesService.setFeatureEnabled($0) }
-            ))
-            .toggleStyle(.switch)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(sectionBorderColor, lineWidth: 1)
-            )
-
+        VStack(spacing: 18) {
+            experiencePreviewStage
             if !productExperiencesService.isFeatureEnabled {
                 disabledBanner
             }
-            variableStatusSection
-            actionsSection
-            demoPresetsSection
-            guideSection
+            experienceControlsPanel
+            experienceLooksPanel
+            experienceSummaryPanel
         }
-    }
-
-    var variableStatusSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text("Live Variable Snapshot")
-                    .font(.headline)
-                Spacer()
-                Text(productExperiencesService.hasFetchedVariables ? "Synced" : "Not Synced")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(productExperiencesService.hasFetchedVariables ? .green : .orange)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background((productExperiencesService.hasFetchedVariables ? Color.green : Color.orange).opacity(0.13), in: Capsule())
-            }
-
-            VStack(spacing: 10) {
-                statusRow(title: "home_header_title", value: productExperiencesService.homeHeaderTitle)
-                statusRow(title: "home_header_subtitle", value: productExperiencesService.homeHeaderSubtitle)
-                statusRow(title: "home_featured_section_title", value: productExperiencesService.featuredSectionTitle)
-                statusRow(title: "home_show_featured_section", value: productExperiencesService.showFeaturedSection ? "true" : "false")
-                statusRow(title: "home_max_featured_products", value: "\(productExperiencesService.maxFeaturedProducts)")
-                statusRow(title: "home_theme_gradient_start", value: productExperiencesService.homeThemeGradientStart)
-                statusRow(title: "home_theme_gradient_end", value: productExperiencesService.homeThemeGradientEnd)
-                statusRow(title: "home_header_badge", value: productExperiencesService.homeHeaderBadge)
-                statusRow(title: "home_show_header_badge", value: productExperiencesService.showHomeHeaderBadge ? "true" : "false")
-            }
-        }
-        .padding(18)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(sectionBorderColor, lineWidth: 1)
-        )
-    }
-
-    var actionsSection: some View {
-        Group {
-            if useCompactControlsLayout {
-                VStack(spacing: 10) {
-                    fetchButton
-                    syncButton
-                }
-            } else {
-                HStack(spacing: 12) {
-                    fetchButton
-                    syncButton
-                }
-            }
-        }
-    }
-
-    var demoPresetsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Demo Presets")
-                    .font(.headline)
-                Spacer()
-                Text("Local preview")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            Text("Use these for quick client walkthroughs. For actual CleverTap demo, publish values in dashboard and tap Fetch.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-
-            Toggle(isOn: Binding(
-                get: { productExperiencesService.isDemoModeLocked },
-                set: { productExperiencesService.setDemoModeLocked($0) }
-            )) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Demo Mode Lock")
-                        .font(.subheadline.weight(.semibold))
-                    Text(productExperiencesService.isDemoModeLocked
-                         ? "Presets stay fixed. Remote fetch is paused."
-                         : "Remote values can update this screen.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-            .toggleStyle(.switch)
-            .padding(12)
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
-
-            LazyVGrid(
-                columns: useCompactControlsLayout
-                    ? [GridItem(.flexible()), GridItem(.flexible())]
-                    : [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())],
-                spacing: 10
-            ) {
-                Button {
-                    productExperiencesService.applyDemoPreset(.luxuryLaunch)
-                    CleverTap.sharedInstance()?.recordEvent(
-                        "luxury_preset_selected",
-                        withProps: ["source": "Product Experiences"]
-                    )
-                    themeManager.setLuxuryActive(true)
-                    alertMessage = "Applied preset: Luxury Launch."
-                    showAlert = true
-                } label: {
-                    actionLabel(title: "Luxury", icon: "sparkles")
-                }
-                .disabled(!productExperiencesService.isFeatureEnabled)
-
-                Button {
-                    themeManager.setLuxuryActive(true)
-                    themeManager.refreshFromCleverTap()
-                    alertMessage = "Requested Luxury theme from Product Config."
-                    showAlert = true
-                } label: {
-                    actionLabel(title: "Luxury Theme", icon: "paintbrush.fill")
-                }
-                .disabled(!productExperiencesService.isFeatureEnabled)
-
-                Button {
-                    productExperiencesService.applyDemoPreset(.festiveSale)
-                    themeManager.setLuxuryActive(false)
-                    alertMessage = "Applied preset: Festive Sale."
-                    showAlert = true
-                } label: {
-                    actionLabel(title: "Festive", icon: "tag.fill")
-                }
-                .disabled(!productExperiencesService.isFeatureEnabled)
-
-                Button {
-                    productExperiencesService.applyDemoPreset(.reset)
-                    themeManager.setLuxuryActive(false)
-                    alertMessage = "Reset to app defaults."
-                    showAlert = true
-                } label: {
-                    actionLabel(title: "Reset", icon: "arrow.uturn.backward")
-                }
-                .disabled(!productExperiencesService.isFeatureEnabled)
-                .gridCellColumns(useCompactControlsLayout ? 2 : 1)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(sectionBorderColor, lineWidth: 1)
-        )
     }
 
     var disabledBanner: some View {
@@ -863,123 +1089,291 @@ private extension ProductExperiencesView {
         )
     }
 
-    var guideSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            let luxuryPayload = """
-            {
-                "home_header_title": "Luxury Atelier",
-                "home_header_subtitle": "Crafted pieces for elevated living.",
-                "home_featured_section_title": "The Signature Edit",
-                "home_show_featured_section": true,
-                "home_max_featured_products": 4,
-                "home_theme_gradient_start": "#1C1512",
-                "home_theme_gradient_end": "#8B6A4A",
-                "home_header_badge": "Private Collection",
-                "home_show_header_badge": true,
-                "theme": { "name": "luxury" },
-                "background": {
-                    "type": "gradient",
-                    "colors": ["#0F0F0F", "#1C1C1E", "#000000"]
-                },
-                "navigationBar": {
-                    "textColor": "#D4AF37",
-                    "glassOpacity": 0.28
-                },
-                "cards": {
-                    "background": "#1A1A1A",
-                    "borderColor": "#D4AF37",
-                    "cornerRadius": 20,
-                    "shadowOpacity": 0.35
-                },
-                "buttons": {
-                    "primary": { "background": "#D4AF37", "textColor": "#0B0F18" },
-                    "secondary": { "background": "#111111", "textColor": "#D4AF37" }
-                },
-                "typography": {
-                    "titleFont": "Georgia",
-                    "bodyFont": "System",
-                    "titleColor": "#E8D5A7",
-                    "bodyColor": "#C7B48B"
-                },
-                "spacing": {
-                    "section": 26,
-                    "card": 16
-                },
-                "animations": {
-                    "style": "smooth",
-                    "duration": 0.4
+    var experiencePreviewStage: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            productExperienceSectionHeader(
+                "Experience Preview",
+                subtitle: "A live storefront read of the current remote experience."
+            )
+
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(previewCanvasBase)
+                    .overlay(
+                        LinearGradient(
+                            colors: [
+                                Color(hex: productExperiencesService.homeThemeGradientStart).opacity(isDarkMode ? (productExperiencesService.isFeatureEnabled ? 0.42 : 0.18) : (productExperiencesService.isFeatureEnabled ? 0.30 : 0.12)),
+                                Color(hex: productExperiencesService.homeThemeGradientEnd).opacity(isDarkMode ? (productExperiencesService.isFeatureEnabled ? 0.28 : 0.14) : (productExperiencesService.isFeatureEnabled ? 0.16 : 0.08))
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .stroke(isDarkMode ? Color.white.opacity(0.08) : Color.white.opacity(0.18), lineWidth: 1)
+                    )
+                    .shadow(color: isDarkMode ? .black.opacity(0.26) : .clear, radius: 18, y: 10)
+
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            if productExperiencesService.showHomeHeaderBadge && !productExperiencesService.homeHeaderBadge.isEmpty {
+                                Text(productExperiencesService.homeHeaderBadge.uppercased())
+                                    .font(.caption2.weight(.bold))
+                                    .foregroundColor(isDarkMode ? .white.opacity(0.82) : .secondary)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(isDarkMode ? Color.white.opacity(0.10) : Color(.systemBackground).opacity(0.75), in: Capsule())
+                            }
+
+                            Text(productExperiencesService.homeHeaderTitle)
+                                .font(.system(size: 34, weight: .semibold, design: .rounded))
+                                .foregroundColor(.primary)
+                                .lineLimit(2)
+
+                            Text(productExperiencesService.homeHeaderSubtitle)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .lineLimit(3)
+                        }
+
+                        Spacer(minLength: 14)
+                    }
+
+                    VStack(spacing: 12) {
+                        HStack {
+                            Text(productExperiencesService.featuredSectionTitle)
+                                .font(.headline.weight(.semibold))
+                            Spacer()
+                            Text(productExperiencesService.showFeaturedSection ? "\(productExperiencesService.maxFeaturedProducts) items" : "Hidden")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(.secondary)
+                        }
+
+                        HStack(spacing: 10) {
+                            ForEach(0..<3, id: \.self) { index in
+                                VStack(alignment: .leading, spacing: 8) {
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .fill(isDarkMode ? Color.white.opacity(0.12) : Color(.systemBackground).opacity(0.72))
+                                        .frame(height: 92)
+                                        .overlay(
+                                            Image(systemName: index == 0 ? "sparkles" : index == 1 ? "circle.grid.2x2.fill" : "bag.fill")
+                                                .font(.title3.weight(.semibold))
+                                                .foregroundColor(isDarkMode ? .white.opacity(0.68) : .secondary.opacity(0.85))
+                                        )
+
+                                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                        .fill(isDarkMode ? Color.white.opacity(0.18) : Color(.systemBackground).opacity(0.82))
+                                        .frame(height: 10)
+
+                                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                        .fill(isDarkMode ? Color.white.opacity(0.10) : Color(.systemBackground).opacity(0.62))
+                                        .frame(width: index == 1 ? 54 : 70, height: 10)
+                                }
+                                .frame(maxWidth: .infinity)
+                            }
+                        }
+                    }
+                    .padding(16)
+                    .background(previewPanelFill, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(isDarkMode ? Color.white.opacity(0.06) : Color.black.opacity(0.04), lineWidth: 1)
+                    )
+                }
+                .padding(22)
+                .opacity(productExperiencesService.isFeatureEnabled ? 1 : 0.68)
+            }
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(elevatedSurfaceFill, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(sectionBorderColor, lineWidth: 1)
+        )
+    }
+
+    var experienceControlsPanel: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            productExperienceSectionHeader(
+                "Controls",
+                subtitle: "Feature state, demo lock, and sync actions."
+            )
+
+            experienceMinimalToggleRow(
+                title: "Product Experiences",
+                subtitle: "Use remote values across the storefront",
+                isOn: Binding(
+                    get: { productExperiencesService.isFeatureEnabled },
+                    set: { productExperiencesService.setFeatureEnabled($0) }
+                )
+            )
+
+            experienceMinimalToggleRow(
+                title: "Demo Lock",
+                subtitle: "Keep the preview fixed for walkthroughs",
+                isOn: Binding(
+                    get: { productExperiencesService.isDemoModeLocked },
+                    set: { productExperiencesService.setDemoModeLocked($0) }
+                )
+            )
+
+            if useCompactControlsLayout {
+                VStack(spacing: 10) {
+                    fetchButton
+                    syncButton
+                }
+            } else {
+                HStack(spacing: 12) {
+                    fetchButton
+                    syncButton
                 }
             }
-            """
 
-            Text("How To Use")
-                .font(.headline)
-
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: "1.circle.fill")
-                    .foregroundStyle(Color("CleverTapPrimary"))
-                    .font(.title3)
-                Text("Enable Product Experiences and turn Demo Mode Lock OFF.")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.primary)
-            }
-            .padding(12)
-            .background(Color("CleverTapPrimary").opacity(0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color("CleverTapPrimary").opacity(0.25), lineWidth: 1)
-            )
-
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: "2.circle.fill")
-                    .foregroundStyle(Color("CleverTapPrimary"))
-                    .font(.title3)
-                Text("In the CleverTap dashboard, create a Product Experience triggered by event: luxury_preset_selected.")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.primary)
-            }
-            .padding(12)
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(sectionBorderColor, lineWidth: 1)
-            )
-
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: "3.circle.fill")
-                    .foregroundStyle(Color("CleverTapPrimary"))
-                    .font(.title3)
-                Text("Paste the payload below, publish, tap Luxury, then Fetch to apply.")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.primary)
-            }
-            .padding(12)
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(sectionBorderColor, lineWidth: 1)
-            )
-
-            Text(luxuryPayload)
-                .font(.system(.caption, design: .monospaced))
-                .foregroundColor(.primary)
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(rowBackgroundColor, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(sectionBorderColor, lineWidth: 1)
-                )
-
-            Text("If the UI does not update, confirm the event fired and tap Fetch again.")
+            Text(productExperiencesService.isDemoModeLocked
+                 ? "Demo Lock is on. Turn it off to fetch fresh dashboard values."
+                 : "Fetch pulls the latest remote values. Sync runs a debug refresh and fetches again.")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .padding(20)
+        .background(elevatedSurfaceFill, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(sectionBorderColor, lineWidth: 1)
+        )
+    }
+
+    var experienceLooksPanel: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            productExperienceSectionHeader(
+                "Looks",
+                subtitle: "Pick the presentation style for the active demo."
+            )
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    lookCard(
+                        title: "Luxury",
+                        subtitle: "Warm metals, premium energy",
+                        footnote: "Best for premium demos",
+                        colors: [Color(hex: "#C9A45C"), Color(hex: "#F5E7C8")],
+                        isActive: themeManager.isLuxuryActive && productExperiencesService.isDemoModeLocked
+                    ) {
+                        productExperiencesService.applyDemoPreset(.luxuryLaunch)
+                        CleverTap.sharedInstance()?.recordEvent(
+                            "luxury_preset_selected",
+                            withProps: ["source": "Product Experiences"]
+                        )
+                        themeManager.setLuxuryActive(true)
+                        alertMessage = "Applied preset: Luxury Launch."
+                        showAlert = true
+                    }
+
+                    lookCard(
+                        title: "Festive",
+                        subtitle: "Brighter contrast and urgency",
+                        footnote: "Best for campaign walkthroughs",
+                        colors: [Color(hex: "#FF8C5A"), Color(hex: "#FFD166")],
+                        isActive: !themeManager.isLuxuryActive && productExperiencesService.isDemoModeLocked
+                    ) {
+                        productExperiencesService.applyDemoPreset(.festiveSale)
+                        themeManager.setLuxuryActive(false)
+                        alertMessage = "Applied preset: Festive Sale."
+                        showAlert = true
+                    }
+
+                    lookCard(
+                        title: "Default",
+                        subtitle: "App baseline without demo styling",
+                        footnote: "Best for showing the natural state",
+                        colors: [Color(.systemGray4), Color(.systemGray6)],
+                        isActive: !themeManager.isLuxuryActive && !productExperiencesService.isDemoModeLocked
+                    ) {
+                        productExperiencesService.applyDemoPreset(.reset)
+                        themeManager.setLuxuryActive(false)
+                        alertMessage = "Reset to app defaults."
+                        showAlert = true
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .background(elevatedSurfaceFill, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(sectionBorderColor, lineWidth: 1)
+        )
+    }
+
+    var experienceSummaryPanel: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            productExperienceSectionHeader(
+                "Live Setup",
+                subtitle: "The three values currently shaping the storefront.",
+                badge: productExperiencesService.hasFetchedVariables ? "Fetched" : "Idle"
+            )
+
+            VStack(spacing: 0) {
+                productExperienceValueRow(
+                    label: "Header",
+                    value: productExperiencesService.homeHeaderBadge.isEmpty
+                        ? productExperiencesService.homeHeaderTitle
+                        : "\(productExperiencesService.homeHeaderTitle) • \(productExperiencesService.homeHeaderBadge)"
+                )
+                Divider()
+                productExperienceValueRow(
+                    label: "Featured",
+                    value: productExperiencesService.showFeaturedSection
+                        ? "\(productExperiencesService.featuredSectionTitle) • \(productExperiencesService.maxFeaturedProducts) items"
+                        : "\(productExperiencesService.featuredSectionTitle) • Hidden"
+                )
+                Divider()
+                productExperienceValueRow(
+                    label: "Theme",
+                    value: "\(productExperiencesService.homeThemeGradientStart) → \(productExperiencesService.homeThemeGradientEnd)"
+                )
+            }
+            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+        .padding(20)
+        .background(elevatedSurfaceFill, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(sectionBorderColor, lineWidth: 1)
+        )
+    }
+
+    var experienceActionPanel: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Actions")
+                .font(.title3.weight(.semibold))
+
+            if useCompactControlsLayout {
+                VStack(spacing: 10) {
+                    fetchButton
+                    syncButton
+                }
+            } else {
+                HStack(spacing: 12) {
+                    fetchButton
+                    syncButton
+                }
+            }
+
+            Text(productExperiencesService.isDemoModeLocked
+                 ? "Turn off Demo Lock to fetch remote dashboard values."
+                 : "Fetch pulls the latest dashboard values. Sync runs a debug refresh and then fetches again.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding(20)
+        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(sectionBorderColor, lineWidth: 1)
         )
     }
@@ -1149,132 +1543,219 @@ private extension ProductExperiencesView {
         )
     }
 
-    private func selectSection(_ section: ExperienceSection) {
-        guard selectedSection != section else { return }
-        withAnimation(.easeInOut(duration: 0.25)) {
-            selectedSection = section
-        }
-        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-    }
-
-    private func introOptionCard(
-        section: ExperienceSection,
+    func experienceMinimalToggleRow(
         title: String,
         subtitle: String,
-        icon: String,
-        action: @escaping () -> Void
+        isOn: Binding<Bool>
     ) -> some View {
-        let isSelected = introSelectedSection == section
-
-        return Button(action: action) {
-            VStack(alignment: .leading, spacing: 8) {
-                Image(systemName: icon)
-                    .font(.title3)
-                    .foregroundColor(isSelected ? .white : Color("CleverTapPrimary"))
-                    .frame(width: 34, height: 34)
-                    .background(
-                        (isSelected ? Color.white.opacity(0.18) : Color("CleverTapPrimary").opacity(0.14)),
-                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    )
-
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundColor(isSelected ? .white : .primary)
-                    .fixedSize(horizontal: false, vertical: true)
-
+                    .foregroundColor(.primary)
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundColor(isSelected ? .white.opacity(0.9) : .secondary)
+                    .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(
-                        isSelected
-                            ? AnyShapeStyle(
-                                LinearGradient(
-                                    colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            : AnyShapeStyle(.thinMaterial)
-                    )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(isSelected ? Color.clear : sectionBorderColor, lineWidth: 1)
-            )
+            Spacer(minLength: 12)
+            Toggle("", isOn: isOn)
+                .labelsHidden()
         }
-        .opacity(revealInteractiveCards ? 1 : 0)
-        .offset(y: revealInteractiveCards ? 0 : 16)
-        .animation(.spring(response: 0.56, dampingFraction: 0.86), value: revealInteractiveCards)
-        .buttonStyle(.plain)
+        .padding(16)
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
-    func selectorCard(
+    func productExperienceSectionHeader(
+        _ title: String,
+        subtitle: String,
+        badge: String? = nil
+    ) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.title3.weight(.semibold))
+                    .foregroundColor(.primary)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 8)
+
+            if let badge {
+                Text(badge.uppercased())
+                    .font(.caption2.weight(.bold))
+                    .foregroundColor(Color("CleverTapPrimary"))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(Color("CleverTapPrimary").opacity(isDarkMode ? 0.18 : 0.10), in: Capsule())
+            }
+        }
+    }
+
+    func lookCard(
         title: String,
         subtitle: String,
-        icon: String,
-        isSelected: Bool,
+        footnote: String,
+        colors: [Color],
+        isActive: Bool,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    Image(systemName: icon)
-                        .font(.title3)
-                        .foregroundStyle(isSelected ? .white : .secondary)
-                        .frame(width: 28, height: 28)
-                        .background(
-                            (isSelected ? Color.white.opacity(0.18) : Color.secondary.opacity(0.12)),
-                            in: RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        )
+                    Text(isActive ? "SELECTED" : "LOOK")
+                        .font(.caption2.weight(.bold))
+                        .foregroundColor(isActive ? .primary : .secondary)
                     Spacer()
-                    if isSelected {
-                        Label("Selected", systemImage: "checkmark.circle.fill")
-                            .font(.caption2.weight(.semibold))
-                    }
+                    Image(systemName: isActive ? "checkmark.circle.fill" : "circle")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(isActive ? Color("CleverTapPrimary") : .secondary.opacity(0.7))
                 }
 
-                Text(title)
-                    .font(.headline)
-                    .lineLimit(2)
-
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(isSelected ? .white.opacity(0.9) : .secondary)
-                    .lineLimit(2)
-            }
-            .foregroundStyle(isSelected ? .white : .primary)
-            .padding(15)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(
-                        isSelected
-                            ? AnyShapeStyle(
-                                LinearGradient(
-                                    colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            : AnyShapeStyle(selectorBackgroundColor)
+                        LinearGradient(
+                            colors: colors,
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
+                    .frame(height: 114)
+                    .overlay(
+                        HStack(spacing: 8) {
+                            ForEach(0..<3, id: \.self) { index in
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(Color.white.opacity(index == 1 ? 0.60 : 0.34))
+                                    .frame(maxWidth: .infinity, minHeight: 48, maxHeight: 74)
+                            }
+                        }
+                        .padding(14)
+                    )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(footnote)
+                        .font(.caption2)
+                        .foregroundColor(.secondary.opacity(0.9))
+                }
+            }
+            .padding(16)
+            .frame(width: 252, alignment: .leading)
+            .background(
+                (isActive ? Color(.tertiarySystemBackground) : Color(.secondarySystemBackground)),
+                in: RoundedRectangle(cornerRadius: 24, style: .continuous)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(isSelected ? Color.clear : sectionBorderColor, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(isActive ? Color("CleverTapPrimary").opacity(0.55) : sectionBorderColor, lineWidth: isActive ? 1.5 : 1)
             )
-            .shadow(color: isSelected ? Color("CleverTapPrimary").opacity(0.22) : .clear, radius: 8, y: 5)
-            .opacity(isSelected ? 1.0 : 0.92)
         }
         .buttonStyle(.plain)
-        .scaleEffect(isSelected ? 1 : 0.98)
-        .animation(.spring(response: 0.32, dampingFraction: 0.80), value: isSelected)
+    }
+
+    func productExperienceValueRow(label: String, value: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundColor(.secondary)
+            Spacer(minLength: 12)
+            Text(value)
+                .font(.subheadline)
+                .foregroundColor(.primary)
+                .multilineTextAlignment(.trailing)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+    }
+
+    var storefrontPreviewCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Storefront Preview")
+                        .font(.caption.weight(.bold))
+                        .foregroundColor(Color("CleverTapPrimary"))
+                    Text("A quick read of the current storefront experience.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                if productExperiencesService.showHomeHeaderBadge && !productExperiencesService.homeHeaderBadge.isEmpty {
+                    Text(productExperiencesService.homeHeaderBadge)
+                        .font(.caption2.weight(.bold))
+                        .foregroundColor(Color("CleverTapPrimary"))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(Color("CleverTapPrimary").opacity(0.12), in: Capsule())
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(productExperiencesService.homeHeaderTitle)
+                    .font(.title2.weight(.bold))
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+
+                Text(productExperiencesService.homeHeaderSubtitle)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .lineLimit(3)
+            }
+
+            Divider()
+
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Featured Section")
+                        .font(.caption.weight(.bold))
+                        .foregroundColor(.secondary)
+                    Text(productExperiencesService.featuredSectionTitle)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.primary)
+                    Text(productExperiencesService.showFeaturedSection ? "\(productExperiencesService.maxFeaturedProducts) products visible" : "Currently hidden")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(hex: productExperiencesService.homeThemeGradientStart),
+                                Color(hex: productExperiencesService.homeThemeGradientEnd)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 74, height: 74)
+                    .overlay(
+                        Image(systemName: "sparkles")
+                            .font(.title3.weight(.bold))
+                            .foregroundColor(.white.opacity(0.9))
+                    )
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(rowBackgroundColor, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(sectionBorderColor, lineWidth: 1)
+        )
     }
 
     func statusRow(title: String, value: String) -> some View {
@@ -1371,45 +1852,16 @@ private extension ProductExperiencesView {
         .disabled(!productExperiencesService.isFeatureEnabled)
     }
 
-    private func openFromIntro(_ section: ExperienceSection) {
-        switch section {
-        case .productExperiences:
-            selectedSection = .productExperiences
-            withAnimation(.easeInOut(duration: 0.28)) {
-                showStudioIntro = false
-            }
-        case .testLab:
-            showRoleSelectionDialog = true
-        case .appInbox:
-            pushedDestination = .appInbox
-        case .nativeDisplay:
-            pushedDestination = .nativeDisplay
-        }
-    }
-
     private func openFromStudioSelection() {
         switch selectedSection {
         case .testLab:
-            showRoleSelectionDialog = true
+            openPreferredTestLab()
         case .appInbox:
             pushedDestination = .appInbox
         case .nativeDisplay:
             pushedDestination = .nativeDisplay
         case .productExperiences:
             break
-        }
-    }
-
-    private var introCtaTitle: String {
-        switch introSelectedSection {
-        case .testLab:
-            return "Open CleverTap Test Lab"
-        case .appInbox:
-            return "Open App Inbox"
-        case .productExperiences:
-            return "Open Product Experiences"
-        case .nativeDisplay:
-            return "Open Native Display"
         }
     }
 

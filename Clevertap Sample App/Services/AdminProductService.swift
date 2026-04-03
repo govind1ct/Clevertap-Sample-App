@@ -195,7 +195,7 @@ final class AdminProductService: ObservableObject {
     }
 }
 
-struct AdminProductFormData {
+struct AdminProductFormData: Codable, Equatable {
     var name: String = ""
     var description: String = ""
     var shortDescription: String = ""

@@ -110,6 +110,37 @@ final class AdminHeroBannerService: ObservableObject {
             }
         }
     }
+
+    func updateBannerActiveState(
+        bannerID: String,
+        title: String?,
+        isActive: Bool,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        self.isSaving = true
+        errorMessage = nil
+
+        db.collection("hero_banners").document(bannerID).setData(["isActive": isActive], merge: true) { [weak self] error in
+            DispatchQueue.main.async {
+                self?.isSaving = false
+                if let error {
+                    self?.errorMessage = error.localizedDescription
+                    completion(.failure(error))
+                } else {
+                    AdminAuditLogger.log(
+                        action: isActive ? "enable" : "disable",
+                        entityType: "hero_banner",
+                        entityId: bannerID,
+                        metadata: [
+                            "title": title ?? "",
+                            "isActive": isActive
+                        ]
+                    )
+                    completion(.success(()))
+                }
+            }
+        }
+    }
 }
 
 struct AdminHeroBannerFormData {

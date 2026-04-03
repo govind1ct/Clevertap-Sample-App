@@ -122,20 +122,21 @@ struct AdminHeroBannersView: View {
     }
 
     private var headerCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top) {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("HERO BANNERS")
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(secondaryText)
 
                     Text("Campaign surfaces")
-                        .font(.title3.weight(.bold))
+                        .font(.title3.weight(.black))
                         .foregroundStyle(primaryText)
 
-                    Text("Manage homepage offers, priorities, and scheduling windows.")
+                    Text("A faster control surface for homepage offers, priorities, and on/off state.")
                         .font(.footnote)
                         .foregroundStyle(secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Spacer(minLength: 12)
@@ -143,34 +144,35 @@ struct AdminHeroBannersView: View {
                 Button {
                     showAddSheet = true
                 } label: {
-                    Label("New Banner", systemImage: "plus.circle.fill")
-                        .font(.caption.weight(.bold))
+                    Image(systemName: "plus")
+                        .font(.subheadline.weight(.black))
                         .foregroundColor(.white)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 11)
+                        .frame(width: 42, height: 42)
                         .background(
                             LinearGradient(
                                 colors: [Color("CleverTapPrimary"), Color("CleverTapSecondary")],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),
-                            in: Capsule()
+                            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
                         )
                 }
                 .buttonStyle(.plain)
             }
 
-            HStack(spacing: 8) {
-                summaryChip("\(sortedBanners.count) total")
-                summaryChip("\(sortedBanners.filter(\.isActive).count) enabled")
-                summaryChip("\(sortedBanners.filter(\.isScheduledActive).count) live")
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    summaryChip("\(sortedBanners.count) total")
+                    summaryChip("\(sortedBanners.filter(\.isActive).count) enabled")
+                    summaryChip("\(sortedBanners.filter(\.isScheduledActive).count) live")
+                }
             }
         }
-        .padding(18)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .stroke(surfaceBorder, lineWidth: 1)
         )
     }
@@ -183,6 +185,9 @@ struct AdminHeroBannersView: View {
                     isDarkMode: isDarkMode,
                     canMoveUp: index > 0,
                     canMoveDown: index < sortedBanners.count - 1,
+                    onToggleActive: { isActive in
+                        toggleBanner(banner, isActive: isActive)
+                    },
                     onEdit: { editingBanner = banner },
                     onMoveUp: { moveBanner(at: index, direction: -1) },
                     onMoveDown: { moveBanner(at: index, direction: 1) },
@@ -304,6 +309,20 @@ struct AdminHeroBannersView: View {
             }
         }
     }
+
+    private func toggleBanner(_ banner: HeroBanner, isActive: Bool) {
+        guard let bannerID = banner.id else { return }
+
+        adminBannerService.updateBannerActiveState(
+            bannerID: bannerID,
+            title: banner.title,
+            isActive: isActive
+        ) { result in
+            if case .success = result {
+                bannerService.fetchBanners()
+            }
+        }
+    }
 }
 
 private struct AdminHeroBannerCard: View {
@@ -311,6 +330,7 @@ private struct AdminHeroBannerCard: View {
     let isDarkMode: Bool
     let canMoveUp: Bool
     let canMoveDown: Bool
+    let onToggleActive: (Bool) -> Void
     let onEdit: () -> Void
     let onMoveUp: () -> Void
     let onMoveDown: () -> Void
@@ -329,7 +349,7 @@ private struct AdminHeroBannerCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 14) {
                 AppAsyncImage(urlString: banner.resolvedMobileImageURL) { phase in
                     if let image = phase.image {
@@ -344,21 +364,21 @@ private struct AdminHeroBannerCard: View {
                         )
                     }
                 }
-                .frame(width: 116, height: 132)
+                .frame(width: 92, height: 106)
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(alignment: .top, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 5) {
                             Text(banner.title)
-                                .font(.headline)
+                                .font(.subheadline.weight(.bold))
                                 .foregroundStyle(primaryText)
                                 .lineLimit(2)
 
                             Text(banner.subtitle)
-                                .font(.subheadline)
+                                .font(.caption)
                                 .foregroundStyle(secondaryText)
-                                .lineLimit(3)
+                                .lineLimit(2)
                         }
 
                         Spacer(minLength: 8)
@@ -369,72 +389,108 @@ private struct AdminHeroBannerCard: View {
                         }
                     }
 
-                    HStack(spacing: 8) {
-                        if let offerLabel = banner.offerLabel, !offerLabel.isEmpty {
-                            statusBadge(title: offerLabel, tint: .pink)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            if let offerLabel = banner.offerLabel, !offerLabel.isEmpty {
+                                statusBadge(title: offerLabel, tint: .pink)
+                            }
+                            if let campaignTag = banner.campaignTag, !campaignTag.isEmpty {
+                                statusBadge(title: campaignTag, tint: Color("CleverTapSecondary"))
+                            }
+                            destinationBadge
                         }
-                        if let campaignTag = banner.campaignTag, !campaignTag.isEmpty {
-                            statusBadge(title: campaignTag, tint: Color("CleverTapSecondary"))
-                        }
-                        destinationBadge
                     }
 
                     if let ctaText = banner.ctaText, !ctaText.isEmpty {
                         Text("CTA: \(ctaText)")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(primaryText)
+                            .lineLimit(1)
                     }
                 }
             }
 
-            HStack(spacing: 10) {
-                Button(action: onEdit) {
-                    Label("Edit", systemImage: "pencil")
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "calendar")
                         .font(.caption.weight(.bold))
-                        .foregroundColor(Color("CleverTapPrimary"))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .background(Color("CleverTapPrimary").opacity(0.12), in: Capsule())
+                        .foregroundStyle(secondaryText)
+
+                    Text(scheduleSummary)
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                        .lineLimit(2)
+
+                    Spacer(minLength: 0)
                 }
-                .buttonStyle(.plain)
 
-                Button(action: onMoveUp) {
-                    Image(systemName: "arrow.up")
-                        .font(.caption.weight(.bold))
-                        .foregroundColor(canMoveUp ? Color("CleverTapPrimary") : .secondary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 10)
-                        .background(Color("CleverTapPrimary").opacity(canMoveUp ? 0.12 : 0.05), in: Capsule())
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        Button {
+                            onToggleActive(!banner.isActive)
+                        } label: {
+                            Label(banner.isActive ? "Turn Off" : "Turn On", systemImage: banner.isActive ? "pause.circle" : "play.circle")
+                                .font(.caption.weight(.bold))
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
+                                .foregroundColor(banner.isActive ? .orange : .green)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 10)
+                                .background((banner.isActive ? Color.orange : Color.green).opacity(0.12), in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+
+                        Button(action: onEdit) {
+                            Label("Edit", systemImage: "pencil")
+                                .font(.caption.weight(.bold))
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
+                                .foregroundColor(Color("CleverTapPrimary"))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 10)
+                                .background(Color("CleverTapPrimary").opacity(0.12), in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+
+                        Button(action: onMoveUp) {
+                            Label("Up", systemImage: "arrow.up")
+                                .font(.caption.weight(.bold))
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
+                                .foregroundColor(canMoveUp ? Color("CleverTapPrimary") : .secondary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 10)
+                                .background(Color("CleverTapPrimary").opacity(canMoveUp ? 0.12 : 0.05), in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(!canMoveUp)
+
+                        Button(action: onMoveDown) {
+                            Label("Down", systemImage: "arrow.down")
+                                .font(.caption.weight(.bold))
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
+                                .foregroundColor(canMoveDown ? Color("CleverTapPrimary") : .secondary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 10)
+                                .background(Color("CleverTapPrimary").opacity(canMoveDown ? 0.12 : 0.05), in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(!canMoveDown)
+
+                        Button(role: .destructive, action: onDelete) {
+                            Label("Delete", systemImage: "trash")
+                                .font(.caption.weight(.bold))
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 10)
+                                .background(Color.red.opacity(0.12), in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.trailing, 2)
                 }
-                .buttonStyle(.plain)
-                .disabled(!canMoveUp)
-
-                Button(action: onMoveDown) {
-                    Image(systemName: "arrow.down")
-                        .font(.caption.weight(.bold))
-                        .foregroundColor(canMoveDown ? Color("CleverTapPrimary") : .secondary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 10)
-                        .background(Color("CleverTapPrimary").opacity(canMoveDown ? 0.12 : 0.05), in: Capsule())
-                }
-                .buttonStyle(.plain)
-                .disabled(!canMoveDown)
-
-                Button(role: .destructive, action: onDelete) {
-                    Label("Delete", systemImage: "trash")
-                        .font(.caption.weight(.bold))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .background(Color.red.opacity(0.12), in: Capsule())
-                }
-                .buttonStyle(.plain)
-
-                Spacer(minLength: 0)
-
-                Text(scheduleSummary)
-                    .font(.caption)
-                    .foregroundStyle(secondaryText)
-                    .multilineTextAlignment(.trailing)
             }
         }
         .padding(18)

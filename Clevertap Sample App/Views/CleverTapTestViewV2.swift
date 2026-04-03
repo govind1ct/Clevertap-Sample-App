@@ -4,9 +4,11 @@ import UIKit
 
 struct CleverTapTestViewV2: View {
     @StateObject private var inAppService = CleverTapInAppService.shared
+    @StateObject private var nativeDisplayService = CleverTapNativeDisplayService.shared
     @Environment(\.colorScheme) private var colorScheme
 
     @State private var selectedTab: Tab = .actions
+    @State private var selectedCommandChannel: CommandChannel = .push
     @State private var searchText = ""
     @State private var showToast = false
     @State private var toastMessage = ""
@@ -25,11 +27,56 @@ struct CleverTapTestViewV2: View {
     @State private var selectedTraceFilter: TraceFilter = .all
     @State private var timerPushEventMode: TimerPushMode = .allAliases
     @State private var showUsageGuide = false
+    @State private var selectedNativeDisplayLocation = "home_hero"
 
     private enum Tab: String, CaseIterable {
         case actions = "Actions"
         case debug = "Debug"
         case activity = "Activity"
+
+        var icon: String {
+            switch self {
+            case .actions:
+                return "sparkles.rectangle.stack.fill"
+            case .debug:
+                return "waveform.path.ecg.rectangle"
+            case .activity:
+                return "clock.arrow.circlepath"
+            }
+        }
+
+        var subtitle: String {
+            switch self {
+            case .actions:
+                return "Scenarios and command center"
+            case .debug:
+                return "SDK, permission, and NSE state"
+            case .activity:
+                return "Recent trigger and delivery logs"
+            }
+        }
+    }
+
+    private enum CommandChannel: String, CaseIterable, Identifiable {
+        case push = "Push"
+        case inApp = "In-App"
+        case appInbox = "App Inbox"
+        case nativeDisplay = "Native Display"
+
+        var id: String { rawValue }
+
+        var icon: String {
+            switch self {
+            case .push:
+                return "paperplane.fill"
+            case .inApp:
+                return "rectangle.stack.badge.person.crop"
+            case .appInbox:
+                return "tray.full.fill"
+            case .nativeDisplay:
+                return "photo.on.rectangle.angled"
+            }
+        }
     }
 
     private enum SharedPushIdentityConfig {
@@ -176,36 +223,44 @@ struct CleverTapTestViewV2: View {
     private var chromeGradient: [Color] {
         if isDarkMode {
             return [
-                Color(red: 0.04, green: 0.06, blue: 0.10),
-                Color(red: 0.07, green: 0.08, blue: 0.14),
-                Color(red: 0.10, green: 0.08, blue: 0.08)
+                Color(red: 0.08, green: 0.07, blue: 0.06),
+                Color(red: 0.11, green: 0.10, blue: 0.09),
+                Color(red: 0.15, green: 0.14, blue: 0.12)
             ]
         }
         return [
-            Color(red: 0.98, green: 0.97, blue: 0.95),
-            Color(red: 0.96, green: 0.93, blue: 0.90),
-            Color(red: 0.93, green: 0.96, blue: 0.98)
+            Color(red: 0.98, green: 0.96, blue: 0.92),
+            Color(red: 0.95, green: 0.93, blue: 0.88),
+            Color(red: 0.92, green: 0.91, blue: 0.87)
         ]
     }
 
     private var accentStart: Color {
-        isDarkMode ? Color(red: 1.00, green: 0.45, blue: 0.20) : Color(red: 0.92, green: 0.30, blue: 0.10)
+        isDarkMode ? Color(red: 0.90, green: 0.66, blue: 0.28) : Color(red: 0.73, green: 0.42, blue: 0.12)
     }
 
     private var accentEnd: Color {
-        isDarkMode ? Color(red: 0.96, green: 0.72, blue: 0.20) : Color(red: 0.94, green: 0.55, blue: 0.20)
+        isDarkMode ? Color(red: 0.76, green: 0.47, blue: 0.20) : Color(red: 0.51, green: 0.29, blue: 0.10)
     }
 
     private var coolAccent: Color {
-        isDarkMode ? Color(red: 0.22, green: 0.88, blue: 0.95) : Color(red: 0.08, green: 0.63, blue: 0.78)
+        isDarkMode ? Color(red: 0.57, green: 0.78, blue: 0.70) : Color(red: 0.19, green: 0.47, blue: 0.42)
     }
 
     private var panelFill: Color {
-        isDarkMode ? Color.white.opacity(0.06) : Color.white.opacity(0.76)
+        isDarkMode ? Color.white.opacity(0.045) : Color.white.opacity(0.72)
     }
 
     private var panelStroke: Color {
-        isDarkMode ? Color.white.opacity(0.14) : Color.black.opacity(0.08)
+        isDarkMode ? Color.white.opacity(0.08) : Color.black.opacity(0.07)
+    }
+
+    private var elevatedPanelFill: Color {
+        isDarkMode ? Color.white.opacity(0.065) : Color.white.opacity(0.84)
+    }
+
+    private var accentGlow: Color {
+        isDarkMode ? accentStart.opacity(0.16) : accentStart.opacity(0.10)
     }
 
     private var primaryText: Color {
@@ -445,22 +500,160 @@ struct CleverTapTestViewV2: View {
         return items
     }
 
+    private var lastPushLog: CleverTapInAppService.InAppNotificationLog? {
+        inAppService.receivedNotifications.first {
+            $0.status == .pushSent || $0.status == .pushReceived || $0.eventName.localizedCaseInsensitiveContains("push")
+        }
+    }
+
+    private var lastInAppLog: CleverTapInAppService.InAppNotificationLog? {
+        inAppService.receivedNotifications.first {
+            let name = $0.eventName.lowercased()
+            return name.contains("in-app") || name.contains("inapp") || [
+                CleverTapInAppService.InAppNotificationLog.NotificationStatus.displayed,
+                .dismissed,
+                .clicked,
+                .interacted
+            ].contains($0.status)
+        }
+    }
+
+    private var lastInboxLog: CleverTapInAppService.InAppNotificationLog? {
+        inAppService.receivedNotifications.first {
+            $0.status == .inboxUpdated || $0.eventName.localizedCaseInsensitiveContains("inbox")
+        }
+    }
+
+    private var selectedCommandPayloadText: String {
+        switch selectedCommandChannel {
+        case .push:
+            return formattedPayload(lastPushLog?.payload)
+        case .inApp:
+            return formattedPayload(lastInAppLog?.payload ?? inAppService.lastPayload)
+        case .appInbox:
+            if let lastInboxLog {
+                return formattedPayload(lastInboxLog.payload)
+            }
+            if let message = inAppService.appInboxMessages.first {
+                return formattedPayload([
+                    "id": message.messageId ?? "unknown",
+                    "type": message.type ?? "unknown",
+                    "campaign_id": message.campaignId ?? "unknown",
+                    "orientation": message.orientation ?? "unknown",
+                    "date": message.date.description
+                ])
+            }
+            return formattedPayload(nil)
+        case .nativeDisplay:
+            return formattedPayload([
+                "feature_enabled": nativeDisplayService.isFeatureEnabled,
+                "reset_state": nativeDisplayService.isResetStateActive,
+                "unit_count": nativeDisplayService.displayUnits.count,
+                "locations": nativeDisplayService.getAvailableLocations(),
+                "last_updated": nativeDisplayService.lastUpdated?.formatted(date: .abbreviated, time: .shortened) ?? "Never"
+            ])
+        }
+    }
+
+    private var selectedCommandAvailability: String {
+        switch selectedCommandChannel {
+        case .push:
+            return inAppService.pushPermissionStatus
+        case .inApp:
+            return inAppService.isSDKInitialized ? "Ready" : "Unavailable"
+        case .appInbox:
+            return inAppService.isRefreshingInbox ? "Refreshing" : "\(inAppService.appInboxCount) messages"
+        case .nativeDisplay:
+            if !nativeDisplayService.isFeatureEnabled { return "Disabled" }
+            if nativeDisplayService.isResetStateActive { return "Reset" }
+            return nativeDisplayService.displayUnits.isEmpty ? "No units" : "\(nativeDisplayService.displayUnits.count) units"
+        }
+    }
+
+    private var selectedCommandLastRender: String {
+        switch selectedCommandChannel {
+        case .push:
+            return formatTimestamp(lastPushLog?.timestamp)
+        case .inApp:
+            return formatTimestamp(lastInAppLog?.timestamp)
+        case .appInbox:
+            return formatTimestamp(lastInboxLog?.timestamp)
+        case .nativeDisplay:
+            return formatTimestamp(nativeDisplayService.lastUpdated)
+        }
+    }
+
+    private var selectedCommandLastTrigger: String {
+        switch selectedCommandChannel {
+        case .push:
+            return lastPushLog?.eventName ?? "No trigger yet"
+        case .inApp:
+            return lastInAppLog?.eventName ?? "No trigger yet"
+        case .appInbox:
+            return lastInboxLog?.eventName ?? "No trigger yet"
+        case .nativeDisplay:
+            return nativeDisplayService.displayUnits.isEmpty ? "No trigger yet" : "Native display refreshed"
+        }
+    }
+
+    private var selectedCommandEventName: String {
+        switch selectedCommandChannel {
+        case .push:
+            return "Trigger_Push_Notification"
+        case .inApp:
+            return "Trigger_Basic_InApp"
+        case .appInbox:
+            return "Trigger_App_Inbox_Message"
+        case .nativeDisplay:
+            return "Native Display Test"
+        }
+    }
+
+    private var nativeDisplayLocations: [String] {
+        ["home_hero", "product_list_header", "cart_recommendations", "profile_offers", "product_detail_related"]
+    }
+
+    private var selectedCommandRecentEvents: [CleverTapInAppService.InAppNotificationLog] {
+        switch selectedCommandChannel {
+        case .push:
+            return inAppService.receivedNotifications.filter {
+                $0.status == .pushSent || $0.status == .pushReceived || $0.eventName.localizedCaseInsensitiveContains("push")
+            }
+        case .inApp:
+            return inAppService.receivedNotifications.filter {
+                let name = $0.eventName.lowercased()
+                return name.contains("in-app") || name.contains("inapp") || [
+                    CleverTapInAppService.InAppNotificationLog.NotificationStatus.displayed,
+                    .dismissed,
+                    .clicked,
+                    .interacted
+                ].contains($0.status)
+            }
+        case .appInbox:
+            return inAppService.receivedNotifications.filter {
+                $0.status == .inboxUpdated || $0.eventName.localizedCaseInsensitiveContains("inbox")
+            }
+        case .nativeDisplay:
+            return []
+        }
+    }
+
     var body: some View {
         ZStack(alignment: .bottom) {
             LinearGradient(colors: chromeGradient, startPoint: .topLeading, endPoint: .bottomTrailing)
                 .ignoresSafeArea()
 
             Circle()
-                .fill(accentStart.opacity(isDarkMode ? 0.20 : 0.12))
-                .frame(width: 280, height: 280)
-                .blur(radius: 36)
+                .fill(accentGlow)
+                .frame(width: 320, height: 320)
+                .blur(radius: 34)
                 .offset(x: -150, y: -360)
 
             Circle()
-                .fill(coolAccent.opacity(isDarkMode ? 0.16 : 0.10))
+                .fill(coolAccent.opacity(isDarkMode ? 0.12 : 0.08))
                 .frame(width: 300, height: 300)
-                .blur(radius: 48)
-                .offset(x: 170, y: -270)
+                .blur(radius: 40)
+                .offset(x: 170, y: -240)
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 16) {
@@ -508,7 +701,7 @@ struct CleverTapTestViewV2: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .navigationTitle("CleverTap Test Lab V2")
+        .navigationTitle("CleverTap Test Lab")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             if !revealContent {
@@ -535,128 +728,126 @@ struct CleverTapTestViewV2: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("QA CONSOLE")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(coolAccent)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(coolAccent.opacity(0.14), in: Capsule())
-
-                    Text("Test Lab 2.0")
-                        .font(.system(size: 34, weight: .heavy, design: .rounded))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [primaryText, primaryText.opacity(0.70)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 14) {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [accentStart.opacity(0.22), accentEnd.opacity(0.14)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
                         )
+                    )
+                    .frame(width: 74, height: 88)
+                    .overlay {
+                        Image(systemName: "brain.head.profile")
+                            .font(.system(size: 30, weight: .semibold))
+                            .foregroundStyle(accentStart)
+                    }
 
-                    Text("Revamped controls for campaign QA, push diagnostics, and live impression traces.")
+                VStack(alignment: .leading, spacing: 8) {
+                    labelChip(title: "Demo Workspace", tint: accentStart)
+
+                    Text("Campaign Studio")
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .foregroundStyle(primaryText)
+
+                    Text("Use this surface to trigger showcase campaigns, review live diagnostics, and validate end-to-end demo flows.")
                         .font(.subheadline)
                         .foregroundStyle(secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                Spacer(minLength: 10)
+                Spacer(minLength: 0)
+            }
 
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [accentStart.opacity(0.26), accentEnd.opacity(0.20)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 62, height: 62)
-
-                    Image(systemName: "sparkles.rectangle.stack.fill")
-                        .font(.system(size: 28, weight: .semibold))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [accentStart, accentEnd],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                }
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                metricTile(title: "Push", value: "\(inAppService.pushNotificationCount)", icon: "paperplane.fill", tint: accentStart)
+                metricTile(title: "Inbox", value: "\(inAppService.appInboxCount)", icon: "tray.full.fill", tint: accentEnd)
+                metricTile(title: "NSE", value: "\(nseTraceCount)", icon: "waveform.path.ecg", tint: coolAccent)
             }
 
             HStack(spacing: 10) {
-                metricPill(title: "Push", value: "\(inAppService.pushNotificationCount)", icon: "paperplane.fill")
-                metricPill(title: "Inbox", value: "\(inAppService.appInboxCount)", icon: "tray.full.fill")
-                metricPill(title: "NSE", value: "\(nseTraceCount)", icon: "waveform.path.ecg")
-            }
+                infoStrip(title: "Status", value: inAppService.connectionStatus, icon: "dot.radiowaves.left.and.right")
+                infoStrip(title: "Last Refresh", value: formattedLastRefresh, icon: "clock")
 
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(statusColor)
-                    .frame(width: 8, height: 8)
-                Text(inAppService.connectionStatus)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(secondaryText)
-                    .lineLimit(1)
-                Spacer()
                 Button {
                     showUsageGuide = true
                 } label: {
-                    Label("How to Use", systemImage: "questionmark.circle")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(coolAccent)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(coolAccent.opacity(0.14), in: Capsule())
+                    HStack(spacing: 8) {
+                        Image(systemName: "questionmark.circle")
+                        Text("Guide")
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(primaryText)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(elevatedPanelFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(panelStroke, lineWidth: 1)
+                    )
                 }
                 .buttonStyle(.plain)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
-        .background(panelFill, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .padding(20)
+        .background(
+            LinearGradient(
+                colors: [elevatedPanelFill, panelFill],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            in: RoundedRectangle(cornerRadius: 28, style: .continuous)
+        )
         .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .stroke(panelStroke, lineWidth: 1)
         )
     }
 
     private var tabStrip: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             ForEach(Tab.allCases, id: \.self) { tab in
                 Button {
                     withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
                         selectedTab = tab
                     }
                 } label: {
-                    Text(tab.rawValue)
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .foregroundStyle(selectedTab == tab ? Color.white : primaryText)
-                        .background {
-                            if selectedTab == tab {
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [accentStart, accentEnd],
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
-                                    )
-                                    .matchedGeometryEffect(id: "tab-bg", in: tabAnimation)
-                            }
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 8) {
+                            Image(systemName: tab.icon)
+                                .font(.caption.weight(.bold))
+                            Text(tab.rawValue)
+                                .font(.subheadline.weight(.bold))
+                                .lineLimit(1)
                         }
+
+                        Text(tab.subtitle)
+                            .font(.caption)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    }
+                    .foregroundStyle(selectedTab == tab ? accentStart : secondaryText)
+                    .frame(maxWidth: .infinity, minHeight: 80, alignment: .leading)
+                    .padding(14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(selectedTab == tab ? Color.white.opacity(isDarkMode ? 0.08 : 0.88) : Color.clear)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(selectedTab == tab ? accentStart.opacity(0.30) : panelStroke, lineWidth: 1)
+                    )
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(6)
-        .background(panelFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(panelFill, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(panelStroke, lineWidth: 1)
         )
     }
@@ -729,6 +920,17 @@ struct CleverTapTestViewV2: View {
                 }
             }
 
+            sectionHeader("Command Center", subtitle: "Push, In-App, App Inbox, and Native Display diagnostics")
+
+            Text("Primary actions here use the same trigger event names as the Demo Workspace so campaign mapping stays consistent.")
+                .font(.caption)
+                .foregroundStyle(secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 2)
+
+            commandCenterSection
+
             sectionHeader("Actions", subtitle: "\(filteredActions.count) available")
 
             HStack(spacing: 8) {
@@ -739,8 +941,8 @@ struct CleverTapTestViewV2: View {
                     .foregroundStyle(primaryText)
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 11)
-            .background(panelFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .padding(.vertical, 10)
+            .background(elevatedPanelFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .stroke(panelStroke, lineWidth: 1)
@@ -780,11 +982,11 @@ struct CleverTapTestViewV2: View {
                             }
                             .foregroundStyle(accentStart)
                         }
-                        .frame(maxWidth: .infinity, minHeight: 120, alignment: .leading)
-                        .padding(14)
-                        .background(panelFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .frame(maxWidth: .infinity, minHeight: 110, alignment: .leading)
+                        .padding(12)
+                        .background(elevatedPanelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
                                 .stroke(panelStroke, lineWidth: 1)
                         )
                     }
@@ -802,8 +1004,8 @@ struct CleverTapTestViewV2: View {
                     .font(.subheadline)
                     .foregroundStyle(primaryText)
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 11)
-                    .background(panelFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .padding(.vertical, 10)
+                    .background(elevatedPanelFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .stroke(panelStroke, lineWidth: 1)
@@ -815,7 +1017,7 @@ struct CleverTapTestViewV2: View {
                             .font(.caption)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 9)
-                            .background(panelFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            .background(elevatedPanelFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                                     .stroke(panelStroke, lineWidth: 1)
@@ -825,7 +1027,7 @@ struct CleverTapTestViewV2: View {
                             .font(.caption)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 9)
-                            .background(panelFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            .background(elevatedPanelFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                                     .stroke(panelStroke, lineWidth: 1)
@@ -883,10 +1085,10 @@ struct CleverTapTestViewV2: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(12)
-            .background(panelFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .padding(14)
+            .background(elevatedPanelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .stroke(panelStroke, lineWidth: 1)
             )
 
@@ -897,8 +1099,8 @@ struct CleverTapTestViewV2: View {
                     .font(.subheadline)
                     .foregroundStyle(primaryText)
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 11)
-                    .background(panelFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .padding(.vertical, 10)
+                    .background(elevatedPanelFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .stroke(panelStroke, lineWidth: 1)
@@ -997,19 +1199,19 @@ struct CleverTapTestViewV2: View {
                                 .buttonStyle(.plain)
                             }
                         }
-                        .padding(10)
-                        .background(panelFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .padding(12)
+                        .background(elevatedPanelFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
                                 .stroke(panelStroke, lineWidth: 1)
                         )
                     }
                 }
             }
-            .padding(12)
-            .background(panelFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .padding(14)
+            .background(elevatedPanelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .stroke(panelStroke, lineWidth: 1)
             )
 
@@ -1017,7 +1219,7 @@ struct CleverTapTestViewV2: View {
                 CleverTapTestView()
             } label: {
                 HStack {
-                    Text("Open Full Test Lab (V1)")
+                    Text("Open Legacy Test Lab")
                         .font(.subheadline.weight(.semibold))
                     Spacer()
                     Image(systemName: "arrow.up.right.square")
@@ -1027,10 +1229,10 @@ struct CleverTapTestViewV2: View {
                 .background(coolAccent.opacity(0.16), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
         }
-        .padding(14)
-        .background(panelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(16)
+        .background(elevatedPanelFill, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .stroke(panelStroke, lineWidth: 1)
         )
     }
@@ -1212,10 +1414,10 @@ struct CleverTapTestViewV2: View {
                                     .foregroundStyle(coolAccent)
                             }
                         }
-                        .padding(10)
-                        .background(panelFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .padding(12)
+                        .background(elevatedPanelFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
                                 .stroke(panelStroke, lineWidth: 1)
                         )
                     }
@@ -1239,10 +1441,10 @@ struct CleverTapTestViewV2: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(14)
-        .background(panelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(16)
+        .background(elevatedPanelFill, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .stroke(panelStroke, lineWidth: 1)
         )
     }
@@ -1333,24 +1535,370 @@ struct CleverTapTestViewV2: View {
                 }
             }
         }
-        .padding(14)
-        .background(panelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(16)
+        .background(elevatedPanelFill, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .stroke(panelStroke, lineWidth: 1)
         )
     }
 
+    private var commandCenterSection: some View {
+        VStack(spacing: 12) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(CommandChannel.allCases) { channel in
+                        Button {
+                            withAnimation(.spring(response: 0.30, dampingFraction: 0.88)) {
+                                selectedCommandChannel = channel
+                            }
+                        } label: {
+                            commandChannelPill(channel)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                compactCard(title: "Current Availability", value: selectedCommandAvailability)
+                compactCard(title: "Last Render Time", value: selectedCommandLastRender)
+                compactCard(title: "Last Trigger", value: selectedCommandLastTrigger)
+                compactCard(title: "Exact Event Name", value: selectedCommandEventName)
+                compactCard(title: "Refresh State", value: inAppService.lastDiagnosticsRefresh == nil ? "Not refreshed" : formattedLastRefresh)
+            }
+
+            if selectedCommandChannel == .nativeDisplay {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Trigger Location")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(primaryText)
+
+                    Picker("Trigger Location", selection: $selectedNativeDisplayLocation) {
+                        ForEach(nativeDisplayLocations, id: \.self) { location in
+                            Text(location).tag(location)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(primaryText)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(panelFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(panelStroke, lineWidth: 1)
+                    )
+                }
+
+                nativeDisplayFeatureControl
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("Last Payload")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(primaryText)
+                    Spacer()
+                    Text(selectedCommandChannel.rawValue)
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(coolAccent)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(coolAccent.opacity(0.14), in: Capsule())
+                }
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    Text(selectedCommandPayloadText)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(primaryText)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                }
+                .padding(12)
+                .background(panelFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(panelStroke, lineWidth: 1)
+                )
+            }
+
+            HStack(spacing: 10) {
+                commandCenterPrimaryAction
+                commandCenterSecondaryAction
+            }
+
+            HStack(spacing: 10) {
+                commandCenterCopyEventAction
+                commandCenterCopyPayloadAction
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("Recent Channel Events")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(primaryText)
+                    Spacer()
+                    Text(selectedCommandChannel == .nativeDisplay ? "Summary" : "Last 3")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(secondaryText)
+                }
+
+                if selectedCommandChannel == .nativeDisplay {
+                    compactCard(
+                        title: "Native Display Timeline",
+                        value: "Location: \(selectedNativeDisplayLocation)\nUnits: \(nativeDisplayService.displayUnits.count)\nLast Updated: \(selectedCommandLastRender)"
+                    )
+                } else if selectedCommandRecentEvents.isEmpty {
+                    compactCard(title: "No Recent Events", value: "Trigger this channel once to populate the timeline.")
+                } else {
+                    VStack(spacing: 8) {
+                        ForEach(Array(selectedCommandRecentEvents.prefix(3))) { log in
+                            commandEventRow(log)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var commandCenterPrimaryAction: some View {
+        Button {
+            runPrimaryCommandAction()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: selectedCommandChannel.icon)
+                Text(primaryActionTitle)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .font(.caption.weight(.bold))
+            .foregroundColor(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 11)
+            .frame(maxWidth: .infinity)
+            .background(LinearGradient(colors: [accentStart, accentEnd], startPoint: .leading, endPoint: .trailing), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var commandCenterSecondaryAction: some View {
+        Button {
+            runSecondaryCommandAction()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.clockwise")
+                Text(secondaryActionTitle)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .font(.caption.weight(.bold))
+            .foregroundStyle(primaryText)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 11)
+            .frame(maxWidth: .infinity)
+            .background(panelFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(panelStroke, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var nativeDisplayFeatureControl: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Native Display State")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(primaryText)
+                Text(nativeDisplayService.isFeatureEnabled ? "Enabled" : "Disabled")
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+            }
+
+            Spacer(minLength: 0)
+
+            Button {
+                nativeDisplayService.setFeatureEnabled(!nativeDisplayService.isFeatureEnabled)
+                showMessage(nativeDisplayService.isFeatureEnabled ? "Native Display turned on" : "Native Display turned off")
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: nativeDisplayService.isFeatureEnabled ? "togglepower" : "power")
+                    Text(nativeDisplayService.isFeatureEnabled ? "Turn Off" : "Turn On")
+                        .lineLimit(1)
+                }
+                .font(.caption.weight(.bold))
+                .foregroundStyle(nativeDisplayService.isFeatureEnabled ? Color.red : Color.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(
+                    nativeDisplayService.isFeatureEnabled
+                    ? AnyShapeStyle(Color.red.opacity(0.12))
+                    : AnyShapeStyle(
+                        LinearGradient(
+                            colors: [accentStart, accentEnd],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    ),
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                )
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(12)
+        .background(elevatedPanelFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(panelStroke, lineWidth: 1)
+        )
+    }
+
+    private var commandCenterCopyEventAction: some View {
+        Button {
+            UIPasteboard.general.string = selectedCommandEventName
+            showMessage("Event name copied")
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "document.on.document")
+                Text("Copy Event Name")
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .font(.caption.weight(.bold))
+            .foregroundStyle(primaryText)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 11)
+            .frame(maxWidth: .infinity)
+            .background(panelFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(panelStroke, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var commandCenterCopyPayloadAction: some View {
+        Button {
+            UIPasteboard.general.string = selectedCommandPayloadText
+            showMessage("Payload copied")
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "doc.on.doc")
+                Text("Copy Payload")
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .font(.caption.weight(.bold))
+            .foregroundStyle(primaryText)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 11)
+            .frame(maxWidth: .infinity)
+            .background(panelFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(panelStroke, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func commandChannelPill(_ channel: CommandChannel) -> some View {
+        let isSelected = selectedCommandChannel == channel
+
+        return HStack(spacing: 8) {
+            Image(systemName: channel.icon)
+                .font(.caption.weight(.bold))
+            Text(channel.rawValue)
+                .font(.caption.weight(.semibold))
+        }
+        .foregroundStyle(isSelected ? accentStart : primaryText)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(commandChannelBackground(isSelected: isSelected), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(isSelected ? accentStart.opacity(0.24) : panelStroke, lineWidth: 1)
+        )
+    }
+
+    private func commandChannelBackground(isSelected: Bool) -> AnyShapeStyle {
+        if isSelected {
+            return AnyShapeStyle(accentStart.opacity(isDarkMode ? 0.22 : 0.12))
+        }
+        return AnyShapeStyle(panelFill)
+    }
+
     private func sectionHeader(_ title: String, subtitle: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.subheadline.weight(.semibold))
+                .font(.title3.weight(.bold))
                 .foregroundStyle(primaryText)
             Text(subtitle)
-                .font(.caption)
+                .font(.footnote)
                 .foregroundStyle(secondaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func labelChip(title: String, tint: Color) -> some View {
+        Text(title)
+            .font(.caption2.weight(.bold))
+            .foregroundStyle(tint)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(tint.opacity(0.14), in: Capsule())
+    }
+
+    private func metricTile(title: String, value: String, icon: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(tint)
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(secondaryText)
+            }
+
+            Text(value)
+                .font(.title3.weight(.bold))
+                .foregroundStyle(primaryText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(elevatedPanelFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(panelStroke, lineWidth: 1)
+        )
+    }
+
+    private func infoStrip(title: String, value: String, icon: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(accentStart)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(secondaryText)
+                Text(value)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(primaryText)
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(elevatedPanelFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(panelStroke, lineWidth: 1)
+        )
     }
 
     private func compactCard(title: String, value: String) -> some View {
@@ -1362,14 +1910,46 @@ struct CleverTapTestViewV2: View {
             Text(value)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(primaryText)
-                .lineLimit(2)
+                .lineLimit(3)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(panelFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(elevatedPanelFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(panelStroke, lineWidth: 1)
+        )
+    }
+
+    private func commandEventRow(_ log: CleverTapInAppService.InAppNotificationLog) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Circle()
+                .fill(log.status.color)
+                .frame(width: 8, height: 8)
+                .padding(.top, 5)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(log.eventName)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(primaryText)
+                    .lineLimit(2)
+
+                Text(log.status.displayText)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(log.status.color)
+
+                Text(log.timestamp.formatted(date: .abbreviated, time: .shortened))
+                    .font(.caption2)
+                    .foregroundStyle(secondaryText)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .background(elevatedPanelFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(panelStroke, lineWidth: 1)
         )
     }
@@ -1387,9 +1967,9 @@ struct CleverTapTestViewV2: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(12)
-        .background(panelFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(elevatedPanelFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(panelStroke, lineWidth: 1)
         )
     }
@@ -1418,14 +1998,14 @@ struct CleverTapTestViewV2: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 14) {
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("TEST LAB V2 GUIDE")
+                            Text("TEST LAB GUIDE")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(coolAccent)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 4)
                                 .background(coolAccent.opacity(0.14), in: Capsule())
 
-                            Text("How to use Event Payload Editor + Scenario Runner")
+                            Text("How to use the Test Lab workflow")
                                 .font(.system(size: 28, weight: .heavy, design: .rounded))
                                 .foregroundStyle(primaryText)
 
@@ -1572,6 +2152,82 @@ struct CleverTapTestViewV2: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(panelStroke, lineWidth: 1)
         )
+    }
+
+    private var primaryActionTitle: String {
+        switch selectedCommandChannel {
+        case .push:
+            return "Trigger Push"
+        case .inApp:
+            return "Trigger In-App"
+        case .appInbox:
+            return "Trigger Inbox"
+        case .nativeDisplay:
+            return "Trigger Location"
+        }
+    }
+
+    private var secondaryActionTitle: String {
+        switch selectedCommandChannel {
+        case .push, .inApp:
+            return "Refresh Diagnostics"
+        case .appInbox:
+            return inAppService.isRefreshingInbox ? "Refreshing" : "Refresh Inbox"
+        case .nativeDisplay:
+            return "Refresh Units"
+        }
+    }
+
+    private func formatTimestamp(_ date: Date?) -> String {
+        guard let date else { return "Never" }
+        return date.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    private func formattedPayload(_ payload: [String: Any]?) -> String {
+        guard let payload, !payload.isEmpty else {
+            return "No payload captured yet"
+        }
+
+        guard JSONSerialization.isValidJSONObject(payload),
+              let data = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys]),
+              let text = String(data: data, encoding: .utf8) else {
+            return payload.map { "\($0.key): \($0.value)" }
+                .sorted()
+                .joined(separator: "\n")
+        }
+
+        return text
+    }
+
+    private func runPrimaryCommandAction() {
+        switch selectedCommandChannel {
+        case .push:
+            inAppService.triggerPushNotification()
+            showMessage("Triggered Push event")
+        case .inApp:
+            inAppService.triggerBasicInApp()
+            showMessage("Triggered In-App event")
+        case .appInbox:
+            inAppService.triggerAppInboxMessage()
+            showMessage("Triggered App Inbox event")
+        case .nativeDisplay:
+            nativeDisplayService.triggerTestEvent(for: selectedNativeDisplayLocation)
+            showMessage("Triggered Native Display for \(selectedNativeDisplayLocation)")
+        }
+    }
+
+    private func runSecondaryCommandAction() {
+        switch selectedCommandChannel {
+        case .push, .inApp:
+            inAppService.refreshDiagnostics()
+            showMessage("Diagnostics refreshed")
+        case .appInbox:
+            inAppService.refreshAppInbox()
+            showMessage("Inbox refresh requested")
+        case .nativeDisplay:
+            nativeDisplayService.refreshDisplayUnits()
+            showMessage("Native Display refreshed")
+        }
     }
 
     private func showMessage(_ message: String) {
