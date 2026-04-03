@@ -39,13 +39,13 @@ struct MainTabView: View {
                 tab: .experiences,
                 title: "CleverTap Lab",
                 message: "Open CleverTap Test Lab, Product Experiences, App Inbox, and Native Display workflows.",
-                icon: "wand.and.stars"
+                icon: "sparkles.tv"
             ),
             WalkthroughStep(
                 tab: .cart,
                 title: "Cart",
                 message: "Review selected items, edit quantities, and continue to checkout.",
-                icon: "cart.fill"
+                icon: "bag.fill"
             ),
             WalkthroughStep(
                 tab: .profile,
@@ -61,7 +61,7 @@ struct MainTabView: View {
                 tab: .admin,
                 title: "Admin",
                 message: "Open the admin control center with the same existing admin access rules.",
-                icon: "lock.shield.fill"
+                icon: "gearshape.2.fill"
             )
             )
         }
@@ -107,7 +107,7 @@ struct MainTabView: View {
                 Label {
                     Text("CleverTap Lab")
                 } icon: {
-                    Image(systemName: selectedTab == .experiences ? "wand.and.stars.inverse" : "wand.and.stars")
+                    Image(systemName: selectedTab == .experiences ? "sparkles.tv.fill" : "sparkles.tv")
                 }
             }
             .tag(Tab.experiences)
@@ -121,7 +121,7 @@ struct MainTabView: View {
                 Label {
                     Text("Cart")
                 } icon: {
-                    Image(systemName: selectedTab == .cart ? "cart.fill" : "cart")
+                    Image(systemName: selectedTab == .cart ? "bag.fill" : "bag")
                 }
             }
             .badge(cartManager.items.count > 0 ? cartManager.items.count : 0)
@@ -160,7 +160,7 @@ struct MainTabView: View {
                     Label {
                         Text("Admin")
                     } icon: {
-                        Image(systemName: selectedTab == .admin ? "lock.shield.fill" : "lock.shield")
+                        Image(systemName: selectedTab == .admin ? "gearshape.2.fill" : "gearshape.2")
                     }
                 }
                 .tag(Tab.admin)
@@ -487,38 +487,51 @@ private extension MainTabView {
     }
     
     func configureTabBarAppearance() {
-        
         let appearance = UITabBarAppearance()
         appearance.configureWithTransparentBackground()
         appearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterial)
-        appearance.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.58)
-        
-        // Selected
-        appearance.stackedLayoutAppearance.selected.iconColor = UIColor(Color("CleverTapPrimary"))
-        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
-            .foregroundColor: UIColor(Color("CleverTapPrimary")),
-            .font: UIFont.systemFont(ofSize: 11, weight: .bold)
-        ]
-        appearance.stackedLayoutAppearance.selected.badgeBackgroundColor = UIColor(Color("CleverTapPrimary"))
-        
-        // Normal
-        appearance.stackedLayoutAppearance.normal.iconColor = UIColor.secondaryLabel
-        appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
-            .foregroundColor: UIColor.secondaryLabel,
-            .font: UIFont.systemFont(ofSize: 11, weight: .medium)
-        ]
-        appearance.stackedLayoutAppearance.normal.badgeBackgroundColor = UIColor.systemRed
-        
-        // Subtle selected indicator for a premium tab focus state
+
+        let selectedColor = UIColor(Color("CleverTapPrimary"))
+        let selectedTextColor = colorScheme == .dark ? UIColor.white : selectedColor
+        let indicatorColor = colorScheme == .dark
+            ? UIColor(Color("CleverTapPrimary")).withAlphaComponent(0.34)
+            : UIColor(Color("CleverTapPrimary")).withAlphaComponent(0.16)
+        let backgroundAlpha: CGFloat = colorScheme == .dark ? 0.94 : 0.85
+        let normalColor = colorScheme == .dark
+            ? UIColor.white.withAlphaComponent(0.82)
+            : UIColor.label.withAlphaComponent(0.72)
+
+        appearance.backgroundColor = UIColor.systemBackground.withAlphaComponent(backgroundAlpha)
+
+        let appearances = [appearance.stackedLayoutAppearance, appearance.inlineLayoutAppearance, appearance.compactInlineLayoutAppearance]
+        appearances.forEach { layout in
+            layout.selected.iconColor = selectedTextColor
+            layout.selected.titleTextAttributes = [
+                .foregroundColor: selectedTextColor,
+                .font: UIFont.systemFont(ofSize: 11, weight: .bold)
+            ]
+            layout.selected.badgeBackgroundColor = selectedColor
+
+            layout.normal.iconColor = normalColor
+            layout.normal.titleTextAttributes = [
+                .foregroundColor: normalColor,
+                .font: UIFont.systemFont(ofSize: 11, weight: .medium)
+            ]
+            layout.normal.badgeBackgroundColor = UIColor.systemRed
+        }
+
         let indicatorSize = CGSize(width: 66, height: 30)
         appearance.selectionIndicatorImage = tabSelectionIndicator(
-            color: UIColor(Color("CleverTapPrimary")).withAlphaComponent(0.16),
-            size: indicatorSize
+            color: indicatorColor,
+            size: indicatorSize,
+            strokeColor: colorScheme == .dark
+                ? UIColor.white.withAlphaComponent(0.14)
+                : UIColor.white.withAlphaComponent(0.40)
         )
-        
-        appearance.shadowColor = UIColor.black.withAlphaComponent(0.08)
+
+        appearance.shadowColor = UIColor.label.withAlphaComponent(colorScheme == .dark ? 0.14 : 0.08)
         appearance.shadowImage = UIImage()
-        
+
         UITabBar.appearance().standardAppearance = appearance
         UITabBar.appearance().scrollEdgeAppearance = appearance
         UITabBar.appearance().isTranslucent = true
@@ -527,14 +540,14 @@ private extension MainTabView {
         UITabBar.appearance().itemSpacing = 8
     }
     
-    func tabSelectionIndicator(color: UIColor, size: CGSize) -> UIImage {
+    func tabSelectionIndicator(color: UIColor, size: CGSize, strokeColor: UIColor) -> UIImage {
         let renderer = UIGraphicsImageRenderer(size: size)
         return renderer.image { context in
             let rect = CGRect(origin: .zero, size: size)
             let path = UIBezierPath(roundedRect: rect, cornerRadius: 14)
             color.setFill()
             path.fill()
-            context.cgContext.setStrokeColor(UIColor.white.withAlphaComponent(0.4).cgColor)
+            context.cgContext.setStrokeColor(strokeColor.cgColor)
             context.cgContext.setLineWidth(1)
             path.stroke()
         }
