@@ -1,104 +1,241 @@
 # CleverTap Sample App (iOS)
 
-This repository contains the CleverTap iOS sample app with integrations for:
-- Profile and event tracking
-- Product Experiences (Remote Config)
-- Native Display
-- Push and rich push extensions
-- PayU checkout flow
+CleverTap Sample App is a SwiftUI commerce demo app built to showcase a realistic end-to-end CleverTap integration on iOS.
 
-**Current Release:** `v3.0.0` (Major Update)
+This version includes a premium V4 storefront, Product Experiences, Native Display, App Inbox, Push + Rich Push, PayU checkout, profile management, and an internal admin console for operating catalog and campaign surfaces.
 
-## Project At A Glance
+**Current Release:** `v4.0.0`
 
-This app is a demo storefront built to showcase end-to-end CleverTap usage in a realistic iOS app flow.
+## What V4 Adds
 
-- `Home`: product browsing with Native Display placements (`hero`, `promotion`, `home`)
-- `Experiences`: Product Experiences fetch/sync controls for remote UI personalization
-- `Inbox`: app inbox and engagement surfaces
-- `Cart / Checkout`: cart lifecycle, order events, and PayU payment integration
-- `Profile`: user properties, membership tier, notification preferences, and CleverTap dashboard access
+- Rebuilt `Home` screen with a cleaner premium commerce layout
+- Modularized Home screen into reusable SwiftUI components
+- Updated Spotlight and Collection presentation for better maintainability
+- Improved tab bar styling and icon system
+- Added stronger light/dark mode compatibility across Home UI
+- Refined category browsing and featured product presentation
+- Expanded admin tooling for banners, products, orders, and audit logs
+- Preserved CleverTap integration flows while improving demo quality and code structure
 
-## Core Integrations
+## Core Capabilities
 
-- Identity and profile sync with CleverTap
-- Event tracking across app launch, screen views, search, cart, and checkout
-- Product Experiences (remote variables) to change Home UI without app release
-- Native Display campaigns for contextual in-app placements
-- Push + rich push support with NSE/NCE targets
+- CleverTap identity, profile, and event tracking
+- Product Experiences / remote personalization variables
+- Native Display rendering and placement handling
+- App Inbox integration and inbox-trigger flows
+- Push notifications with NSE and NCE targets
+- PayU checkout flow for purchase demo journeys
+- Cart, checkout, order creation, and profile editing flows
+- Admin dashboard for live content and commerce operations
 
-## Architecture Overview
+## App Modules
+
+### Storefront
+
+- `HomeView`: premium editorial storefront with campaigns, spotlight products, collection grid, and Native Display placements
+- `ProductListView`: browse products in a dedicated list flow
+- `ProductDetailView`: product detail, add-to-cart, and purchase action surface
+- `CartView`: cart review and quantity management
+- `CheckoutView`: checkout flow with order creation and PayU handoff
+
+### CleverTap Demo Surfaces
+
+- `CleverTapTestView` and `CleverTapTestViewV2`: test/event and integration demo screens
+- `ProductExperiencesView`: remote-variable driven personalization surface
+- `NativeDisplayLabView`: Native Display testing and validation screen
+- `AppInboxView`: inbox rendering and interaction surface
+- `NotificationSettingsView`: notification preference and permissions surface
+
+### Profile and Settings
+
+- `ProfileView`: user profile, dashboard access, and account utilities
+- `EditProfileView`: profile editing flow
+- `SettingsView`: app-level toggles and feature settings
+- `CleverTapProfileDashboardView`: profile and engagement summary surface
+
+### Admin Console
+
+- `AdminDashboardView`: admin landing surface
+- `AdminHeroBannersView`: create and manage hero/campaign banners
+- `AdminOrdersView`: review placed orders
+- `AdminAuditLogView`: inspect admin activity logs
+- `AdminDashboardHeaderView`: shared entry point into admin operations
+
+Admin services:
+- `AdminProductService`
+- `AdminHeroBannerService`
+- `AdminOrderService`
+- `AdminAuditLogService`
+- `AdminProductImageUploadService`
+- `AdminAuditLogger`
+
+## Technical Highlights
+
+- SwiftUI-first app architecture
+- Shared app state through environment objects where appropriate
+- Firebase-backed product, profile, and admin content flows
+- CleverTap wrapped through focused service layers
+- Home screen refactored into reusable components:
+  - `HomeCommerceComponents.swift`
+  - `HomeSectionViews.swift`
+- Theme-driven typography and styling via:
+  - `ThemeManager`
+  - `ThemeModels`
+
+## Project Structure
 
 ```text
-SwiftUI App (Clevetap_Sample_AppApp)
-  |
-  +-- Views/
-  |    +-- Home, ProductList, Cart, Checkout, Profile
-  |    +-- Experiences (ProductExperiencesView, NativeDisplayLabView, CleverTapTestView)
-  |    +-- Dashboard (CleverTapProfileDashboardView)
-  |
-  +-- ViewModels/
-  |    +-- AuthViewModel
-  |
-  +-- Services/
-  |    +-- CleverTapService (core SDK wrapper)
-  |    +-- CleverTapProductExperiencesService (remote variables)
-  |    +-- CleverTapNativeDisplayService (display unit handling)
-  |    +-- ProfileService / OrderService / ProductService / PayUService
-  |
-  +-- Models/
-  |    +-- Product / Order / ProductCategory
-  |
-  +-- Extensions Targets
-       +-- Clevertap NSE (rich push processing)
-       +-- Clevertap NCE (notification content rendering)
+Clevertap Sample App
+├── Models
+│   ├── HeroBanner.swift
+│   ├── Order.swift
+│   ├── Product.swift
+│   └── ProductCategory.swift
+├── Services
+│   ├── CleverTapService.swift
+│   ├── CleverTapProductExperiencesService.swift
+│   ├── CleverTapNativeDisplayService.swift
+│   ├── CleverTapInAppService.swift
+│   ├── ProductService.swift
+│   ├── OrderService.swift
+│   ├── ProfileService.swift
+│   ├── PayUService.swift
+│   ├── ThemeManager.swift
+│   └── Admin* services
+├── ViewModels
+│   └── AuthViewModel.swift
+├── Views
+│   ├── HomeView.swift
+│   ├── MainTabView.swift
+│   ├── CartView.swift
+│   ├── CheckoutView.swift
+│   ├── ProfileView.swift
+│   ├── AppInboxView.swift
+│   ├── ProductExperiencesView.swift
+│   ├── NativeDisplayLabView.swift
+│   ├── Admin*.swift
+│   └── Common/
+│       ├── HomeCommerceComponents.swift
+│       ├── HomeSectionViews.swift
+│       ├── ProductDetailView.swift
+│       ├── NativeDisplayContainerView.swift
+│       └── NativeDisplayView.swift
+├── Clevertap NSE
+└── Clevertap NCE
 ```
 
-### Data and Event Flow
+## CleverTap Integration Areas
 
-1. User actions in `Views` trigger service calls and tracking events.
-2. `CleverTapService` records profile updates/events and reads profile properties.
-3. Product Experiences + Native Display services fetch remote content and expose it to UI.
-4. Dashboard and Profile surfaces read synced values to show engagement and preference state.
+### Profile and Identity
 
-## Quick Demo Flow
+- login / signup flows
+- profile update sync
+- user property updates
+- profile dashboard rendering
 
-1. Login/signup and complete profile details.
-2. Open `Experiences` and fetch Product Experiences variables.
-3. Return to `Home` to verify remote UI changes and Native Display cards.
-4. Add products to cart and complete checkout to generate conversion events.
-5. Open Profile dashboard and validate synced properties/engagement metrics.
+### Event Tracking
 
-## Built By
+- app launch and screen views
+- product browsing and selection
+- search and category exploration
+- add to cart and checkout actions
+- banner interaction and campaign taps
 
-This app was built by **Govind Pathak** (CleverTap).
+### Product Experiences
 
-- Role: Manager - Technical Accounts - Customer Solutions - Customer Success
-- Email: `govind.pathak@clevertap.com`
-- Alternate Phone: `8527858516`
+- fetch and apply remote variables
+- personalize Home content and layout behavior
+- support demo/testing workflows in dedicated screens
 
-In-app credits are shown in the Profile tab. To show builder photo in the app, add the image asset with name: `GovindPathak`.
+### Native Display
 
-## v3.0.0 Major Update (March 2026)
+- render display units in Home and other placements
+- support vertical and horizontal layouts
+- provide lab/test surface for validation
 
-- Complete redesign of the CleverTap Profile Dashboard UI with premium visual styling and improved information hierarchy.
-- Improved dashboard header status indicators for profile properties, push state, sync state, and last refresh.
-- Hardened engagement metric parsing to correctly handle CleverTap values returned as `Int`, `NSNumber`, or `String`.
-- Reinforced app launch engagement tracking by triggering launch tracking during app startup.
-- Preserved all dashboard functionality (refresh, sync, export, clear cache) while upgrading UI quality for demos and client walkthroughs.
+### Push / Rich Push
 
-## Latest Enhancements (March 2026)
+- standard push integration
+- Notification Service Extension (`Clevertap NSE`)
+- Notification Content Extension (`Clevertap NCE`)
 
-- Upgraded `Experiences` tab with section-based studio flow: `CleverTap Test Lab` -> `Product Experiences` -> `Native Display`.
-- Added smooth animated section transitions with haptic feedback to improve demo polish.
-- Added in-screen Product Experiences enable/disable toggle under selector cards and connected it to persisted app state.
-- Added Settings access directly from Experiences via the slider icon and expanded global Settings controls for Product Experiences + walkthrough replay.
-- Ensured section isolation so each selected Experience surface only shows its own content.
-- Improved Product Experiences guidance with a single highlighted setup step for client demos.
-- Added robust cart persistence so cart items survive app kill/relaunch sessions.
+## Checkout and Orders
+
+The commerce flow supports:
+
+- add to cart
+- cart persistence
+- checkout handoff
+- PayU integration
+- order creation and storage
+- order visibility inside admin tools
+
+Additional PayU details are documented in:
+- `Clevertap Sample App/README_PayU.md`
+
+## Admin Workflows
+
+The app now includes an internal admin track for demo operations.
+
+Admin users can:
+- manage hero banners
+- manage products and product media
+- inspect orders
+- review audit logs
+- validate storefront content changes against the user-facing Home experience
+
+This makes the sample app more useful for internal demos, solution walkthroughs, and operational showcases where both marketer and admin flows need to be shown.
 
 ## Documentation
 
-- Product Experiences: `Clevertap Sample App/README_ProductExperiences.md`
-- Native Display: `Clevertap Sample App/README_NativeDisplay.md`
-- PayU Checkout: `Clevertap Sample App/README_PayU.md`
+- `Clevertap Sample App/README_ProductExperiences.md`
+- `Clevertap Sample App/README_NativeDisplay.md`
+- `Clevertap Sample App/README_PayU.md`
+
+## Setup Notes
+
+Prerequisites:
+- Xcode
+- Firebase configuration via `GoogleService-Info.plist`
+- CleverTap SDK configuration
+- PayU credentials if checkout demo is required
+
+Important files:
+- `Clevertap Sample App/Clevetap_Sample_AppApp.swift`
+- `Clevertap Sample App/Services/AppDelegate.swift`
+- `Clevertap Sample App/GoogleService-Info.plist`
+
+## Recommended Demo Flow
+
+1. Sign in or sign up
+2. Open Home and show premium storefront + campaign surfaces
+3. Demonstrate Product Experiences / Native Display updates
+4. Open a product and add it to cart
+5. Walk through checkout and order creation
+6. Open Profile and dashboard surfaces
+7. Open Admin and show banner / order / audit capabilities
+
+## Built By
+
+This app was built by **Govind Pathak**.
+
+- Email: `govind.pathak@clevertap.com`
+- Role: Manager - Technical Accounts - Customer Solutions - Customer Success
+
+## Version History
+
+### v4.0.0
+
+- rewritten Home architecture with extracted section components
+- upgraded premium storefront presentation
+- improved maintainability of Home UI code
+- updated tab bar styling and icons
+- improved theme compatibility across light and dark mode
+- expanded README and admin documentation
+
+### v3.0.0
+
+- major profile dashboard redesign
+- improved engagement metric parsing
+- launch tracking reinforcement
+- stronger demo-ready dashboard presentation
